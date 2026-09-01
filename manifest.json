@@ -80,7 +80,7 @@
     },
     {
       "path": "os/kernel/theme.lua",
-      "sha1": "77e2812152a0b88a5b3f2e45ae95a50d742277e9"
+      "sha1": "b99beb6df8b9442f90256742af1ea04b50bd7fa0"
     },
     {
       "path": "os/kernel/ui.lua",
@@ -88,7 +88,7 @@
     },
     {
       "path": "os/kernel/wm.lua",
-      "sha1": "5d0c80b5bc910b0660884c086a726a0eee74e1da"
+      "sha1": "40cab539b0b2b00bb3f863c5f9a0d5d44fc62d74"
     },
     {
       "path": "os/lib/fsx.lua",

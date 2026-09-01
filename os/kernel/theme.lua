@@ -23,6 +23,7 @@ local themes = {
         toastBg = colors.yellow,      toastFg = colors.black,
         errorBg = colors.red,         errorFg = colors.white,
         mutedFg = colors.gray,
+        shadowBg = colors.black,      -- sombra da janela sobre a area de trabalho
     },
 }
 -- Tema escuro: mesma estrutura, base preta/cinza.
@@ -36,6 +37,7 @@ themes.dark = setmetatable({
     dialogBg = colors.gray, dialogFg = colors.white,
     inputBg = colors.black, inputFg = colors.white,
     mutedFg = colors.lightGray,
+    shadowBg = colors.gray,   -- aqui a area de trabalho ja e preta: sombra preta some
 }, { __index = themes.default })
 
 theme.names = { "default", "dark" }

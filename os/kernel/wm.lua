@@ -240,6 +240,26 @@ end
 
 function wm.hasToasts() return #wm.toasts > 0 end
 
+-- Sombra: uma coluna a direita e uma linha abaixo da janela. Fica dentro do mesmo laco do
+-- compositor, entao janela de cima cobre a sombra da de baixo sem z-order proprio.
+local function drawShadow(c, p)
+    local bottom = p.y + (p.chrome and 1 or 0) + p.h - 1
+    local maxY = wm.H - 1   -- nunca invade a taskbar
+    c.setBackgroundColor(theme.shadowBg)
+    local sx = p.x + p.w
+    if sx <= wm.W then
+        for y = p.y + 1, math.min(bottom + 1, maxY) do
+            c.setCursorPos(sx, y)
+            c.write(" ")
+        end
+    end
+    local n = math.min(p.w, wm.W - p.x)
+    if bottom + 1 <= maxY and n > 0 then
+        c.setCursorPos(p.x + 1, bottom + 1)
+        c.write(string.rep(" ", n))
+    end
+end
+
 function wm.render(procs, focus)
     local c = canvas
     c.setBackgroundColor(theme.desktopBg)
@@ -247,6 +267,9 @@ function wm.render(procs, focus)
     c.clear()
     for _, p in ipairs(procs) do
         if p.win and not p.minimized and not p.hidden then
+            -- Sem sombra na area de trabalho (e' o fundo) nem em tela pequena, onde
+            -- cada coluna conta.
+            if not p.bottom and not wm.tiny then drawShadow(c, p) end
             if p.chrome then drawTitle(c, p, p == focus) end
             p.win.setVisible(true)
             p.win.setVisible(false)

@@ -218,6 +218,36 @@ sf.scroll = 0
 sf:handle("mouse_scroll", 1, 1, 3)          -- roda do mouse fora de widget rolavel = rola o form
 check(sf.scroll == 1, "roda do mouse nao rolou o form: " .. tostring(sf.scroll))
 
+-- 15. Sombra da janela: coluna a direita e linha embaixo, sem invadir a taskbar
+for _, q in ipairs(proc.list()) do
+    if not q.bottom and not q.hidden then proc.kill(q) end
+end
+pump()
+local sh = colors.toBlit(theme.shadowBg)
+local hs = fs.open("/sombra.lua", "w")
+hs.write('os.pullEvent("key")\n')
+hs.close()
+local sombra = proc.launch("/sombra.lua", {}, { title = "Sombra", x = 3, y = 3, w = 10, h = 4 })
+pump()
+check(not sombra.dead, "processo da sombra morreu")
+-- titulo na linha 3, cliente 4..7; sombra na coluna 13 (linhas 4..8) e na linha 8 (col 4..13)
+local function bgAt(y, x1, x2)
+    local _, _, bg = wm.canvas.getLine(y)
+    return bg:sub(x1, x2 or x1)
+end
+check(bgAt(4, 13) == sh, "sem sombra a direita da janela: " .. bgAt(4, 13))
+check(bgAt(8, 4, 13) == string.rep(sh, 10), "sem sombra embaixo da janela: " .. bgAt(8, 4, 13))
+check(bgAt(3, 13) ~= sh, "sombra subiu ate a linha do titulo")
+check(bgAt(4, 14) ~= sh, "sombra passou de uma coluna")
+proc.kill(sombra)
+pump()
+-- Janela colada na base nao pode pintar sombra na taskbar
+local rente = proc.launch("/sombra.lua", {}, { title = "Rente", x = 3, y = wm.H - 3, w = 10, h = 2 })
+pump()
+check(bgAt(wm.H, 4, 13) ~= string.rep(sh, 10), "sombra invadiu a taskbar")
+proc.kill(rente)
+pump()
+
 -- Resultado
 term.redirect(term.native())
 term.setBackgroundColor(colors.black)
