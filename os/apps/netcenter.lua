@@ -25,7 +25,7 @@ local function refreshRelay()
     if not url or url == "" then
         relayLine.text = "Relay: nao configurado"
         relayLine.fg = theme.mutedFg
-        relayInfo.text = "Configure em Configuracoes para controlar este PC de fora do jogo."
+        relayInfo.text = "Configure em Configuracoes."
     else
         local st = mosaic.relayStatus and mosaic.relayStatus() or nil
         if st and st.connected then
