@@ -1,0 +1,54 @@
+{
+  "name": "Mosaic OS",
+  "version": "0.1.0",
+  "files": [
+    {
+      "path": "os/apps/desktop.lua",
+      "sha1": "2099656f24d3258a0ea9218ae4bc9c092873beb3"
+    },
+    {
+      "path": "os/apps/launcher.lua",
+      "sha1": "59576ae526965c03461525d65ab4bf30fe26eb9b"
+    },
+    {
+      "path": "os/apps/registry.lua",
+      "sha1": "b9d2a7aaecdf1d9adc5ef0fc2f675c5f4790b96f"
+    },
+    {
+      "path": "os/apps/taskman.lua",
+      "sha1": "a36fdd71081dc7166147b529399e2c4999594422"
+    },
+    {
+      "path": "os/boot.lua",
+      "sha1": "c5a219dff105c301ec95162cd5541a82e1c95a61"
+    },
+    {
+      "path": "os/kernel/proc.lua",
+      "sha1": "88d1c5188952f77a880b69e82e81d62ee04360c4"
+    },
+    {
+      "path": "os/kernel/runner.lua",
+      "sha1": "c194c770c43e221f759305ee74ac2d87b56ae32d"
+    },
+    {
+      "path": "os/kernel/theme.lua",
+      "sha1": "77e2812152a0b88a5b3f2e45ae95a50d742277e9"
+    },
+    {
+      "path": "os/kernel/ui.lua",
+      "sha1": "9a6b311d4d27087faad6ec4a99c05aaf2b4ed272"
+    },
+    {
+      "path": "os/kernel/wm.lua",
+      "sha1": "5d0c80b5bc910b0660884c086a726a0eee74e1da"
+    },
+    {
+      "path": "os/version.lua",
+      "sha1": "94826922ad59217aee32bfab46ca2becf3aa9f47"
+    },
+    {
+      "path": "startup.lua",
+      "sha1": "2aee43e370c868ff41ae20472dc9cf9656d5a4e1"
+    }
+  ]
+}

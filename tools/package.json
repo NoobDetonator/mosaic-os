@@ -1,0 +1,14 @@
+{
+  "name": "mosaic-tools",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Ferramentas de desenvolvimento do Mosaic OS (lint Lua 5.1, manifest)",
+  "scripts": {
+    "lint": "node lint.js",
+    "manifest": "node manifest.js"
+  },
+  "dependencies": {
+    "fengari": "^0.1.5",
+    "luaparse": "^0.3.1"
+  }
+}
