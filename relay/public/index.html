@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mosaic OS — painel</title>
+<style>
+  :root {
+    --bg: #14161a; --panel: #1c1f26; --line: #2a2f3a; --fg: #e6e8ee; --muted: #8b93a7;
+    --accent: #4c8dff; --ok: #3ddc84; --err: #ff5c5c;
+    --cc-0:#f0f0f0;--cc-1:#f2b233;--cc-2:#e57fd8;--cc-3:#99b2f2;--cc-4:#dede6c;--cc-5:#7fcc19;
+    --cc-6:#f2b2cc;--cc-7:#4c4c4c;--cc-8:#999999;--cc-9:#4c99b2;--cc-a:#b266e5;--cc-b:#3366cc;
+    --cc-c:#7f664c;--cc-d:#57a64e;--cc-e:#cc4c4c;--cc-f:#111111;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple-system, Segoe UI, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--err); }
+  .dot.on { background: var(--ok); }
+  main { display: grid; grid-template-columns: 240px 1fr; gap: 16px; padding: 16px; align-items: start; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 8px; }
+  button, input, select, textarea { font: inherit; }
+  button { background: var(--accent); color: #fff; border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+  button.ghost { background: transparent; border: 1px solid var(--line); color: var(--fg); }
+  button:hover { filter: brightness(1.1); }
+  input, textarea, select { background: #0f1116; border: 1px solid var(--line); color: var(--fg); border-radius: 6px; padding: 6px 8px; width: 100%; }
+  textarea { font-family: ui-monospace, Consolas, monospace; resize: vertical; }
+  .list { display: flex; flex-direction: column; gap: 4px; }
+  .item { padding: 8px; border-radius: 6px; cursor: pointer; border: 1px solid transparent; }
+  .item:hover { background: #232733; }
+  .item.sel { background: #232733; border-color: var(--accent); }
+  .item small { color: var(--muted); display: block; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 10px; flex-wrap: wrap; }
+  .tab { padding: 5px 10px; border-radius: 6px; cursor: pointer; color: var(--muted); border: 1px solid transparent; }
+  .tab.sel { color: var(--fg); border-color: var(--line); background: #232733; }
+  pre.out { background: #0f1116; border: 1px solid var(--line); border-radius: 6px; padding: 10px; overflow: auto; max-height: 45vh; font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; margin: 10px 0 0; }
+  .screen { background: #000; padding: 8px; border-radius: 6px; overflow-x: auto; }
+  .screen pre { margin: 0; font-family: ui-monospace, Consolas, monospace; font-size: 13px; line-height: 1.15; letter-spacing: 0; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  .row > * { flex: 0 0 auto; }
+  .row .grow { flex: 1 1 auto; }
+  .muted { color: var(--muted); }
+  .err { color: var(--err); }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot"></span>
+  <h1>Mosaic OS — painel do relay</h1>
+  <span class="muted" id="count"></span>
+  <span style="flex:1"></span>
+  <input id="token" placeholder="token" style="width:220px" autocomplete="off">
+  <button class="ghost" onclick="saveToken()">Salvar token</button>
+</header>
+
+<main>
+  <div class="card">
+    <h2>Computadores</h2>
+    <div class="list" id="computers"><span class="muted">nenhum conectado</span></div>
+    <button class="ghost" style="margin-top:8px;width:100%" onclick="refresh()">Atualizar</button>
+  </div>
+
+  <div class="card">
+    <div class="tabs">
+      <div class="tab sel" data-tab="console">Console</div>
+      <div class="tab" data-tab="screen">Tela</div>
+      <div class="tab" data-tab="files">Arquivos</div>
+      <div class="tab" data-tab="procs">Processos</div>
+      <div class="tab" data-tab="events">Eventos</div>
+    </div>
+
+    <section data-panel="console">
+      <div class="row" style="margin-bottom:8px">
+        <select id="mode" style="width:150px">
+          <option value="exec">Codigo Lua</option>
+          <option value="shell">Comando do shell</option>
+        </select>
+        <button onclick="send()">Enviar (Ctrl+Enter)</button>
+        <button class="ghost" onclick="notifyPc()">Mandar aviso</button>
+      </div>
+      <textarea id="code" rows="5" placeholder="return os.getComputerLabel()"></textarea>
+      <pre class="out" id="out">Escolha um computador na lista.</pre>
+    </section>
+
+    <section data-panel="screen" hidden>
+      <div class="row" style="margin-bottom:8px">
+        <button onclick="shot()">Capturar</button>
+        <label class="muted row" style="gap:4px"><input type="checkbox" id="auto" style="width:auto"> atualizar sozinho</label>
+        <span class="grow"></span>
+        <button class="ghost" onclick="key('up')">^</button>
+        <button class="ghost" onclick="key('down')">v</button>
+        <button class="ghost" onclick="key('enter')">Enter</button>
+        <input id="typed" placeholder="digitar texto..." style="width:160px" onkeydown="if(event.key==='Enter')typeText()">
+      </div>
+      <div class="screen" id="screen"><span class="muted">sem captura</span></div>
+    </section>
+
+    <section data-panel="files" hidden>
+      <div class="row" style="margin-bottom:8px">
+        <input id="path" value="/" class="grow">
+        <button onclick="ls()">Listar</button>
+        <button class="ghost" onclick="openFile()">Abrir</button>
+        <button class="ghost" onclick="saveFile()">Salvar</button>
+      </div>
+      <div class="list" id="files"></div>
+      <textarea id="filedata" rows="12" placeholder="conteudo do arquivo" style="margin-top:8px"></textarea>
+    </section>
+
+    <section data-panel="procs" hidden>
+      <button onclick="ps()">Atualizar lista</button>
+      <pre class="out" id="psout"></pre>
+    </section>
+
+    <section data-panel="events" hidden>
+      <p class="muted">Eventos do jogo enviados pelos computadores (redstone, chat, jogadores...).</p>
+      <pre class="out" id="events"></pre>
+    </section>
+  </div>
+</main>
+
+<script>
+let token = localStorage.getItem('mosaic-token') || '';
+let current = null;
+let autoTimer = null;
+document.getElementById('token').value = token;
+
+function saveToken() {
+  token = document.getElementById('token').value.trim();
+  localStorage.setItem('mosaic-token', token);
+  refresh(); listen();
+}
+
+async function api(path, options) {
+  const res = await fetch('/api' + path, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, ...(options || {}).headers },
+  });
+  const data = await res.json().catch(() => ({ error: 'resposta invalida' }));
+  if (!res.ok) throw new Error(data.error || res.status);
+  return data;
+}
+
+async function refresh() {
+  try {
+    const list = await api('/computers');
+    const box = document.getElementById('computers');
+    document.getElementById('count').textContent = list.length + ' conectado(s)';
+    document.getElementById('dot').classList.toggle('on', list.length > 0);
+    if (!list.length) { box.innerHTML = '<span class="muted">nenhum conectado</span>'; current = null; return; }
+    box.innerHTML = '';
+    for (const c of list) {
+      const el = document.createElement('div');
+      el.className = 'item' + (c.id === current ? ' sel' : '');
+      el.innerHTML = `<b>#${c.id}</b> ${c.label || 'sem nome'}<small>${c.os || ''}</small>`;
+      el.onclick = () => { current = c.id; refresh(); };
+      box.appendChild(el);
+    }
+    if (current === null) current = list[0].id;
+  } catch (e) {
+    document.getElementById('computers').innerHTML = '<span class="err">' + e.message + '</span>';
+  }
+}
+
+function need() {
+  if (current === null) { throw new Error('escolha um computador'); }
+  return current;
+}
+
+async function send() {
+  const out = document.getElementById('out');
+  const mode = document.getElementById('mode').value;
+  const code = document.getElementById('code').value;
+  out.textContent = 'executando...';
+  try {
+    const id = need();
+    const body = mode === 'exec' ? { code } : { cmd: code };
+    const res = await api(`/computers/${id}/${mode}`, { method: 'POST', body: JSON.stringify(body) });
+    out.textContent = (res.output || '') + (res.returns && res.returns.length ? '\n=> ' + res.returns.join('\n=> ') : '');
+    if (!out.textContent.trim()) out.textContent = '(sem saida)';
+  } catch (e) { out.innerHTML = '<span class="err">' + e.message + '</span>'; }
+}
+document.getElementById('code').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) send();
+});
+
+async function notifyPc() {
+  const text = prompt('Aviso para mostrar na tela do computador:');
+  if (text) { try { await api(`/computers/${need()}/notify`, { method: 'POST', body: JSON.stringify({ text, secs: 8 }) }); } catch (e) { alert(e.message); } }
+}
+
+async function shot() {
+  const box = document.getElementById('screen');
+  try {
+    const s = await api(`/computers/${need()}/screen`);
+    let html = '';
+    for (const line of s.lines) {
+      let row = '';
+      for (let i = 0; i < line.text.length; i++) {
+        const ch = line.text[i].replace('&', '&amp;').replace('<', '&lt;');
+        row += `<span style="color:var(--cc-${line.fg[i]});background:var(--cc-${line.bg[i]})">${ch === ' ' ? '&nbsp;' : ch}</span>`;
+      }
+      html += row + '\n';
+    }
+    box.innerHTML = '<pre>' + html + '</pre>';
+  } catch (e) { box.innerHTML = '<span class="err">' + e.message + '</span>'; }
+}
+
+document.getElementById('auto').onchange = (e) => {
+  clearInterval(autoTimer);
+  if (e.target.checked) autoTimer = setInterval(shot, 2000);
+};
+
+const KEYS = { up: 265, down: 264, left: 263, right: 262, enter: 257, tab: 258, backspace: 259, escape: 256 };
+async function key(name) {
+  try {
+    await api(`/computers/${need()}/inject`, { method: 'POST', body: JSON.stringify({ name: 'key', args: [KEYS[name], false] }) });
+    setTimeout(shot, 200);
+  } catch (e) { alert(e.message); }
+}
+async function typeText() {
+  const input = document.getElementById('typed');
+  try {
+    await api(`/computers/${need()}/inject`, { method: 'POST', body: JSON.stringify({ name: 'paste', args: [input.value] }) });
+    input.value = '';
+    setTimeout(shot, 200);
+  } catch (e) { alert(e.message); }
+}
+
+async function ls() {
+  const box = document.getElementById('files');
+  box.innerHTML = 'carregando...';
+  try {
+    const p = document.getElementById('path').value || '/';
+    const res = await api(`/computers/${need()}/ls?path=${encodeURIComponent(p)}`);
+    box.innerHTML = '';
+    for (const e of res.entries) {
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.textContent = (e.isDir ? '[ ] ' : '    ') + e.name + (e.isDir ? '' : '  ' + e.size + ' B');
+      el.onclick = () => {
+        document.getElementById('path').value = e.path;
+        if (e.isDir) ls(); else openFile();
+      };
+      box.appendChild(el);
+    }
+    if (!res.entries.length) box.innerHTML = '<span class="muted">pasta vazia</span>';
+  } catch (e) { box.innerHTML = '<span class="err">' + e.message + '</span>'; }
+}
+
+async function openFile() {
+  try {
+    const p = document.getElementById('path').value;
+    const res = await api(`/computers/${need()}/file?path=${encodeURIComponent(p)}`);
+    document.getElementById('filedata').value = res.content;
+  } catch (e) { alert(e.message); }
+}
+
+async function saveFile() {
+  try {
+    const p = document.getElementById('path').value;
+    await api(`/computers/${need()}/file?path=${encodeURIComponent(p)}`, {
+      method: 'PUT', body: JSON.stringify({ content: document.getElementById('filedata').value }),
+    });
+    alert('Salvo em ' + p);
+  } catch (e) { alert(e.message); }
+}
+
+async function ps() {
+  const out = document.getElementById('psout');
+  try {
+    const list = await api(`/computers/${need()}/ps`);
+    out.textContent = list.map((p) => `${String(p.id).padStart(3)} ${p.title}${p.focused ? '  (foco)' : ''}${p.hidden ? '  (servico)' : ''}`).join('\n');
+  } catch (e) { out.innerHTML = '<span class="err">' + e.message + '</span>'; }
+}
+
+function listen() {
+  if (!token) return;
+  const es = new EventSource('/api/events?token=' + encodeURIComponent(token));
+  es.onmessage = (m) => {
+    const data = JSON.parse(m.data);
+    if (data.type === 'connected' || data.type === 'disconnected' || data.type === 'hello') refresh();
+    if (data.type === 'game_event') {
+      const box = document.getElementById('events');
+      box.textContent = `#${data.computer} ${data.name} ${JSON.stringify(data.args)}\n` + box.textContent;
+    }
+  };
+  es.onerror = () => { es.close(); setTimeout(listen, 5000); };
+}
+
+for (const tab of document.querySelectorAll('.tab')) {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('sel', t === tab));
+    document.querySelectorAll('[data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== tab.dataset.tab; });
+    if (tab.dataset.tab === 'screen') shot();
+    if (tab.dataset.tab === 'files') ls();
+    if (tab.dataset.tab === 'procs') ps();
+  };
+}
+
+refresh();
+listen();
+setInterval(refresh, 10000);
+</script>
+</body>
+</html>

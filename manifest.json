@@ -3,16 +3,64 @@
   "version": "0.1.0",
   "files": [
     {
+      "path": "os/apps/calc.lua",
+      "sha1": "564283a487906539b83c6adf0e585073cca48297"
+    },
+    {
+      "path": "os/apps/clock.lua",
+      "sha1": "0278c9ed22f8069594d31d0d2a72bc4d3408ee38"
+    },
+    {
       "path": "os/apps/desktop.lua",
       "sha1": "2099656f24d3258a0ea9218ae4bc9c092873beb3"
+    },
+    {
+      "path": "os/apps/editor.lua",
+      "sha1": "3f541d2d1705b33ca0f718d180e02d7b6253403f"
+    },
+    {
+      "path": "os/apps/files.lua",
+      "sha1": "eb550b0b2d5782720f4f0a8a0b77331c1d97346e"
+    },
+    {
+      "path": "os/apps/help.lua",
+      "sha1": "4ee11f49e34ef89cb181edb4220bb275de10660d"
     },
     {
       "path": "os/apps/launcher.lua",
       "sha1": "59576ae526965c03461525d65ab4bf30fe26eb9b"
     },
     {
+      "path": "os/apps/mirror.lua",
+      "sha1": "eab0d48162ead054cd5bd954e78678594763b5b0"
+    },
+    {
+      "path": "os/apps/netcenter.lua",
+      "sha1": "e1c799be9ad573491c434ace202dbc02149039f3"
+    },
+    {
+      "path": "os/apps/notes.lua",
+      "sha1": "c7e0dd76c15541c41f3b2857833cb0dc6144b88f"
+    },
+    {
+      "path": "os/apps/periph.lua",
+      "sha1": "d92bb9b04953eb35dce04cae6771d326eb3b721d"
+    },
+    {
+      "path": "os/apps/pkg.lua",
+      "sha1": "2161dbe5216dfb262a908d2468a241a83c7513fa"
+    },
+    {
       "path": "os/apps/registry.lua",
-      "sha1": "b9d2a7aaecdf1d9adc5ef0fc2f675c5f4790b96f"
+      "sha1": "5471e8a133d4b61dfed34ea28622fa7238c95659"
+    },
+    {
+      "path": "os/apps/remote.lua",
+      "sha1": "431fdee578b764aee04a3cd3e54a97d904765427"
+    },
+    {
+      "path": "os/apps/settings.lua",
+      "sha1": "131694057159e83eb0b549cb71adeb56f63dcdff"
     },
     {
       "path": "os/apps/taskman.lua",
@@ -24,7 +72,7 @@
     },
     {
       "path": "os/kernel/proc.lua",
-      "sha1": "88d1c5188952f77a880b69e82e81d62ee04360c4"
+      "sha1": "27d10765ffe33b638492df0bcfc3a952dfa5102c"
     },
     {
       "path": "os/kernel/runner.lua",
@@ -41,6 +89,34 @@
     {
       "path": "os/kernel/wm.lua",
       "sha1": "5d0c80b5bc910b0660884c086a726a0eee74e1da"
+    },
+    {
+      "path": "os/lib/fsx.lua",
+      "sha1": "1b93f1b5fb789b70b5ed66ef93699d3c30b79df8"
+    },
+    {
+      "path": "os/lib/hal.lua",
+      "sha1": "a6832969cf60b8a3410b3cb5b67072e0b00ce1f9"
+    },
+    {
+      "path": "os/lib/httpx.lua",
+      "sha1": "81e44124ca1d0b9589cb37eb54a4fe1e0e1f62d1"
+    },
+    {
+      "path": "os/lib/log.lua",
+      "sha1": "94f730c6b055462d57123e6e7f3587ecbf769747"
+    },
+    {
+      "path": "os/lib/strutil.lua",
+      "sha1": "db9e91b0458ba969b1ee2baa677957a67d1102fb"
+    },
+    {
+      "path": "os/net/netd.lua",
+      "sha1": "0d9f2497dc72f4ff95fb8a4c4cdfe4d7c36810f1"
+    },
+    {
+      "path": "os/net/relay.lua",
+      "sha1": "3ae87a182c78b9894f0e344df9f70ffa2d85559e"
     },
     {
       "path": "os/version.lua",

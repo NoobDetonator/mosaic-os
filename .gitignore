@@ -3,3 +3,4 @@ os/var/*.json
 relay/.token
 relay/node_modules/
 tools/emu/last.txt
+tools/emu/sandbox/

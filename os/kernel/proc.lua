@@ -204,6 +204,18 @@ function proc.launchShell(spec)
     return proc.spawn(spec)
 end
 
+-- Roda uma linha de comando ("edit /home/x.lua") no shell da ROM e sai quando terminar.
+function proc.runCommand(cmd, spec)
+    spec = spec or {}
+    local words = {}
+    for word in tostring(cmd):gmatch("%S+") do words[#words + 1] = word end
+    spec.runPath = SHELL
+    spec.args = pack(table.unpack(words))
+    spec.env = spec.env or setmetatable({ shell = proc.parentShell }, { __index = _G })
+    spec.title = spec.title or words[1] or "cmd"
+    return proc.spawn(spec)
+end
+
 -- Servico em segundo plano (sem janela).
 function proc.daemon(name, path, args)
     return proc.launch(path, args, { title = name, hidden = true, daemon = true, holdOnError = false })
@@ -292,7 +304,7 @@ function proc.toggleStartMenu()
         proc.startMenu = nil
         return
     end
-    local h = math.min(wm.H - 2, 12)
+    local h = math.max(4, wm.H - 2)
     local w = math.min(wm.W, 24)
     proc.startMenu = proc.launch("/os/apps/launcher.lua", {}, {
         title = "Iniciar", chrome = false, popup = true, x = 1, y = wm.H - h, w = w, h = h,

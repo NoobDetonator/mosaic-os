@@ -126,7 +126,7 @@ os.queueEvent("mouse_click", 1, 2, wm.H)
 pump()
 if not (proc.startMenu and not proc.startMenu.dead) then snap() end
 check(proc.startMenu and not proc.startMenu.dead, "menu iniciar nao abriu")
-check(screen():find("Desligar", 1, true) ~= nil, "menu iniciar sem itens")
+check(screen():find("Terminal", 1, true) ~= nil, "menu iniciar sem itens")
 os.queueEvent("mouse_click", 1, wm.W - 2, 3)   -- clique no desktop
 pump()
 check(proc.startMenu.dead == true, "menu iniciar nao fechou ao perder foco")
@@ -161,6 +161,39 @@ os.queueEvent("key", keys.enter, false)   -- botao padrao = Sim
 pump()
 check(answer == true, "confirm nao devolveu true (" .. tostring(answer) .. ")")
 check(d.dead == true, "processo do dialogo nao terminou")
+
+-- 12. Todos os apps abrem sem quebrar
+local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman" }
+for _, name in ipairs(apps) do
+    local path = "/os/apps/" .. name .. ".lua"
+    local ap = proc.launch(path, {}, { title = name, x = 2, y = 2, w = wm.W - 4, h = wm.H - 5 })
+    pump()
+    if ap.dead then snap() end
+    check(not ap.dead, "app " .. name .. " fechou sozinho ao abrir")
+    proc.kill(ap)
+    pump()
+end
+
+-- 13. Bibliotecas carregam e funcionam
+local strutil = require("lib.strutil")
+check(strutil.bytes(2048) == "2.0 KB", "strutil.bytes errado: " .. strutil.bytes(2048))
+check(strutil.short(1500000) == "1.50M", "strutil.short errado: " .. strutil.short(1500000))
+check(strutil.duration(3725) == "1h 2m", "strutil.duration errado: " .. strutil.duration(3725))
+check(strutil.itemName("minecraft:iron_ingot") == "Iron Ingot", "strutil.itemName errado")
+check(#strutil.wrap("um dois tres quatro cinco", 10) == 4, "strutil.wrap errado: " .. #strutil.wrap("um dois tres quatro cinco", 10))
+local fsx = require("lib.fsx")
+check(fsx.write("/tmp_test.txt", "abc") == true, "fsx.write falhou")
+check(fsx.read("/tmp_test.txt") == "abc", "fsx.read falhou")
+check(fsx.writeJSON("/tmp_test.json", { a = 1 }) == true, "fsx.writeJSON falhou")
+check(fsx.readJSON("/tmp_test.json").a == 1, "fsx.readJSON falhou")
+check(fsx.uniqueName("/tmp_test.txt") == "/tmp_test (2).txt", "fsx.uniqueName errado: " .. fsx.uniqueName("/tmp_test.txt"))
+local hal = require("lib.hal")
+check(type(hal.list()) == "table", "hal.list nao devolveu tabela")
+check(hal.find("chatBox") == nil, "hal.find achou periferico inexistente")
+local logger = require("lib.log").open("teste")
+logger:info("linha de teste")
+check(#logger:tail(10) >= 1, "log nao gravou")
+require("lib.httpx")
 
 -- Resultado
 term.redirect(term.native())

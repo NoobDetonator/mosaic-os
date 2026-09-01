@@ -1,0 +1,15 @@
+{
+  "name": "mosaic-relay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Relay do Mosaic OS: ponte entre computadores do CC:Tweaked e o mundo fora do jogo",
+  "main": "relay.js",
+  "scripts": {
+    "start": "node relay.js",
+    "mcp": "node mcp.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  }
+}

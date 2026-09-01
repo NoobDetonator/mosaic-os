@@ -22,7 +22,7 @@ const FORBIDDEN = [
   [/\bcolors\.fromBlit\b|\bcolours\.fromBlit\b/, 'colors.fromBlit (CC:T 1.106)'],
   [/\bexpect\.range\b/, 'cc.expect.range (CC:T 1.96)'],
   [/\bfs\.combine\s*\([^()]*,[^()]*,[^()]*\)/, 'fs.combine com >2 args (CC:T 1.95)'],
-  [/\bgetResponseHeaders\s*\(\)/, 'Websocket.getResponseHeaders (CC:T 1.117) — ok só em http.Response'],
+  [/\b(ws|socket|websocket)\.getResponseHeaders\s*\(/, 'Websocket.getResponseHeaders (CC:T 1.117)'],
 ];
 
 function walk(dir, out) {
