@@ -32,9 +32,9 @@ os/kernel/proc.lua -> scheduler: spawn/launch/resume/kill/terminate/setFocus/rai
 os/kernel/wm.lua   -> canvas offscreen (window.create(root,1,1,W,H,false)), z-order, hitTest, drag/resize, taskbar, screenshot
 os/kernel/ui.lua   -> widgets (form/label/button/textbox/list/checkbox/dropdown/progress) + msgbox/confirm/prompt modais
 os/kernel/theme.lua-> cores nomeadas
-os/lib/*           -> fsx, json, log, config, strutil, hal (periféricos), notify, httpx
+os/lib/*           -> fsx, hal (periféricos), httpx, log, strutil
 os/net/*           -> relay.lua (websocket p/ relay Node), netd.lua (rednet entre computadores Mosaic)
-os/apps/*          -> desktop, terminal, files, taskman, settings, netcenter, periph, notes, calc, clock, help, pkg, remote
+os/apps/*          -> desktop, launcher, registry, files, editor, netcenter, periph, taskman, settings, help, notes, calc, clock, remote, pkg, mirror
 relay/             -> relay.js (WS + HTTP API + dashboard), mcp.js (tools p/ Claude Code)
 ```
 
@@ -45,11 +45,15 @@ Fatos do kernel que não são óbvios:
 - `terminate` ignora filtros de evento; vai só para o processo focado. `os.queueEvent` descarta funções → só ids.
 - Programas externos rodam via `os.run(env, "/rom/programs/shell.lua", cmd, ...)`; o env recebe um `multishell` compatível
   para `shell.openTab`/`fg`/`bg` abrirem janelas.
+- O app "Terminal" não é um arquivo: é a entrada `action = "shell"` do `apps/registry.lua`, que abre o shell da ROM numa janela.
 
 ## Como testar
 
 - `node tools/lint.js` — sintaxe Lua 5.1 (luaparse) + grep de APIs proibidas. Rode antes de dizer que terminou.
+- `node tools/test.js` — self-check do kernel no emulador embutido (`tools/emu`, fengari). Não precisa do CraftOS-PC.
+- `node tools/emu/emu.js --show` — boota o OS de verdade e imprime a tela final; bom para conferir layout.
 - `node tools/manifest.js` — regenera `manifest.json` (usado por `install.lua` e pelo app `pkg`).
 - CraftOS-PC **v2.7.2** (ROM do CC:T 1.101.1; versões 2.8+ têm ROM Lua 5.2 e escondem bugs):
-  `craftos --headless --script tools/test/run.lua --mount-rw /os=<abs>/mosaic/os --directory <tmp>`.
+  `craftos --headless --script tools/test/run.lua --mount-rw /os=<abs>/os --directory <tmp>`.
 - Relay: `cd relay && npm install && node relay.js` → `http://localhost:8765`.
+- `node tools/test-relay.js` — teste de integração do relay (sobe o servidor, conecta, fecha).

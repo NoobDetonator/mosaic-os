@@ -79,3 +79,7 @@ os/apps/             aplicativos
 relay/               servidor Node + dashboard + MCP
 tools/               lint, emulador, testes, gerador de manifest
 ```
+
+## Licença
+
+[MIT](LICENSE).
