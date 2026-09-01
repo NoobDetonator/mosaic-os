@@ -10,9 +10,8 @@ local function save()
     mosaic.notify("Configuracoes salvas")
 end
 
-f:add(ui.label { x = 1, y = 1, w = w, text = " Configuracoes", bg = theme.accent, fg = theme.accentFg })
 
-local y = 3
+local y = 1
 local function row(text)
     f:add(ui.label { x = 2, y = y, text = text })
     y = y + 1
@@ -84,13 +83,13 @@ end })
 y = y + 2
 
 f:add(ui.checkbox {
-    x = 2, y = y, text = "Rede rednet entre computadores",
+    x = 2, y = y, text = "Rede entre computadores",
     checked = settings.get("mosaic.net.enabled") ~= false,
     onChange = function(_, v) settings.set("mosaic.net.enabled", v) save() end,
 })
 y = y + 1
 f:add(ui.checkbox {
-    x = 2, y = y, text = "Papel de parede (/home/wallpaper.nfp)",
+    x = 2, y = y, text = "Papel de parede",
     checked = settings.get("mosaic.wallpaper") ~= nil,
     onChange = function(_, v)
         settings.set("mosaic.wallpaper", v and "/home/wallpaper.nfp" or nil)

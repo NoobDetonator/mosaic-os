@@ -7,9 +7,8 @@ local strutil = mosaic.lib("strutil")
 local w, h = term.getSize()
 local f = ui.form()
 
-f:add(ui.label { x = 1, y = 1, w = w, text = " Perifericos conectados", bg = theme.accent, fg = theme.accentFg })
 local list = f:add(ui.list {
-    x = 1, y = 2, w = w, h = h - 3,
+    x = 1, y = 1, w = w, h = h - 2,
     render = function(it) return string.format(" %-22s %s", strutil.ellipsis(it.name, 22), it.type) end,
 })
 local info = f:add(ui.label { x = 1, y = h, w = w, text = "", bg = theme.taskbarBg, fg = theme.taskbarFg })

@@ -101,7 +101,9 @@ end
 -- Shell de topo: roda o script inicial (equivale ao rom/startup.lua) e entra no prompt.
 if not parentShell then
     local script = host.opts.script
-    if fs.exists(script) then shell.run(script) end
+    -- --script aceita argumentos ("/test/debug.lua /os/apps/files.lua"); so o primeiro
+    -- pedaco e' o caminho do arquivo.
+    if fs.exists(script:match("^%S+") or script) then shell.run(script) end
     -- se o script terminou, o computador "desliga" (headless)
     if host.opts.show then host.print(term.screenText()) end
     host.exit(0)

@@ -96,7 +96,7 @@ function Text:onKey(code)
     if code == keys.down then self.scroll = (self.scroll or 0) + 1 self:invalidate()
     elseif code == keys.up then self.scroll = (self.scroll or 0) - 1 self:invalidate() end
 end
-function ui.text(o) return newWidget(Text, o, { w = 20, h = 3, focusable = true }) end
+function ui.text(o) return newWidget(Text, o, { w = 20, h = 3, focusable = true, scrollable = true }) end
 
 -- ---------------------------------------------------------------- Button
 local Button = setmetatable({}, Widget) Button.__index = Button
@@ -287,7 +287,7 @@ function List:onKey(code)
     elseif code == keys.enter or code == keys.numPadEnter then self:select(self.selected, true) end
 end
 function ui.list(o)
-    local l = newWidget(List, o, { w = 20, h = 5, focusable = true, items = {} })
+    local l = newWidget(List, o, { w = 20, h = 5, focusable = true, scrollable = true, items = {} })
     if l.selected == nil and #l.items > 0 then l.selected = 1 end
     return l
 end
@@ -398,9 +398,47 @@ function Form:clear()
     self.dirty = true
 end
 
+-- Rolagem do form: os widgets continuam com coordenadas absolutas, o form e' que tem
+-- um viewport. Serve para formularios mais altos que a janela (ex.: Configuracoes).
+function Form:viewHeight()
+    local _, h = (self.term or term.current()).getSize()
+    return h
+end
+
+function Form:contentHeight()
+    local bottom = 0
+    for _, w in ipairs(self.widgets) do
+        if w.visible ~= false then
+            local b = w.y + (w.h or 1) - 1
+            if b > bottom then bottom = b end
+        end
+    end
+    return bottom
+end
+
+function Form:maxScroll(H)
+    return math.max(0, self:contentHeight() - (H or self:viewHeight()))
+end
+
+function Form:scrollTo(n, H)
+    local s = math.max(0, math.min(n, self:maxScroll(H)))
+    if s ~= (self.scroll or 0) then self.scroll = s self.dirty = true end
+    return s
+end
+
+-- Traz o widget para dentro do viewport; sem isso o Tab manda o foco para fora da tela.
+function Form:reveal(w)
+    if not w then return end
+    local H = self:viewHeight()
+    local off = self.scroll or 0
+    if w.y - off < 1 then self:scrollTo(w.y - 1, H)
+    elseif w.y + (w.h or 1) - 1 - off > H then self:scrollTo(w.y + (w.h or 1) - 1 - H, H) end
+end
+
 function Form:setFocus(w)
     if self.focused == w then return end
     self.focused = w
+    self:reveal(w)
     self.dirty = true
 end
 
@@ -417,8 +455,22 @@ function Form:focusNext(dir)
     end
 end
 
+-- Barra de rolagem do form, na ultima coluna. Mesmo desenho que o ui.list usa.
+function Form:drawScrollbar(t, W, H, off)
+    local content = self:contentHeight()
+    if content <= H then return end
+    local barH = math.max(1, math.floor(H * H / content))
+    local barY = math.floor(off / math.max(1, content - H) * (H - barH) + 0.5)
+    for i = 0, H - 1 do
+        t.setCursorPos(W, i + 1)
+        t.setBackgroundColor((i >= barY and i < barY + barH) and theme.accent or theme.mutedFg)
+        t.write(" ")
+    end
+end
+
 function Form:draw()
     local t = self.term or term.current()
+    local W, H = t.getSize()
     t.setCursorBlink(false)
     if self.clear ~= false then
         t.setBackgroundColor(self.bg)
@@ -426,11 +478,24 @@ function Form:draw()
         t.clear()
     end
     if self.onDraw then self.onDraw(self, t) end
+    local off = math.max(0, math.min(self.scroll or 0, self:maxScroll(H)))
+    self.scroll = off
+    -- ponytail: desloca o y do widget so' durante o desenho e devolve em seguida. Custa uma
+    -- mutacao temporaria, mas nenhum widget precisa saber que o form rola.
     for _, w in ipairs(self.widgets) do
-        if w.visible ~= false then w:draw(t) end
+        if w.visible ~= false then
+            local y0 = w.y
+            w.y = y0 - off
+            if w.y + (w.h or 1) - 1 >= 1 and w.y <= H then w:draw(t) end
+            w.y = y0
+        end
     end
+    self:drawScrollbar(t, W, H, off)
     if self.focused and self.focused.placeCursor and self.focused.visible ~= false then
-        self.focused:placeCursor(t)
+        local y0 = self.focused.y
+        self.focused.y = y0 - off
+        if self.focused.y >= 1 and self.focused.y <= H then self.focused:placeCursor(t) end
+        self.focused.y = y0
     end
     self.dirty = false
 end
@@ -444,6 +509,10 @@ function Form:widgetAt(x, y)
 end
 
 function Form:handle(ev, a, b, c)
+    -- Coordenada do mouse chega na tela; os widgets vivem no espaco do conteudo.
+    if ev == "mouse_click" or ev == "mouse_drag" or ev == "mouse_up" or ev == "mouse_scroll" then
+        c = (c or 0) + (self.scroll or 0)
+    end
     if ev == "mouse_click" then
         local w = self:widgetAt(b, c)
         self.mouseTarget = w
@@ -460,8 +529,11 @@ function Form:handle(ev, a, b, c)
         if ev == "mouse_up" then self.mouseTarget = nil end
         return true
     elseif ev == "mouse_scroll" then
+        -- So' widget que rola de verdade consome; senao o form inteiro rola (um label
+        -- embaixo do cursor nao pode engolir a roda do mouse).
         local w = self:widgetAt(b, c)
-        if w then w:onMouse(ev, nil, b - w.x + 1, c - w.y + 1, a) return true end
+        if w and w.scrollable then w:onMouse(ev, nil, b - w.x + 1, c - w.y + 1, a) return true end
+        if self:maxScroll() > 0 then self:scrollTo((self.scroll or 0) + a) return true end
     elseif ev == "key" then
         if a == keys.tab then
             self:focusNext(self.shiftHeld and -1 or 1)

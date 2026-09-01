@@ -8,8 +8,7 @@ if not fs.exists(DIR) then fs.makeDir(DIR) end
 
 local w, h = term.getSize()
 local f = ui.form()
-f:add(ui.label { x = 1, y = 1, w = w, text = " Notas", bg = theme.accent, fg = theme.accentFg })
-local list = f:add(ui.list { x = 1, y = 2, w = w, h = h - 3, render = function(n) return " " .. n end })
+local list = f:add(ui.list { x = 1, y = 1, w = w, h = h - 2, render = function(n) return " " .. n end })
 local preview = f:add(ui.label { x = 1, y = h, w = w, text = "", bg = theme.taskbarBg, fg = theme.taskbarFg })
 
 local function refresh()

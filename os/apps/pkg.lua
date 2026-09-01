@@ -10,12 +10,11 @@ local f = ui.form()
 local installed = fsx.readJSON("/os/var/installed.json", {}) or {}
 local base = installed.base or mosaic.version.repo
 
-f:add(ui.label { x = 1, y = 1, w = w, text = " Atualizar o Mosaic OS", bg = theme.accent, fg = theme.accentFg })
-local infoLabel = f:add(ui.label { x = 2, y = 3, w = w - 2,
+local infoLabel = f:add(ui.label { x = 2, y = 1, w = w - 2,
     text = "Instalado: " .. mosaic.version.version .. (installed.version and (" (pacote " .. installed.version .. ")") or "") })
-local urlBox = f:add(ui.textbox { x = 2, y = 5, w = w - 3, text = base })
-f:add(ui.label { x = 2, y = 4, text = "Repositorio (raw do GitHub):", fg = theme.mutedFg })
-local list = f:add(ui.list { x = 1, y = 7, w = w, h = h - 9, render = function(it) return " " .. it.mark .. " " .. it.path end })
+local urlBox = f:add(ui.textbox { x = 2, y = 3, w = w - 3, text = base })
+f:add(ui.label { x = 2, y = 2, text = "Repositorio (raw do GitHub):", fg = theme.mutedFg })
+local list = f:add(ui.list { x = 1, y = 5, w = w, h = h - 7, render = function(it) return " " .. it.mark .. " " .. it.path end })
 local status = f:add(ui.label { x = 1, y = h, w = w, text = " Clique em Verificar para comecar.", bg = theme.taskbarBg, fg = theme.taskbarFg })
 
 local pending = {}

@@ -15,9 +15,10 @@ if not peerId then
     if not peerId then return end
 end
 
+mosaic.setTitle(nil, "Remoto #" .. peerId)
+
 local f = ui.form()
-f:add(ui.label { x = 1, y = 1, w = w, text = " Remoto #" .. peerId, bg = theme.accent, fg = theme.accentFg })
-local list = f:add(ui.list { x = 1, y = 2, w = w, h = h - 4, items = history, render = function(l) return " " .. l end })
+local list = f:add(ui.list { x = 1, y = 1, w = w, h = h - 3, items = history, render = function(l) return " " .. l end })
 f:add(ui.label { x = 1, y = h - 2, w = w, text = " Codigo Lua (Enter envia):", fg = theme.mutedFg })
 local box = f:add(ui.textbox { x = 2, y = h - 1, w = w - 2 })
 

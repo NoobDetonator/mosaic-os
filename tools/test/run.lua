@@ -195,6 +195,29 @@ logger:info("linha de teste")
 check(#logger:tail(10) >= 1, "log nao gravou")
 require("lib.httpx")
 
+-- 14. Form rola quando o conteudo passa da altura da janela (era o bug do app Configuracoes)
+local ui = proc.api.ui
+local vw = window.create(wm.canvas, 1, 1, 20, 5, false)
+local sf = ui.form { term = vw }
+sf:add(ui.label { x = 1, y = 1, text = "topo" })
+local fundo = sf:add(ui.button { x = 1, y = 12, text = "fundo" })
+check(sf:contentHeight() == 12, "contentHeight errado: " .. sf:contentHeight())
+check(sf:maxScroll(5) == 7, "maxScroll errado: " .. sf:maxScroll(5))
+sf:scrollTo(999, 5)
+check(sf.scroll == 7, "scrollTo nao limitou no fim: " .. tostring(sf.scroll))
+sf.scroll = 0
+sf:reveal(fundo)
+check(sf.scroll == 7, "reveal nao trouxe o widget para a tela: " .. tostring(sf.scroll))
+sf:draw()
+check(vw.getLine(5):find("fundo", 1, true) ~= nil, "widget rolado nao desenhou na ultima linha")
+local clicado = false
+fundo.onClick = function() clicado = true end
+sf:handle("mouse_click", 1, 1, 5)          -- clique na linha 5 da tela = linha 12 do conteudo
+check(clicado, "clique no widget rolado nao chegou nele")
+sf.scroll = 0
+sf:handle("mouse_scroll", 1, 1, 3)          -- roda do mouse fora de widget rolavel = rola o form
+check(sf.scroll == 1, "roda do mouse nao rolou o form: " .. tostring(sf.scroll))
+
 -- Resultado
 term.redirect(term.native())
 term.setBackgroundColor(colors.black)

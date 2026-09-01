@@ -8,12 +8,11 @@ local w, h = term.getSize()
 local f = ui.form()
 local peers = {}
 
-f:add(ui.label { x = 1, y = 1, w = w, text = " Rede", bg = theme.accent, fg = theme.accentFg })
-local relayLine = f:add(ui.label { x = 2, y = 3, w = w - 2, text = "" })
-local relayInfo = f:add(ui.label { x = 2, y = 4, w = w - 2, text = "", fg = theme.mutedFg })
-f:add(ui.label { x = 2, y = 6, text = "Computadores na rede local:" })
+local relayLine = f:add(ui.label { x = 2, y = 1, w = w - 2, text = "" })
+local relayInfo = f:add(ui.label { x = 2, y = 2, w = w - 2, text = "", fg = theme.mutedFg })
+f:add(ui.label { x = 2, y = 4, text = "Computadores na rede local:" })
 local list = f:add(ui.list {
-    x = 1, y = 7, w = w, h = h - 9,
+    x = 1, y = 5, w = w, h = h - 7,
     render = function(p)
         return string.format(" #%-4d %-16s %s", p.id, strutil.ellipsis(p.name or "?", 16), p.os or "")
     end,
@@ -46,7 +45,7 @@ local function scan()
     f:draw()
     local st = mosaic.netStatus and mosaic.netStatus() or nil
     if not st or not st.side then
-        status.text = " Sem modem conectado. Coloque um modem no computador."
+        status.text = " Sem modem. Coloque um no PC."
         list:setItems({})
         f.dirty = true
         return

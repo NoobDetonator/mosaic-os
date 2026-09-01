@@ -11,9 +11,8 @@ local env = { math = math, abs = math.abs, floor = math.floor, ceil = math.ceil,
     tan = math.tan, log = math.log, exp = math.exp, random = math.random, tonumber = tonumber, ans = 0 }
 
 local f = ui.form()
-f:add(ui.label { x = 1, y = 1, w = w, text = " Calculadora", bg = theme.accent, fg = theme.accentFg })
-local list = f:add(ui.list { x = 1, y = 2, w = w, h = h - 4, items = history, render = function(x) return " " .. x end })
-f:add(ui.label { x = 1, y = h - 2, w = w, text = " Expressao (Enter calcula, ans = ultimo):" })
+local list = f:add(ui.list { x = 1, y = 1, w = w, h = h - 3, items = history, render = function(x) return " " .. x end })
+f:add(ui.label { x = 1, y = h - 2, w = w, text = " Expressao (Enter, ans = ultimo):" })
 local box = f:add(ui.textbox { x = 2, y = h - 1, w = w - 2 })
 
 local function calc()
