@@ -12,7 +12,7 @@
     },
     {
       "path": "os/apps/desktop.lua",
-      "sha1": "68a2dc7ee7d634275e4f00ee24cc9aaa8c8a6904"
+      "sha1": "42430ea36b4e87a5e5b9de4349136d74181a9d6a"
     },
     {
       "path": "os/apps/editor.lua",
@@ -71,6 +71,22 @@
       "sha1": "c5a219dff105c301ec95162cd5541a82e1c95a61"
     },
     {
+      "path": "os/docs/01-primeiros-passos.md",
+      "sha1": "8a9148680709c731e0d40aff93521913802d7e78"
+    },
+    {
+      "path": "os/docs/02-aplicativos.md",
+      "sha1": "54c07a74f2736db492cdb5f0a18f3c6d71264ae0"
+    },
+    {
+      "path": "os/docs/03-rede-e-relay.md",
+      "sha1": "64e67669e9596799e6fa17f84ac3b2f8b1f546ca"
+    },
+    {
+      "path": "os/docs/04-seus-programas.md",
+      "sha1": "6c919d85a8e9e8d80b9cdefbee26678655b87d0a"
+    },
+    {
       "path": "os/kernel/proc.lua",
       "sha1": "27d10765ffe33b638492df0bcfc3a952dfa5102c"
     },
@@ -105,6 +121,10 @@
     {
       "path": "os/lib/log.lua",
       "sha1": "94f730c6b055462d57123e6e7f3587ecbf769747"
+    },
+    {
+      "path": "os/lib/pixel.lua",
+      "sha1": "c24ab53fd55d70765e3a530dc9006745999573c7"
     },
     {
       "path": "os/lib/strutil.lua",

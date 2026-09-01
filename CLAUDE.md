@@ -32,8 +32,9 @@ os/kernel/proc.lua -> scheduler: spawn/launch/resume/kill/terminate/setFocus/rai
 os/kernel/wm.lua   -> canvas offscreen (window.create(root,1,1,W,H,false)), z-order, hitTest, drag/resize, taskbar, screenshot
 os/kernel/ui.lua   -> widgets (form/label/button/textbox/list/checkbox/dropdown/progress) + msgbox/confirm/prompt modais
 os/kernel/theme.lua-> cores nomeadas
-os/lib/*           -> fsx, hal (periféricos), httpx, log, strutil
+os/lib/*           -> fsx, hal (periféricos), httpx, log, pixel (teletext 2x3), strutil
 os/net/*           -> relay.lua (websocket p/ relay Node), netd.lua (rednet entre computadores Mosaic)
+os/docs/*          -> guias em markdown simples lidos pelo app Ajuda (entram no manifest)
 os/apps/*          -> desktop, launcher, registry, files, editor, netcenter, periph, taskman, settings, help, notes, calc, clock, remote, pkg, mirror
 relay/             -> relay.js (WS + HTTP API + dashboard), mcp.js (tools p/ Claude Code)
 ```
@@ -46,11 +47,15 @@ Fatos do kernel que não são óbvios:
 - Programas externos rodam via `os.run(env, "/rom/programs/shell.lua", cmd, ...)`; o env recebe um `multishell` compatível
   para `shell.openTab`/`fg`/`bg` abrirem janelas.
 - O app "Terminal" não é um arquivo: é a entrada `action = "shell"` do `apps/registry.lua`, que abre o shell da ROM numa janela.
+- `ui.form` rola sozinho: `Form:draw` desloca `w.y` durante o desenho e devolve, e `Form:handle` soma `self.scroll` ao y do mouse.
+  Nenhum widget sabe que existe scroll. Só `list` e `text` (com `scrollable = true`) consomem `mouse_scroll`; o resto deixa o form rolar.
+- Sub-pixel (`lib/pixel`) é 2x3 por célula, e uma célula com sub-pixel só aceita 2 cores e nenhum texto: serve para imagem, não para interface.
 
 ## Como testar
 
 - `node tools/lint.js` — sintaxe Lua 5.1 (luaparse) + grep de APIs proibidas. Rode antes de dizer que terminou.
 - `node tools/test.js` — self-check do kernel no emulador embutido (`tools/emu`, fengari). Não precisa do CraftOS-PC.
+- `node tools/debug.js os/apps/files.lua` — abre um app no emulador e mostra a tela, antes e depois de rolar.
 - `node tools/emu/emu.js --show` — boota o OS de verdade e imprime a tela final; bom para conferir layout.
 - `node tools/manifest.js` — regenera `manifest.json` (usado por `install.lua` e pelo app `pkg`).
 - CraftOS-PC **v2.7.2** (ROM do CC:T 1.101.1; versões 2.8+ têm ROM Lua 5.2 e escondem bugs):

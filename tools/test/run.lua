@@ -194,6 +194,13 @@ local logger = require("lib.log").open("teste")
 logger:info("linha de teste")
 check(#logger:tail(10) >= 1, "log nao gravou")
 require("lib.httpx")
+local okPixel, errPixel = pcall(require("lib.pixel").demo)
+check(okPixel, "pixel.demo falhou: " .. tostring(errPixel))
+-- O app Ajuda le /os/docs; sem isso ele abre vazio mandando "rode o Atualizar OS".
+check(fs.isDir("/os/docs"), "sem /os/docs: o app Ajuda fica vazio")
+local nmd = 0
+for _, n in ipairs(fs.list("/os/docs") or {}) do if n:match("%.md$") then nmd = nmd + 1 end end
+check(nmd >= 4, "poucos documentos em /os/docs: " .. nmd)
 
 -- 14. Form rola quando o conteudo passa da altura da janela (era o bug do app Configuracoes)
 local ui = proc.api.ui

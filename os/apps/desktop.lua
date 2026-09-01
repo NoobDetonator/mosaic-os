@@ -24,17 +24,34 @@ local function layout()
     end
 end
 
+-- Montar o canvas de sub-pixels custa 102x57 entradas; guarda o resultado por
+-- caminho+tamanho para nao refazer a cada redesenho da area de trabalho.
+local wallCache = nil
+
 local function drawWallpaper(t, w, h)
     local path = settings.get("mosaic.wallpaper")
-    if path and fs.exists(path) then
+    if not path or not fs.exists(path) then wallCache = nil return end
+    local key = path .. ":" .. w .. "x" .. h
+    if not wallCache or wallCache.key ~= key then
+        wallCache = { key = key }
         local ok, img = pcall(paintutils.loadImage, path)
-        if ok and img then
-            local prev = term.current()
-            term.redirect(t)
-            paintutils.drawImage(img, 1, 1)
-            term.redirect(prev)
-            return
+        if ok and type(img) == "table" and #img > 0 then
+            -- Imagem maior que a grade de caracteres = arquivo em alta resolucao: cada
+            -- pixel do arquivo vira um sub-pixel. Menor que isso e um .nfp normal.
+            if #img > h or #(img[1] or {}) > w then
+                wallCache.canvas = mosaic.lib("pixel").fromImage(img, w, h, theme.desktopBg)
+            else
+                wallCache.img = img
+            end
         end
+    end
+    if wallCache.canvas then
+        wallCache.canvas:render(t, 1, 1)
+    elseif wallCache.img then
+        local prev = term.current()
+        term.redirect(t)
+        paintutils.drawImage(wallCache.img, 1, 1)
+        term.redirect(prev)
     end
 end
 
