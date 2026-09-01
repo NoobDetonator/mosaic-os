@@ -12,7 +12,7 @@
     },
     {
       "path": "os/apps/desktop.lua",
-      "sha1": "2099656f24d3258a0ea9218ae4bc9c092873beb3"
+      "sha1": "68a2dc7ee7d634275e4f00ee24cc9aaa8c8a6904"
     },
     {
       "path": "os/apps/editor.lua",

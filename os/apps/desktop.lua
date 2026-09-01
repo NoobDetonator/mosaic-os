@@ -3,7 +3,7 @@ local ui = mosaic.ui
 local theme = mosaic.theme
 local registry = mosaic.require("apps.registry")
 
-local ICON_W, ICON_H = 10, 3
+local ICON_W, ICON_H = 12, 3   -- largura 12 = 11 col. de nome, o suficiente para "Perifericos"
 
 local icons = {}
 
@@ -15,7 +15,7 @@ local function layout()
     for _, app in ipairs(registry.all()) do
         if app.desktop then
             local col, row = i % cols, math.floor(i / cols)
-            local y = 1 + row * ICON_H
+            local y = 2 + row * ICON_H   -- linha 1 e do nome do computador
             if y + ICON_H - 1 <= h then
                 icons[#icons + 1] = { app = app, x = 2 + col * ICON_W, y = y }
             end
@@ -45,7 +45,7 @@ f.onDraw = function(_, t)
     drawWallpaper(t, w, h)
     for _, ic in ipairs(icons) do
         local app = ic.app
-        t.setCursorPos(ic.x + 3, ic.y)
+        t.setCursorPos(ic.x + math.floor((ICON_W - 4) / 2), ic.y)
         t.setBackgroundColor(app.color or colors.white)
         t.setTextColor(app.color == colors.black and colors.white or colors.black)
         t.write(ui.pad(app.icon or "?", 3, "center"))
