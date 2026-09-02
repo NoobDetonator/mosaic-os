@@ -81,6 +81,58 @@ if (cmd === 'test') {
   process.exit(status || 0);
 }
 
+// Liga o OS e tira um print PNG de verdade (pixels, fonte e cores do CraftOS-PC).
+// Precisa do modo grafico: uma janela abre por alguns segundos e fecha sozinha.
+function bootAndShoot(actions, secs, outFile) {
+  resetComputer();
+  fs.copyFileSync(path.join(ROOT, 'startup.lua'), path.join(COMPUTER, 'startup.lua'));
+  const SHOTS = path.join(DATA, 'screenshots');
+  fs.rmSync(SHOTS, { recursive: true, force: true });
+  const OUT = path.join(DATA, 'out');
+  fs.rmSync(OUT, { recursive: true, force: true });
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'snap.lua'), [
+    'mosaic.minimize()',
+    `sleep(${secs})`,
+    ...actions,
+    // term.screenshot e uma extensao do CraftOS-PC; captura a tela real, nao o redirect.
+    'local shoot = term.screenshot or (term.native and term.native().screenshot)',
+    'if shoot then pcall(shoot) end',
+    'sleep(1)',
+    'os.shutdown()',
+  ].join('\n'));
+  fs.writeFileSync(path.join(COMPUTER, '.settings'),
+    '{\n  ["mosaic.autostart"] = {\n    "/out/snap.lua",\n  },\n}\n');
+
+  spawnSync(EXE.replace('_console', ''), ['-d', DATA, ...mounts(true), '--mount-rw', `/out=${OUT}`], {
+    encoding: 'utf8', timeout: (secs + 30) * 1000, input: '', windowsHide: true,
+  });
+
+  if (!fs.existsSync(SHOTS)) return null;
+  const files = fs.readdirSync(SHOTS).filter((f) => /\.(png|bmp|webp)$/.test(f)).sort();
+  if (!files.length) return null;
+  const src = path.join(SHOTS, files[files.length - 1]);
+  const dest = outFile || path.join(ROOT, 'tools', 'shots', files[files.length - 1]);
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(src, dest);
+  return dest;
+}
+
+if (cmd === 'shot') {
+  const actions = arg ? [`mosaic.launch("/os/apps/${arg}.lua")`, 'sleep(2)'] : [];
+  if (arg && !fs.existsSync(path.join(ROOT, 'os', 'apps', `${arg}.lua`))) {
+    console.error(`nao existe os/apps/${arg}.lua`);
+    process.exit(2);
+  }
+  const file = bootAndShoot(actions, arg ? 2 : 3, process.argv[4]);
+  if (!file) {
+    console.error('O CraftOS-PC nao gerou o print. Ele precisa do modo grafico (nao roda headless).');
+    process.exit(1);
+  }
+  console.log(file);
+  process.exit(0);
+}
+
 // Liga o OS de verdade, executa `actions` (Lua) e devolve a tela composta.
 // A tela nao pode sair do despejo do headless: o relogio redesenha a cada segundo e o fim
 // da saida vira so a taskbar. Entao o proprio OS tira a foto, por um app de autostart.
