@@ -16,9 +16,20 @@ const m = target.match(/(?:^|[/])(os[/].*)$/);
 if (m) target = '/' + m[1];
 else if (target && target[0] !== '/') target = '/' + target;
 
+// Um argumento "36x10" vira o tamanho da tela — util para conferir o layout num
+// monitor pequeno ou num pocket, sem precisar do jogo.
+const rest = process.argv.slice(3);
+const size = [];
+const clicks = [];
+for (const a of rest) {
+  const m2 = a.match(/^(\d+)x(\d+)$/);
+  if (m2) size.push('--width', m2[1], '--height', m2[2]);
+  else clicks.push(a);
+}
+
 let stderr = '';
 try {
-  execFileSync('node', [emu, '--script', ('/test/debug.lua ' + target + ' ' + process.argv.slice(3).join(' ')).trim()], { encoding: 'utf8' });
+  execFileSync('node', [emu, '--script', ('/test/debug.lua ' + target + ' ' + clicks.join(' ')).trim(), ...size], { encoding: 'utf8' });
 } catch (e) {
   stderr = e.stderr || '';
 }

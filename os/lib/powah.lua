@@ -70,9 +70,17 @@ function powah.read(hw)
         r.tank = { name = tanks[1].name, amount = tanks[1].amount or 0 }
     end
 
-    -- Energia: celula/detector, nunca a face do reator (ela nao tem).
-    local e = hal.energy()
-    if e and (e.capacity > 0 or e.rate) then r.energy = e end
+    -- Energia: o buffer sai do proprio reator, mas SO quando ele vem pela rede com
+    -- fio -- a face encostada direto no computador nao publica energy_storage.
+    -- A vazao (FE/t) nao existe na API do Forge: so com Energy Detector na linha.
+    local e = hal.energy(hw.reactor) or {}
+    if hw.energyDetector then
+        local okR, rate = pcall(hw.energyDetector.getTransferRate)
+        if okR then e.rate = rate end
+        local okL, lim = pcall(hw.energyDetector.getTransferRateLimit)
+        if okL then e.limit = lim end
+    end
+    if (e.capacity or 0) > 0 or e.rate then r.energy = e end
 
     -- Temperatura so existe via NBT do bloco.
     if hw.blockReader then

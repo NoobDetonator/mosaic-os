@@ -101,14 +101,22 @@ local function bar(t, x, y, bw, frac, color)
     t.setBackgroundColor(theme.appBg)
 end
 
+-- Largura do rotulo acompanha a tela: num monitor de 36 colunas nao da para
+-- gastar 11 so com o nome, e numa tela larga ficaria apertado sem necessidade.
+local function labelWidth(tw)
+    return math.max(5, math.min(11, math.floor(tw * 0.3)))
+end
+
 local function row(t, y, tw, label, value, frac, color)
+    local lw = labelWidth(tw)
     t.setCursorPos(1, y)
     t.setBackgroundColor(theme.appBg)
     t.setTextColor(theme.appFg)
-    t.write(" " .. strutil.pad(label, 11))
-    local barW = math.max(4, tw - 13 - #value - 2)
-    bar(t, 13, y, barW, frac, color)
-    t.setCursorPos(13 + barW + 1, y)
+    t.write(" " .. strutil.pad(strutil.ellipsis(label, lw), lw))
+    local x = lw + 2
+    local barW = math.max(3, tw - x - #value - 1)
+    bar(t, x, y, barW, frac, color)
+    t.setCursorPos(math.min(tw - #value + 1, x + barW + 1), y)
     t.setTextColor(theme.appFg)
     t.write(value)
 end
@@ -140,7 +148,8 @@ local function drawPanel(t, reserva)
         return
     end
 
-    local y = 3
+    -- Tela baixa (monitor pequeno) nao pode gastar linha em branco depois do titulo.
+    local y = (th < 14) and 2 or 3
     row(t, y, tw, "Combustivel", tostring(reading.fuel.count), reading.fuel.count / 64, colors.lime)
     y = y + 1
     if reading.coolant.count > 0 then
@@ -177,9 +186,10 @@ local function drawPanel(t, reserva)
         y = y + 1
     end
 
-    -- Grafico com o espaco que sobrar, da serie mais interessante que existir.
-    y = y + 1
-    local sobra = th - y + 1
+    -- Grafico com o que sobrar, mas com teto: solto, ele viraria um bloco de cor
+    -- ocupando a tela inteira num monitor baixo.
+    y = y + ((th < 14) and 0 or 1)
+    local sobra = math.min(6, th - y + 1)
     if sobra >= 3 then
         local serie, cor2, nome = hFuel, colors.lime, "combustivel"
         if hRate.n > 1 then serie, cor2, nome = hRate, colors.yellow, "FE/t"
@@ -195,13 +205,27 @@ local function drawPanel(t, reserva)
     end
 end
 
+-- Maior escala de texto que ainda deixa o painel caber: texto grande se le de
+-- longe, mas nao pode espremer as barras. Medido no servidor: um monitor 2x2 so
+-- serve a 0.5 (36x10); um maior aguenta 1 e fica bem mais legivel de longe.
+local monitorScale
+local function fitMonitor(m)
+    for _, s in ipairs({ 1.5, 1, 0.5 }) do
+        m.setTextScale(s)
+        local mw, mh = m.getSize()
+        if mw >= 26 and mh >= 8 then monitorScale = s return end
+    end
+    m.setTextScale(0.5)
+    monitorScale = 0.5
+end
+
 local function drawMonitor()
     if not hw.monitor then return end
     local ok = pcall(function()
-        hw.monitor.setTextScale(0.5)
+        if not monitorScale then fitMonitor(hw.monitor) end
         drawPanel(hw.monitor, 0)
     end)
-    if not ok then hw.monitor = nil end   -- monitor quebrado no jogo
+    if not ok then hw.monitor, monitorScale = nil, nil end   -- monitor quebrado no jogo
 end
 
 -- ---------------------------------------------------------------- janela
@@ -209,11 +233,18 @@ local f = ui.form()
 local mode = "painel"
 local logList
 
--- Inventarios da rede que servem de deposito de combustivel.
+local SIDES = { front = true, back = true, top = true, bottom = true, left = true, right = true }
+
+-- Inventarios que servem de deposito de combustivel.
+-- pushItems/pullItems so funcionam DENTRO DA MESMA REDE: medido no servidor, um bau
+-- encostado no computador ("right") da "Source does not exist" para um reator que
+-- vem por cabo. Entao, se o reator e de rede, so oferece inventarios de rede --
+-- senao o app deixaria escolher uma opcao que falha calada.
 local function inventories()
+    local reactorEmRede = hw.reactorName ~= nil and not SIDES[hw.reactorName]
     local out = { "(nenhum)" }
     for _, n in ipairs(peripheral.getNames()) do
-        if n ~= hw.reactorName then
+        if n ~= hw.reactorName and (not reactorEmRede or not SIDES[n]) then
             local p = peripheral.wrap(n)
             if p and p.list and p.pushItems then out[#out + 1] = n end
         end
@@ -242,10 +273,12 @@ end
 
 -- ---- barra de abas, presa no rodape (nao rola com o conteudo)
 local navX = 1
+local nav = {}
 local function tab(label, m)
     local b
     b = f:add(ui.button { x = navX, y = h, text = label, pinned = true,
         alt = true, onClick = function() setMode(m) end })
+    nav[#nav + 1] = b
     navX = navX + b:width() + 1
     return b
 end
@@ -253,7 +286,7 @@ tab("Painel", "painel")
 tab("Config", "config")
 tab("Registro", "registro")
 
-f:add(ui.button { x = navX, y = h, text = "Parar", pinned = true, bg = colors.red, fg = colors.white,
+nav[#nav + 1] = f:add(ui.button { x = navX, y = h, text = "Parar", pinned = true, bg = colors.red, fg = colors.white,
     onClick = function()
         local chest = settings.get("mosaic.reactor.chest")
         if not chest then
@@ -290,6 +323,9 @@ local chestSel = 1
 for i, n in ipairs(invs) do if n == chestNow then chestSel = i end end
 local chestBox = f:add(ui.dropdown { x = 2, y = cy, w = math.min(28, w - 4), items = invs,
     selected = chestSel, tab = "config" })
+cy = cy + 1
+local chestHint = f:add(ui.label { x = 2, y = cy, w = w - 3, tab = "config",
+    fg = colors.orange, text = "" })
 cy = cy + 2
 local autofeedBox = f:add(ui.checkbox { x = 2, y = cy, text = "Repor sozinho quando faltar",
     checked = settings.get("mosaic.reactor.autofeed") == true, tab = "config" })
@@ -369,12 +405,21 @@ f.onEvent = function(_, ev, id)
         sample()
         drawMonitor()
         hwLabel.text = hardwareText()
+        chestHint.text = (#chestBox.items <= 1)
+            and "nenhum na rede: ponha um modem com fio no bau" or ""
         if mode == "registro" then setMode("registro") end
         f.dirty = true
         return true
     elseif ev == "term_resize" then
+        -- A janela pode ser maximizada depois de aberta: sem reposicionar, a barra
+        -- de abas fica presa na altura antiga, no meio do formulario.
         w, h = term.getSize()
+        for _, b in ipairs(nav) do b.y = h end
+        logList.w, logList.h = w, h - 1
+        hwLabel.w = w - 3
+        chestBox.w = math.min(28, w - 4)
         f.dirty = true
+        return true
     end
 end
 
