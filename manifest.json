@@ -1,6 +1,6 @@
 {
   "name": "Mosaic OS",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "files": [
     {
       "path": "os/apps/calc.lua",
@@ -76,7 +76,7 @@
     },
     {
       "path": "os/docs/01-primeiros-passos.md",
-      "sha1": "8a9148680709c731e0d40aff93521913802d7e78"
+      "sha1": "854ca8173bb7b73ad096d3caecd545f3213d43fe"
     },
     {
       "path": "os/docs/02-aplicativos.md",
@@ -88,7 +88,7 @@
     },
     {
       "path": "os/docs/04-seus-programas.md",
-      "sha1": "6c919d85a8e9e8d80b9cdefbee26678655b87d0a"
+      "sha1": "9c3ec14558e54b59c106a6085d097bb9a8837fe8"
     },
     {
       "path": "os/kernel/draw.lua",
@@ -248,7 +248,7 @@
     },
     {
       "path": "os/var/log/netd.log",
-      "sha1": "23534ea50e8504abfb8fd4d2ff9b193ceba4af83"
+      "sha1": "53ad3dd3efee354a2db1699c597e36aae2361e54"
     },
     {
       "path": "os/var/log/teste.log",
@@ -256,7 +256,7 @@
     },
     {
       "path": "os/version.lua",
-      "sha1": "94826922ad59217aee32bfab46ca2becf3aa9f47"
+      "sha1": "201f22c37842646ac51697f0133461597ab26ded"
     },
     {
       "path": "startup.lua",

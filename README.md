@@ -4,7 +4,7 @@ Sistema operacional com janelas para [CC:Tweaked](https://tweaked.cc), escrito e
 sem Basalt, sem Pine3D, sem nenhuma dependência externa. Alvo: **Minecraft 1.16.5 / All The Mods 6**
 (CC:Tweaked ~1.95–1.101, Advanced Peripherals 0.7.x).
 
-![versão](https://img.shields.io/badge/versão-0.1.0%20"Tessera"-blue)
+![versão](https://img.shields.io/badge/versão-0.2.0%20"Tessera"-blue)
 
 ## Instalação
 
