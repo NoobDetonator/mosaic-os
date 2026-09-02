@@ -12,7 +12,7 @@
     },
     {
       "path": "os/apps/desktop.lua",
-      "sha1": "b27737b4eedf4db386c087abc1924f02f85e8b8a"
+      "sha1": "e1e3be8be7ff9ec76b185e2180c015874ea5b0fd"
     },
     {
       "path": "os/apps/editor.lua",
@@ -20,7 +20,7 @@
     },
     {
       "path": "os/apps/files.lua",
-      "sha1": "df547fee9052681a46236364775a972c45a51d94"
+      "sha1": "31d05466b11c3c7e3897c8c627d0de239912cd84"
     },
     {
       "path": "os/apps/help.lua",
@@ -36,19 +36,19 @@
     },
     {
       "path": "os/apps/netcenter.lua",
-      "sha1": "fb6ab81071a8a70bfbf57b80b433f4be719cddfb"
+      "sha1": "e2735870e50dc705153ee45202a706d788aeb9a6"
     },
     {
       "path": "os/apps/notes.lua",
-      "sha1": "4f9affbe3df31e7e6bff0178e958c29b949868c9"
+      "sha1": "d0c7b744789c6a3e5cce6718fc7254ae6f5f5b50"
     },
     {
       "path": "os/apps/periph.lua",
-      "sha1": "9d421667f5c4568a3a027964309a60739b248dca"
+      "sha1": "be84d64cc64eba8fd420afb9d156a1590eef2cec"
     },
     {
       "path": "os/apps/pkg.lua",
-      "sha1": "d301da7595701337c54a4931e5c177297b7c8e67"
+      "sha1": "ae5bff7777b79f4835072923915f049b95d2058a"
     },
     {
       "path": "os/apps/reactor.lua",
@@ -68,7 +68,7 @@
     },
     {
       "path": "os/apps/taskman.lua",
-      "sha1": "a36fdd71081dc7166147b529399e2c4999594422"
+      "sha1": "dcda9d001ed1c15ae764513af0f958d76d1e832b"
     },
     {
       "path": "os/boot.lua",
@@ -100,7 +100,7 @@
     },
     {
       "path": "os/kernel/proc.lua",
-      "sha1": "27d10765ffe33b638492df0bcfc3a952dfa5102c"
+      "sha1": "387f30bdc3fbde6448ed7c2e89a18089b2d04a23"
     },
     {
       "path": "os/kernel/runner.lua",
@@ -112,7 +112,7 @@
     },
     {
       "path": "os/kernel/ui.lua",
-      "sha1": "a06a11f06281dd5215f5cc5f04c2f9f2116f104c"
+      "sha1": "6d25922f48c04036bb93c2205ca8da47d62df78a"
     },
     {
       "path": "os/kernel/wm.lua",
@@ -232,11 +232,11 @@
     },
     {
       "path": "os/var/log/crash.log",
-      "sha1": "c1b724b2940193afb619877cab86c132763d7db9"
+      "sha1": "a1d07601c11143ce8c7611a5f75129b8e0118214"
     },
     {
       "path": "os/var/log/kernel.log",
-      "sha1": "918c17b74b54d15557a499465b9bfe08ad501fe8"
+      "sha1": "93ef71a5bd62ddadfcd27a708dbbbb164b03fcdd"
     },
     {
       "path": "os/var/log/netd.log",
@@ -244,7 +244,7 @@
     },
     {
       "path": "os/var/log/teste.log",
-      "sha1": "10487a518b960ccbd7a53197a9cdf84efa737586"
+      "sha1": "022564824713035bb87e81bd1b7bf7da8b3bf010"
     },
     {
       "path": "os/version.lua",

@@ -11,11 +11,12 @@ local ICON_DX = math.floor((ICON_W - 1 - iconlib.COLS) / 2)
 
 local icons = {}
 local sel = 1
+local cols = 1
 
 local function layout()
     local w, h = term.getSize()
     icons = {}
-    local cols = math.max(1, math.floor((w - 1) / ICON_W))
+    cols = math.max(1, math.floor((w - 1) / ICON_W))
     local i = 0
     for _, app in ipairs(registry.all()) do
         if app.desktop then
@@ -98,7 +99,23 @@ local function iconAt(x, y)
 end
 
 f.onEvent = function(_, ev, btn, x, y)
-    if ev == "mouse_click" then
+    if ev == "key" then
+        -- Setas andam pela grade, Enter abre. E' o caminho de teclado para a area de trabalho.
+        local n = #icons
+        if n == 0 then return false end
+        if btn == keys.left then sel = math.max(1, sel - 1)
+        elseif btn == keys.right then sel = math.min(n, sel + 1)
+        elseif btn == keys.up then sel = math.max(1, sel - cols)
+        elseif btn == keys.down then sel = math.min(n, sel + cols)
+        elseif btn == keys.home then sel = 1
+        elseif btn == keys["end"] then sel = n
+        elseif btn == keys.enter or btn == keys.numPadEnter then
+            registry.open(icons[sel].app)
+            return true
+        else return false end
+        f.dirty = true
+        return true
+    elseif ev == "mouse_click" then
         local ic, idx = iconAt(x, y)
         if btn == 1 and ic then
             sel = idx

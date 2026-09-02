@@ -74,9 +74,9 @@ local function addBtn(text, fn, alt)
     local b = f:add(ui.button { x = bx, y = h - 1, text = text, alt = alt, onClick = fn })
     bx = bx + b:width() + 1
 end
-addBtn("Verificar", verify)
-addBtn("Atualizar", apply)
-addBtn("Espaco", function()
+addBtn("&Verificar", verify)
+addBtn("&Atualizar", apply)
+addBtn("&Espaco", function()
     ui.msgbox(string.format("Livre: %s\nMosaic OS ocupa: %s",
         strutil.bytes(fs.getFreeSpace("/")), strutil.bytes(fsx.treeSize("/os"))), "Disco")
 end, true)

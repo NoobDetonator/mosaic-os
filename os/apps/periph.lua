@@ -77,9 +77,9 @@ local function addBtn(text, fn, alt)
     local b = f:add(ui.button { x = bx, y = h - 1, text = text, alt = alt, onClick = fn })
     bx = bx + b:width() + 1
 end
-addBtn("Metodos", function() local it = list:getSelected() if it then showMethods(it) end end)
-addBtn("Atualizar", refresh, true)
-addBtn("Resumo", function()
+addBtn("&Metodos", function() local it = list:getSelected() if it then showMethods(it) end end)
+addBtn("&Atualizar", refresh, true)
+addBtn("&Resumo", function()
     local lines = {}
     local e = hal.energy()
     if e then lines[#lines + 1] = string.format("Energia: %s / %s (%.0f%%)", strutil.short(e.stored), strutil.short(e.capacity), e.percent) end

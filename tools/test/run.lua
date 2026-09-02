@@ -274,6 +274,58 @@ check(bgAt(wm.H, 4, 13) ~= string.rep(sh, 10), "sombra invadiu a taskbar")
 proc.kill(rente)
 pump()
 
+-- 14. Navegacao por teclado
+local ui = require("kernel.ui")
+local label, letter, mark = ui.mnemonic("&Salvar")
+check(label == "Salvar", "mnemonic devolveu rotulo errado: " .. tostring(label))
+check(letter == "s", "mnemonic achou a letra errada: " .. tostring(letter))
+check(mark == 1, "mnemonic marcou a posicao errada: " .. tostring(mark))
+check(select(2, ui.mnemonic("Sem atalho")) == nil, "texto sem & nao pode ter atalho")
+check(ui.mnemonic("A && B") == "A & B", "&& deveria virar um & literal")
+
+-- Enter aciona o botao padrao do formulario; Esc o de cancelar.
+local escolha
+local kb = proc.spawn { title = "Teclado", x = 2, y = 2, w = 40, h = 8, fn = function()
+    escolha = mosaic.ui.confirm("Vai?", "Teste")
+end }
+pump()
+os.queueEvent("key", keys.escape, false)
+pump()
+check(escolha == false, "Esc deveria acionar o botao de cancelar (" .. tostring(escolha) .. ")")
+check(kb.dead == true, "processo do dialogo nao terminou apos Esc")
+
+-- Ctrl+Esc abre o menu Iniciar
+os.queueEvent("key", keys.leftCtrl, false)
+os.queueEvent("key", keys.escape, false)
+pump()
+if not (proc.startMenu and not proc.startMenu.dead) then snap() end
+check(proc.startMenu and not proc.startMenu.dead, "Ctrl+Esc nao abriu o menu Iniciar")
+os.queueEvent("key_up", keys.leftCtrl)
+os.queueEvent("mouse_click", 1, wm.W - 2, 3)
+pump()
+
+-- Alt+F4 fecha a janela focada
+local vitima = proc.launch("/hello.lua", {}, { title = "Vitima", x = 3, y = 3, w = 20, h = 5 })
+pump()
+check(proc.focus == vitima, "a janela nova deveria estar em foco")
+os.queueEvent("key", keys.leftAlt, false)
+os.queueEvent("key", keys.f4, false)
+os.queueEvent("key_up", keys.leftAlt)
+pump()
+check(vitima.dead == true, "Alt+F4 nao fechou a janela focada")
+
+-- Setas navegam os icones da area de trabalho, e Enter abre o selecionado.
+-- Contar processos e' o unico jeito de ver isso de fora: os icones ficam cobertos pelas
+-- janelas que os testes anteriores deixaram abertas.
+proc.setFocus(desk)
+local antes = #mosaic.list()
+os.queueEvent("key", keys.home, false)
+pump()
+os.queueEvent("key", keys.enter, false)
+pump()
+check(not desk.dead, "area de trabalho morreu ao receber setas")
+check(#mosaic.list() > antes, "Enter na area de trabalho nao abriu o icone selecionado")
+
 -- Resultado
 term.redirect(term.native())
 term.setBackgroundColor(colors.black)

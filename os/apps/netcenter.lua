@@ -120,9 +120,9 @@ local function addBtn(text, fn, alt)
     local b = f:add(ui.button { x = bx, y = h - 1, text = text, alt = alt, onClick = fn })
     bx = bx + b:width() + 1
 end
-addBtn("Procurar", scan)
-addBtn("Acoes", function() local p = list:getSelected() if p then list.onActivate(list, p) end end, true)
-addBtn("Config", function() mosaic.launchWith({ title = "Configuracoes" }, "/os/apps/settings.lua") end, true)
+addBtn("&Procurar", scan)
+addBtn("&Acoes", function() local p = list:getSelected() if p then list.onActivate(list, p) end end, true)
+addBtn("&Config", function() mosaic.launchWith({ title = "Configuracoes" }, "/os/apps/settings.lua") end, true)
 
 f.onEvent = function(_, ev)
     if ev == "mosaic:relay_state" then refreshRelay() return true end

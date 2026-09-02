@@ -46,6 +46,33 @@ end
 
 local function pack(...) return { n = select("#", ...), ... } end
 
+-- ---------------------------------------------------------------- atalhos por letra
+-- O texto aceita "&": "&Salvar" marca o S. Nao existe sublinhado na grade de caracteres, entao
+-- a letra so muda de cor ENQUANTO o Alt esta segurado, como no Windows moderno. Assim nao ha
+-- ruido visual o tempo todo.
+function ui.mnemonic(text)
+    text = tostring(text or "")
+    local at = text:find("&", 1, true)
+    if not at or at >= #text then return (text:gsub("&&", "&")), nil, nil end
+    local letter = text:sub(at + 1, at + 1)
+    return text:sub(1, at - 1) .. text:sub(at + 1), letter:lower(), at
+end
+
+function ui.altHeld()
+    return mosaic and mosaic.altHeld and mosaic.altHeld() or false
+end
+
+-- Escreve um rotulo destacando a letra do atalho quando o Alt esta segurado.
+function ui.writeLabel(t, label, mark, fg, hotFg)
+    if not mark or not ui.altHeld() then t.write(label) return end
+    t.write(label:sub(1, mark - 1))
+    t.setTextColor(hotFg or theme.accentFg)
+    t.write(label:sub(mark, mark))
+    t.setTextColor(fg)
+    t.write(label:sub(mark + 1))
+end
+
+
 -- ---------------------------------------------------------------- base
 local Widget = {}
 Widget.__index = Widget
@@ -89,6 +116,19 @@ function Text:draw(t)
         t.setCursorPos(self.x, self.y + i - 1)
         t.write(pad(lines[i + self.scroll] or "", self.w))
     end
+    -- Texto rolavel e focavel, mas nao tinha nenhum sinal de foco. A barra na ultima coluna
+    -- acende quando ele esta com o foco, e so aparece se houver o que rolar.
+    if #lines > self.h then
+        local focused = self.form and self.form.focused == self
+        local barH = math.max(1, math.floor(self.h * self.h / #lines))
+        local barY = math.floor(self.scroll / math.max(1, #lines - self.h) * (self.h - barH) + 0.5)
+        for i = 0, self.h - 1 do
+            t.setCursorPos(self.x + self.w - 1, self.y + i)
+            local on = i >= barY and i < barY + barH
+            t.setBackgroundColor(on and (focused and theme.accent or theme.face) or theme.shadow)
+            t.write(" ")
+        end
+    end
 end
 function Text:onMouse(ev, btn, lx, ly, dir)
     if ev == "mouse_scroll" then self.scroll = (self.scroll or 0) + dir self:invalidate() end
@@ -113,7 +153,13 @@ function Button:draw(t)
     t.setBackgroundColor(bg)
     t.setTextColor(fg)
     -- O texto ocupa o miolo; as duas pontas ficam para o relevo.
-    t.write(" " .. pad(tostring(self.text), self.w - 2, "center") .. " ")
+    local label, _, mark = ui.mnemonic(self.text)
+    local padded = pad(label, self.w - 2, "center")
+    local shift = padded:find(label, 1, true)
+    t.write(" ")
+    ui.writeLabel(t, padded, mark and shift and (mark + shift - 1) or nil, fg, theme.toastBg)
+    t.setTextColor(fg)
+    t.write(" ")
     draw.caps(t, self.x, self.y, self.w, bg, not self.pressed)
 end
 function Button:width() return self.w or (#tostring(self.text) + 2) end
@@ -133,11 +179,13 @@ function Button:onMouse(ev)
     end
 end
 function Button:onKey(code)
-    if (code == keys.enter or code == keys.space) and not self.disabled and self.onClick then self.onClick(self) end
+    if (code == keys.enter or code == keys.numPadEnter or code == keys.space)
+        and not self.disabled and self.onClick then self.onClick(self) end
 end
+function Button:activate() if not self.disabled and self.onClick then self.onClick(self) end end
 function ui.button(o)
     local b = newWidget(Button, o, { h = 1, focusable = true })
-    b.w = b.w or (#tostring(b.text) + 2)   -- as duas pontas viram o relevo
+    b.w = b.w or (#(ui.mnemonic(b.text)) + 2)   -- as duas pontas viram o relevo
     return b
 end
 
@@ -207,7 +255,10 @@ function Textbox:onMouse(ev, btn, lx)
         self:invalidate()
     end
 end
-function ui.textbox(o) return newWidget(Textbox, o, { w = 16, h = 1, focusable = true, text = "" }) end
+function ui.textbox(o)
+    -- takesEnter: o Enter e' do widget, nao do botao padrao do formulario.
+    return newWidget(Textbox, o, { w = 16, h = 1, focusable = true, text = "", takesEnter = true })
+end
 
 -- ---------------------------------------------------------------- List
 local List = setmetatable({}, Widget) List.__index = List
@@ -304,7 +355,7 @@ function List:onKey(code)
     elseif code == keys.enter or code == keys.numPadEnter then self:select(self.selected, true) end
 end
 function ui.list(o)
-    local l = newWidget(List, o, { w = 20, h = 5, focusable = true, scrollable = true, items = {} })
+    local l = newWidget(List, o, { w = 20, h = 5, focusable = true, scrollable = true, items = {}, takesEnter = true })
     if l.selected == nil and #l.items > 0 then l.selected = 1 end
     return l
 end
@@ -312,12 +363,16 @@ end
 -- ---------------------------------------------------------------- Checkbox
 local Checkbox = setmetatable({}, Widget) Checkbox.__index = Checkbox
 function Checkbox:draw(t)
+    local focused = self.form.focused == self
     t.setCursorPos(self.x, self.y)
-    t.setBackgroundColor(self.bg or self.form.bg)
-    t.setTextColor(self.fg or self.form.fg)
-    local box = self.checked and "[x] " or "[ ] "
-    if self.form.focused == self then t.setTextColor(theme.accent) end
-    t.write(box .. tostring(self.text or ""))
+    -- Foco = cores invertidas, a mesma regra do botao e da lista.
+    local bg = focused and theme.selBg or (self.bg or self.form.bg)
+    local fg = focused and theme.selFg or (self.fg or self.form.fg)
+    t.setBackgroundColor(bg)
+    t.setTextColor(fg)
+    local label, _, mark = ui.mnemonic(self.text or "")
+    t.write(self.checked and "[x] " or "[ ] ")
+    ui.writeLabel(t, label, mark, fg, theme.toastBg)
 end
 function Checkbox:toggle()
     self.checked = not self.checked
@@ -325,10 +380,13 @@ function Checkbox:toggle()
     self:invalidate()
 end
 function Checkbox:onMouse(ev) if ev == "mouse_click" then self:toggle() end end
-function Checkbox:onKey(code) if code == keys.space or code == keys.enter then self:toggle() end end
+function Checkbox:onKey(code)
+    if code == keys.space or code == keys.enter or code == keys.numPadEnter then self:toggle() end
+end
+function Checkbox:activate() self:toggle() end
 function ui.checkbox(o)
     local c = newWidget(Checkbox, o, { h = 1, focusable = true })
-    c.w = c.w or (#tostring(c.text or "") + 4)
+    c.w = c.w or (#(ui.mnemonic(c.text or "")) + 4)
     return c
 end
 
@@ -385,7 +443,10 @@ function Dropdown:open()
     if self.form then self.form.dirty = true end
 end
 function Dropdown:onMouse(ev) if ev == "mouse_click" then self:open() end end
-function Dropdown:onKey(code) if code == keys.enter or code == keys.space then self:open() end end
+function Dropdown:onKey(code)
+    if code == keys.enter or code == keys.numPadEnter or code == keys.space then self:open() end
+end
+function Dropdown:activate() self:open() end
 function ui.dropdown(o) return newWidget(Dropdown, o, { w = 12, h = 1, focusable = true, items = {}, selected = 1 }) end
 
 -- ---------------------------------------------------------------- Form
@@ -542,6 +603,23 @@ local function localY(w, y, rawY)
     return (w.pinned and (rawY or y) or y) - w.y + 1
 end
 
+-- Alt+letra: procura o widget visivel com aquele atalho e aciona.
+-- O casamento e' pelo codigo da tecla e nao pelo evento char, porque Alt+letra nem sempre
+-- gera char no CC.
+function Form:pressMnemonic(code)
+    for _, w in ipairs(self.widgets) do
+        if w.visible ~= false and not w.disabled and w.activate and w.text then
+            local _, letter = ui.mnemonic(w.text)
+            if letter and keys[letter] == code then
+                if w.focusable then self:setFocus(w) end
+                w:activate()
+                return true
+            end
+        end
+    end
+    return false
+end
+
 function Form:handle(ev, a, b, c)
     -- Coordenada do mouse chega na tela; os widgets vivem no espaco do conteudo.
     local rawC = c
@@ -575,10 +653,22 @@ function Form:handle(ev, a, b, c)
             return true
         elseif a == keys.leftShift or a == keys.rightShift then
             self.shiftHeld = true
+        elseif a == keys.leftAlt or a == keys.rightAlt then
+            self.dirty = true          -- as letras de atalho acendem enquanto o Alt esta preso
+        elseif ui.altHeld() and self:pressMnemonic(a) then
+            return true
+        elseif (a == keys.enter or a == keys.numPadEnter) and self.defaultButton
+            and not (self.focused and self.focused.takesEnter) then
+            self.defaultButton:activate()
+            return true
+        elseif a == keys.escape and self.cancelButton then
+            self.cancelButton:activate()
+            return true
         end
         if self.focused and not self.focused.disabled then self.focused:onKey(a, b) return true end
     elseif ev == "key_up" then
         if a == keys.leftShift or a == keys.rightShift then self.shiftHeld = false end
+        if a == keys.leftAlt or a == keys.rightAlt then self.dirty = true end
     elseif ev == "char" then
         if self.focused and not self.focused.disabled then self.focused:onChar(a) return true end
     elseif ev == "paste" then
@@ -695,6 +785,9 @@ local function buttonsRow(f, dlg, buttons)
         x = x + #b.text + 3
     end
     f:setFocus(made[#made])
+    -- Enter aciona o ultimo (OK/Sim), Esc o primeiro (Cancelar/Nao), como no Windows.
+    f.defaultButton = made[#made]
+    if #made > 1 then f.cancelButton = made[1] end
     return made
 end
 
@@ -708,7 +801,7 @@ function ui.msgbox(text, title, opts)
         title = title or "Aviso", w = w, h = h,
         build = function(f, dlg)
             f:add(ui.text { x = 3, y = dlg.contentY + 1, w = w - 4, h = h - 5 + (title and 0 or 1), text = text })
-            buttonsRow(f, dlg, { { text = opts.ok or "OK", value = true } })
+            buttonsRow(f, dlg, { { text = opts.ok or "&OK", value = true } })
         end,
     }
 end
@@ -724,8 +817,8 @@ function ui.confirm(text, title, opts)
         build = function(f, dlg)
             f:add(ui.text { x = 3, y = dlg.contentY + 1, w = w - 4, h = h - 5, text = text })
             buttonsRow(f, dlg, {
-                { text = opts.no or "Nao", value = false, alt = true },
-                { text = opts.yes or "Sim", value = true },
+                { text = opts.no or "&Nao", value = false, alt = true },
+                { text = opts.yes or "&Sim", value = true },
             })
         end,
     }
@@ -745,8 +838,8 @@ function ui.prompt(text, default, title, opts)
                 onEnter = function(self) dlg.close(self.text) end,
             })
             buttonsRow(f, dlg, {
-                { text = "Cancelar", value = nil, alt = true },
-                { text = "OK", value = "__ok" },
+                { text = "&Cancelar", value = nil, alt = true },
+                { text = "&OK", value = "__ok" },
             })
             f:setFocus(tb)
             local close = dlg.close

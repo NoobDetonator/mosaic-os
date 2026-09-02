@@ -34,14 +34,14 @@ local function addBtn(text, fn, alt)
     local b = f:add(ui.button { x = bx, y = h, text = text, alt = alt, onClick = fn })
     bx = bx + b:width() + 1
 end
-addBtn("Focar", function() local id = selectedId() if id then mosaic.focus(id) end end)
-addBtn("Terminar", function() local id = selectedId() if id then mosaic.terminate(id) refresh() end end)
-addBtn("Matar", function()
+addBtn("&Focar", function() local id = selectedId() if id then mosaic.focus(id) end end)
+addBtn("&Terminar", function() local id = selectedId() if id then mosaic.terminate(id) refresh() end end)
+addBtn("&Matar", function()
     local id = selectedId()
     if id and id ~= mosaic.current() and ui.confirm("Matar o processo " .. id .. " sem aviso?") then mosaic.kill(id) end
     refresh()
 end, true)
-addBtn("Atualizar", refresh, true)
+addBtn("&Atualizar", refresh, true)
 
 local timer = os.startTimer(1)
 f.onEvent = function(_, ev, id)

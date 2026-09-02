@@ -94,12 +94,12 @@ local function addBtn(text, fn, alt)
     local b = f:add(ui.button { x = bx, y = h - 1, text = text, alt = alt, onClick = fn })
     bx = bx + b:width() + 1
 end
-addBtn("Abrir", function() open(list:getSelected()) end)
-addBtn("Nova pasta", function()
+addBtn("&Abrir", function() open(list:getSelected()) end)
+addBtn("Nova &pasta", function()
     local name = ui.prompt("Nome da pasta:", "", "Nova pasta")
     if name and #name > 0 then fs.makeDir(fs.combine(dir, name)) refresh() end
 end, true)
-addBtn("Novo arquivo", function()
+addBtn("&Novo arquivo", function()
     local name = ui.prompt("Nome do arquivo:", "novo.lua", "Novo arquivo")
     if name and #name > 0 then
         local path = fs.combine(dir, name)
@@ -108,7 +108,7 @@ addBtn("Novo arquivo", function()
         refresh()
     end
 end, true)
-addBtn("Ir para", function()
+addBtn("&Ir para", function()
     local p = ui.prompt("Caminho:", "/" .. dir, "Ir para")
     if p then
         local clean = p:gsub("^/", "")

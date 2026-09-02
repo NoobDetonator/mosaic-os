@@ -332,9 +332,19 @@ function proc.step()
         end
         broadcast(ev)
     elseif name == "key" or name == "key_up" then
-        held[ev[2]] = (name == "key") or nil
-        if name == "key" and ev[2] == keys.tab and (held[keys.leftAlt] or held[keys.rightAlt]) then
+        -- Evento de tecla sem codigo existe (o CraftOS-PC manda um ao ganhar foco) e nao pode
+        -- derrubar o kernel inteiro.
+        if ev[2] ~= nil then held[ev[2]] = (name == "key") or nil end
+        local alt = held[keys.leftAlt] or held[keys.rightAlt]
+        local ctrl = held[keys.leftCtrl] or held[keys.rightCtrl]
+        -- Atalhos do sistema. Ctrl+T, Ctrl+R e Ctrl+S ficam de fora de proposito: o proprio CC
+        -- os intercepta quando segurados, e reinicia ou desliga o computador.
+        if name == "key" and alt and ev[2] == keys.tab then
             cycleFocus()
+        elseif name == "key" and ctrl and ev[2] == keys.escape then
+            proc.toggleStartMenu()
+        elseif name == "key" and alt and ev[2] == keys.f4 then
+            if proc.focus then proc.terminate(proc.focus) end
         elseif proc.focus then
             proc.resume(proc.focus, table.unpack(ev, 1, ev.n))
         end
@@ -414,6 +424,7 @@ function api.require(name) return require(name) end   -- modulos kernel/lib com 
 function api.lib(name) return require("lib." .. name) end
 function api.emit(name, ...) os.queueEvent("mosaic:" .. name, ...) end
 function api.isTiny() return wm.tiny end
+function api.altHeld() return (held[keys.leftAlt] or held[keys.rightAlt]) and true or false end
 
 _G.mosaic = api
 return proc

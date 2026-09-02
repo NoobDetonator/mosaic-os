@@ -32,8 +32,8 @@ local function addBtn(text, fn, alt)
     local b = f:add(ui.button { x = bx, y = h - 1, text = text, alt = alt, onClick = fn })
     bx = bx + b:width() + 1
 end
-addBtn("Abrir", function() local n = list:getSelected() if n then list.onActivate(list, n) end end)
-addBtn("Nova", function()
+addBtn("&Abrir", function() local n = list:getSelected() if n then list.onActivate(list, n) end end)
+addBtn("&Nova", function()
     local name = ui.prompt("Titulo da nota:", "", "Nova nota")
     if name and #name > 0 then
         if not name:match("%.%w+$") then name = name .. ".txt" end
@@ -43,14 +43,14 @@ addBtn("Nova", function()
         mosaic.launchWith({ title = name }, "/rom/programs/edit.lua", path)
     end
 end, true)
-addBtn("Excluir", function()
+addBtn("&Excluir", function()
     local n = list:getSelected()
     if n and ui.confirm("Excluir a nota " .. n .. "?", "Confirmar") then
         fs.delete(fs.combine(DIR, n))
         refresh()
     end
 end, true)
-addBtn("Atualizar", refresh, true)
+addBtn("A&tualizar", refresh, true)
 
 f.onEvent = function(_, ev)
     if ev == "term_resize" then
