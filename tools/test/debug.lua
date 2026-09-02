@@ -8,6 +8,16 @@ local target = (args[1] and #args[1] > 0) and args[1] or "/os/apps/settings.lua"
 local out = fs.open("/dbg.txt", "w")
 local function say(s) out.write(tostring(s) .. "\n") end
 
+-- Argumento "fake": instala um reator do Powah de mentira, para conferir o painel
+-- com dados variando sem precisar do jogo.
+local fake = false
+for i = 2, #args do
+    if args[i] == "fake" then
+        fake = true
+        dofile("/test/fake-reactor.lua").instalar()
+    end
+end
+
 local ok, err = pcall(function()
     settings.define("mosaic.clock", { type = "string", default = "real" })
     local theme = require("kernel.theme")
@@ -21,6 +31,8 @@ local ok, err = pcall(function()
         title = "DBG", x = 1, y = 1, w = wm.W, h = wm.H - 2, holdOnError = true })
     os.queueEvent("timer", -1)
     for _ = 1, 3 do proc.step() end
+    -- Com o reator falso, deixa varias amostras acumularem para o grafico ter serie.
+    if fake then for _ = 1, 400 do proc.step() end end
     say("=== " .. target .. " (dead=" .. tostring(p.dead) .. ") ===")
     say(wm.screenshotText())
 

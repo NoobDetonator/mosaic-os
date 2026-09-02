@@ -7,7 +7,9 @@ local chart = mosaic.lib("chart")
 local hal = mosaic.lib("hal")
 local strutil = mosaic.lib("strutil")
 
-local INTERVAL = 2   -- segundos entre amostras
+-- Cada chamada de periferico pela rede custa 1 tick; com a capacidade e o NBT em
+-- cache sobram ~4 por ciclo (0.2 s). Da para amostrar de segundo em segundo.
+local INTERVAL = 1
 
 settings.define("mosaic.reactor.chest", { description = "Inventario com uraninita", type = "string" })
 settings.define("mosaic.reactor.fuelMin", { description = "Alerta de combustivel abaixo de", type = "number", default = 8 })
@@ -22,6 +24,7 @@ local hFuel = chart.history(60)
 local hWater = chart.history(60)
 local hRate = chart.history(60)
 local hEnergy = chart.history(60)
+local hNet = chart.history(60)
 local netFeTick, netMax = nil, 0    -- balanco do buffer em FE/t, com sinal
 -- tanks() nao traz capacidade e o detector nao tem maximo: acompanha o maior valor
 -- ja visto para ter uma escala honesta em vez de barra cheia sem significado.
@@ -96,7 +99,10 @@ local function sample()
         hEnergy:push(reading.energy.stored)
         local porSeg = hEnergy:slopePerSec(INTERVAL)
         netFeTick = porSeg and (porSeg / 20) or nil   -- 20 ticks por segundo
-        if netFeTick then netMax = math.max(netMax, math.abs(netFeTick)) end
+        if netFeTick then
+            netMax = math.max(netMax, math.abs(netFeTick))
+            hNet:push(netFeTick)
+        end
     end
 
     local fuelMin = settings.get("mosaic.reactor.fuelMin") or 8
@@ -153,24 +159,79 @@ local function bar(t, x, y, bw, frac, color)
     t.setBackgroundColor(theme.appBg)
 end
 
--- Largura do rotulo acompanha a tela: num monitor de 36 colunas nao da para
--- gastar 11 so com o nome, e numa tela larga ficaria apertado sem necessidade.
-local function labelWidth(tw)
-    return math.max(5, math.min(11, math.floor(tw * 0.3)))
+-- Largura do rotulo acompanha a coluna. "Combustivel" tem 11: com 0.4 uma coluna
+-- de 28 ja cabe o nome inteiro, e abaixo disso encolhe em vez de estourar.
+local function labelWidth(cw)
+    return math.max(5, math.min(11, math.floor(cw * 0.4)))
 end
 
-local function row(t, y, tw, label, value, frac, color)
-    local lw = labelWidth(tw)
-    t.setCursorPos(1, y)
+-- Uma barra rotulada dentro de uma coluna que comeca em x e tem cw de largura.
+local function row(t, x, y, cw, label, value, frac, color)
+    local lw = labelWidth(cw)
+    -- O valor nunca pode empurrar a barra para fora da coluna: corta ele primeiro,
+    -- senao a linha vaza para a coluna vizinha.
+    value = strutil.ellipsis(value, math.max(1, cw - lw - 6))
+    t.setCursorPos(x, y)
     t.setBackgroundColor(theme.appBg)
     t.setTextColor(theme.appFg)
     t.write(" " .. strutil.pad(strutil.ellipsis(label, lw), lw))
-    local x = lw + 2
-    local barW = math.max(3, tw - x - #value - 1)
-    bar(t, x, y, barW, frac, color)
-    t.setCursorPos(math.min(tw - #value + 1, x + barW + 1), y)
+    local bx = x + lw + 1
+    local barW = math.max(3, cw - lw - 2 - #value - 1)
+    bar(t, bx, y, barW, frac, color)
+    t.setCursorPos(bx + barW + 1, y)
     t.setTextColor(theme.appFg)
     t.write(value)
+end
+
+-- Faixa de grafico com titulo. Devolve a primeira linha livre depois dela.
+local function drawChart(t, x, cw, y, ch, hist, color, nome, minimo)
+    if ch < 3 or hist.n < 2 then return y end
+    t.setCursorPos(x, y)
+    t.setBackgroundColor(theme.appBg)
+    t.setTextColor(theme.mutedFg)
+    t.write(strutil.pad(strutil.ellipsis(nome .. " (" .. hist.n .. ")", cw), cw))
+    chart.line(t, { x = x, y = y + 1, w = cw, h = ch - 1, data = hist.data,
+                    min = minimo, fg = color, bg = colors.black, fill = true })
+    return y + ch
+end
+
+-- As barras, numa coluna. Devolve a primeira linha livre.
+local function drawGauges(t, x, cw, y0)
+    local y = y0
+    -- Coluna estreita nao comporta o "~26min" junto do valor: ou some a barra.
+    local comPrazo = cw >= 34
+    local function put(label, value, frac, color)
+        row(t, x, y, cw, label, value, frac, color)
+        y = y + 1
+    end
+    put("Combustivel", reading.fuel.count .. (comPrazo and prazo(reading.fuel.count, hFuel) or ""),
+        reading.fuel.count / 64, colors.lime)
+    if reading.coolant.count > 0 then
+        put("Gelo seco", tostring(reading.coolant.count), reading.coolant.count / 64, colors.lightBlue)
+    end
+    if reading.tank then
+        put("Agua", reading.tank.amount .. " mB" .. (comPrazo and prazo(reading.tank.amount, hWater) or ""),
+            tankMax > 0 and (reading.tank.amount / tankMax) or 0, colors.blue)
+    end
+    if reading.energy and reading.energy.capacity > 0 then
+        -- math.floor: em Lua 5.3 o %d recusa float, e o percentual e fracionario.
+        put("Energia", string.format("%d%%", math.floor(reading.energy.percent)),
+            reading.energy.percent / 100, colors.red)
+    end
+    if netFeTick then
+        -- Com sinal: verde carregando, laranja drenando. E o numero que responde
+        -- "produzo mais do que gasto?", que o throughput sozinho nao responde.
+        local mag = math.abs(netFeTick)
+        put("Balanco", (netFeTick >= 0 and "+" or "-") ..
+            (mag >= 1000 and strutil.short(mag) or string.format("%.1f", mag)) .. " FE/t",
+            netMax > 0 and (mag / netMax) or 0,
+            netFeTick >= 0 and colors.lime or colors.orange)
+    end
+    if reading.energy and reading.energy.rate and reading.energy.rate > 0 then
+        put("Saida", strutil.short(reading.energy.rate) .. " FE/t",
+            rateMax > 0 and (reading.energy.rate / rateMax) or 0, colors.yellow)
+    end
+    return y
 end
 
 -- Desenha o painel em qualquer terminal: a janela do OS ou um monitor.
@@ -201,70 +262,57 @@ local function drawPanel(t, reserva)
     end
 
     -- Tela baixa (monitor pequeno) nao pode gastar linha em branco depois do titulo.
-    local y = (th < 14) and 2 or 3
-    row(t, y, tw, "Combustivel", reading.fuel.count .. prazo(reading.fuel.count, hFuel),
-        reading.fuel.count / 64, colors.lime)
-    y = y + 1
-    if reading.coolant.count > 0 then
-        row(t, y, tw, "Gelo seco", tostring(reading.coolant.count), reading.coolant.count / 64, colors.lightBlue)
-        y = y + 1
-    end
-    if reading.tank then
-        row(t, y, tw, "Agua", reading.tank.amount .. " mB" .. prazo(reading.tank.amount, hWater),
-            tankMax > 0 and (reading.tank.amount / tankMax) or 0, colors.blue)
-        y = y + 1
-    end
-    if reading.energy and reading.energy.capacity > 0 then
-        row(t, y, tw, "Energia", string.format("%d%%", reading.energy.percent),
-            reading.energy.percent / 100, colors.red)
-        y = y + 1
-    end
-    if netFeTick then
-        -- Com sinal: verde carregando, laranja drenando. E o numero que responde
-        -- "estou produzindo mais do que gasto?", que o throughput sozinho nao responde.
-        local mag = math.abs(netFeTick)
-        local txt = (netFeTick >= 0 and "+" or "-") ..
-            (mag >= 1000 and strutil.short(mag) or string.format("%.1f", mag)) .. " FE/t"
-        row(t, y, tw, "Balanco", txt, netMax > 0 and (mag / netMax) or 0,
-            netFeTick >= 0 and colors.lime or colors.orange)
-        y = y + 1
-    end
-    if reading.energy and reading.energy.rate then
-        row(t, y, tw, "Saida", strutil.short(reading.energy.rate) .. " FE/t",
-            rateMax > 0 and (reading.energy.rate / rateMax) or 0, colors.yellow)
-        y = y + 1
-    end
+    local topo = (th < 14) and 2 or 3
+    -- Tela larga (o 3x2 da 57x24 na escala 0.5) ganha duas colunas: barras a
+    -- esquerda, graficos a direita, que e onde a densidade do sub-pixel aparece.
+    -- 56: abaixo disso as duas colunas ficam com 25 e cortam "Combustivel". A janela
+    -- do computador (51) fica melhor em coluna unica; o monitor 3x2 (57) em duas.
+    local largo = tw >= 56
+    local colW = largo and math.floor(tw * 0.5) or tw
+
+    local y = drawGauges(t, 1, colW, topo)
 
     -- Diz o que falta em vez de mostrar zero, que seria mentira.
     local faltando = {}
-    if not hw.blockReader then faltando[#faltando + 1] = "Block Reader (estado do multiblock)" end
-    if not hw.energyDetector and not (reading.energy and reading.energy.rate) then
-        faltando[#faltando + 1] = "Energy Detector (FE/t)"
+    if not hw.blockReader then faltando[#faltando + 1] = "Block Reader" end
+    if not (reading.energy and reading.energy.rate and reading.energy.rate > 0) then
+        faltando[#faltando + 1] = "Detector na linha"
     end
     if #faltando > 0 and y < th then
         t.setCursorPos(2, y)
         t.setBackgroundColor(theme.appBg)
         t.setTextColor(theme.mutedFg)
-        t.write(strutil.ellipsis("falta: " .. table.concat(faltando, ", "), tw - 2))
+        t.write(strutil.ellipsis("falta: " .. table.concat(faltando, ", "), colW - 2))
         y = y + 1
     end
 
-    -- Grafico com o que sobrar, mas com teto: solto, ele viraria um bloco de cor
-    -- ocupando a tela inteira num monitor baixo.
-    y = y + ((th < 14) and 0 or 1)
-    local sobra = math.min(6, th - y + 1)
-    if sobra >= 3 then
-        local serie, cor2, nome = hFuel, colors.lime, "combustivel"
-        if hRate.n > 1 then serie, cor2, nome = hRate, colors.yellow, "FE/t"
-        elseif hWater.n > 1 then serie, cor2, nome = hWater, colors.blue, "agua" end
-        t.setCursorPos(2, y - 1)
-        t.setBackgroundColor(theme.appBg)
-        t.setTextColor(theme.mutedFg)
-        t.write(strutil.ellipsis(nome .. " (" .. serie.n .. " amostras)", tw - 2))
-        if serie.n > 1 then
-            chart.line(t, { x = 1, y = y, w = tw, h = sobra, data = serie.data,
-                            min = 0, fg = cor2, bg = colors.black, fill = true })
+    if largo then
+        -- Dois graficos empilhados na coluna da direita, dividindo a altura.
+        local cx, cw = colW + 2, tw - colW - 1
+        local disp = th - topo + 1
+        local metade = math.floor(disp / 2)
+        local yy = topo
+        if hEnergy.n > 1 then
+            yy = drawChart(t, cx, cw, yy, metade, hEnergy, colors.red, "Buffer FE", 0)
+        else
+            yy = drawChart(t, cx, cw, yy, metade, hFuel, colors.lime, "Combustivel", 0)
         end
+        if hNet.n > 1 then
+            -- Sem min = 0: o balanco fica negativo quando drena, e cortar isso
+            -- em zero esconderia justamente a informacao que interessa.
+            drawChart(t, cx, cw, yy, disp - metade, hNet, colors.orange, "Balanco FE/t")
+        else
+            drawChart(t, cx, cw, yy, disp - metade, hWater, colors.blue, "Agua", 0)
+        end
+    else
+        -- Coluna unica: um grafico embaixo, com teto. Solto, ele viraria um bloco
+        -- de cor ocupando a tela toda num monitor baixo.
+        y = y + ((th < 14) and 0 or 1)
+        local sobra = math.min(7, th - y + 1)
+        local serie, cor2, nome, mn = hFuel, colors.lime, "Combustivel", 0
+        if hNet.n > 1 then serie, cor2, nome, mn = hNet, colors.orange, "Balanco FE/t", nil
+        elseif hEnergy.n > 1 then serie, cor2, nome, mn = hEnergy, colors.red, "Buffer FE", 0 end
+        drawChart(t, 1, tw, y, sobra, serie, cor2, nome, mn)
     end
 end
 
@@ -273,6 +321,13 @@ end
 -- serve a 0.5 (36x10); um maior aguenta 1 e fica bem mais legivel de longe.
 local monitorScale
 local function fitMonitor(m)
+    -- Se a escala menor render uma tela larga, ela vence: e a unica que abre o
+    -- layout de duas colunas com grafico grande (um 3x2 da 57x24 assim, contra
+    -- 29x12 na escala 1). Texto menor, mas muito mais informacao na parede.
+    m.setTextScale(0.5)
+    if m.getSize() >= 56 then monitorScale = 0.5 return end
+    -- Senao, a MAIOR escala que ainda deixa o painel caber: num monitor pequeno
+    -- vale mais ler de longe do que espremer barra.
     for _, s in ipairs({ 1.5, 1, 0.5 }) do
         m.setTextScale(s)
         local mw, mh = m.getSize()

@@ -56,7 +56,7 @@ Fatos do kernel que não são óbvios:
 
 - `node tools/lint.js` — sintaxe Lua 5.1 (luaparse) + grep de APIs proibidas. Rode antes de dizer que terminou.
 - `node tools/test.js` — self-check do kernel no emulador embutido (`tools/emu`, fengari). Não precisa do CraftOS-PC.
-- `node tools/debug.js os/apps/files.lua [x,y ...]` — abre um app no emulador, clica onde você mandar e mostra a tela a cada passo.
+- `node tools/debug.js os/apps/files.lua [36x10] [12,18] [fake]` — abre um app no emulador: tamanho de tela, cliques, e `fake` instala um reator do Powah de mentira (`tools/test/fake-reactor.lua`) para conferir o painel com dados variando.
 - `node tools/emu/emu.js --show` — boota o OS de verdade e imprime a tela final; bom para conferir layout.
 - `node tools/manifest.js` — regenera `manifest.json` (usado por `install.lua` e pelo app `pkg`).
 - CraftOS-PC **v2.7.2** (ROM do CC:T 1.101.1; versões 2.8+ têm ROM Lua 5.2 e escondem bugs):

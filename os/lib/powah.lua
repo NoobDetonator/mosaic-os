@@ -17,6 +17,10 @@ local powah = {}
 powah.FUEL = "powah:uraninite"
 powah.SOLID_COOLANT = "powah:dry_ice"
 
+-- De quantos em quantos ciclos reler o NBT do bloco. Ele custa um tick e so
+-- entrega `built`, que praticamente nunca muda.
+powah.NBT_CADA = 10
+
 -- Acha o reator: primeiro pelo tipo do Powah, senao qualquer periferico que se
 -- comporte como reator (tem inventario E tanque).
 function powah.findReactor()
@@ -73,7 +77,16 @@ function powah.read(hw)
     -- Energia: o buffer sai do proprio reator, mas SO quando ele vem pela rede com
     -- fio -- a face encostada direto no computador nao publica energy_storage.
     -- A vazao (FE/t) nao existe na API do Forge: so com Energy Detector na linha.
-    local e = hal.energy(hw.reactor) or {}
+    --
+    -- Cada chamada de periferico pela rede custa 1 tick (medido: 0.05 s cada).
+    -- A capacidade nao muda, entao e lida uma vez so: um tick a menos por ciclo.
+    local e = {}
+    if hw.reactor.getEnergy then
+        hw._cap = hw._cap or hw.reactor.getEnergyCapacity() or 0
+        local stored = hw.reactor.getEnergy() or 0
+        e.stored, e.capacity = stored, hw._cap
+        e.percent = hw._cap > 0 and (stored / hw._cap * 100) or 0
+    end
     if hw.energyDetector then
         local okR, rate = pcall(hw.energyDetector.getTransferRate)
         if okR then e.rate = rate end
@@ -86,11 +99,23 @@ function powah.read(hw)
     -- uma PECA (powah:reactor_part) so carrega built/variant/redstone_mode/extractor
     -- e um core_pos apontando para o nucleo. Entao, se o leitor caiu numa peca, da
     -- para dizer exatamente para onde mover em vez de so ficar sem temperatura.
+    -- getBlockData tambem custa 1 tick e so entrega `built`, que praticamente nunca
+    -- muda: le a cada NBT_CADA ciclos em vez de a cada amostra.
     if hw.blockReader then
-        local okB, data = pcall(hw.blockReader.getBlockData)
-        if okB and type(data) == "table" then
+        hw._nbtN = (hw._nbtN or powah.NBT_CADA) + 1
+        if hw._nbtN >= powah.NBT_CADA then
+            hw._nbtN = 0
+            local okB, data = pcall(hw.blockReader.getBlockData)
+            hw._nbt = (okB and type(data) == "table") and data or false
+            if hw.blockReader.getBlockName then
+                local okN, nome = pcall(hw.blockReader.getBlockName)
+                hw._blockName = okN and nome or nil
+            end
+        end
+        local data = hw._nbt
+        if data then
             r.nbt = data
-            r.blockName = hw.blockReader.getBlockName and hw.blockReader.getBlockName() or nil
+            r.blockName = hw._blockName
             -- built = 0 significa multiblock desmontado: vale um alerta, ao contrario
             -- da temperatura, que so existe no nucleo e o nucleo e' inalcancavel.
             if data.built ~= nil then r.built = data.built == 1 end
