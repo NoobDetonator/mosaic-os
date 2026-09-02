@@ -36,7 +36,7 @@
     },
     {
       "path": "os/apps/netcenter.lua",
-      "sha1": "e2735870e50dc705153ee45202a706d788aeb9a6"
+      "sha1": "1f179dfd7caaa0043e98d7ca61b33c922b3ed4e2"
     },
     {
       "path": "os/apps/notes.lua",
@@ -44,11 +44,11 @@
     },
     {
       "path": "os/apps/periph.lua",
-      "sha1": "be84d64cc64eba8fd420afb9d156a1590eef2cec"
+      "sha1": "afc3efe3aef8ba536d4652da647a369a5da94a33"
     },
     {
       "path": "os/apps/pkg.lua",
-      "sha1": "ae5bff7777b79f4835072923915f049b95d2058a"
+      "sha1": "1e1fe03d610052401e3ec4213f4584230ee61519"
     },
     {
       "path": "os/apps/reactor.lua",
@@ -240,19 +240,19 @@
     },
     {
       "path": "os/var/log/crash.log",
-      "sha1": "39b8fe27757554f33e650ab8f185497f8625903b"
+      "sha1": "96dd006fbce6f159628ac39caede57bb821a5ccf"
     },
     {
       "path": "os/var/log/kernel.log",
-      "sha1": "bf8db599d623dd8e5b1d63d87edd92a918fe5fc5"
+      "sha1": "bb701e2b03af09f08df2c5f16c2d01775425617a"
     },
     {
       "path": "os/var/log/netd.log",
-      "sha1": "31092b2e2234e2658eb10c9ef3ff4a30acda1ab5"
+      "sha1": "d590c4a0a79b77372098cd5020eda1b7aa9dbcc0"
     },
     {
       "path": "os/var/log/teste.log",
-      "sha1": "b6191e70edaf10300fdad21e8cbe9a1f48fb80e6"
+      "sha1": "82aa4da36c126a16c590ed2732779c18dd4c5031"
     },
     {
       "path": "os/version.lua",

@@ -7,13 +7,9 @@ local strutil = mosaic.lib("strutil")
 local w, h = term.getSize()
 local f = ui.form()
 
-local list = f:add(ui.list {
-    x = 1, y = 1, w = w, h = h - 2,
-    render = function(it) return string.format(" %-22s %s", strutil.ellipsis(it.name, 22), it.type) end,
-})
-local info = f:add(ui.label { x = 1, y = h, w = w, text = "", bg = theme.taskbarBg, fg = theme.taskbarFg })
+local list, info, refresh, showMethods
 
-local function refresh()
+function refresh()
     local items = hal.list()
     list:setItems(items, true)
     info.text = string.format(" %d perifericos | clique direito = acoes", #items)
@@ -43,7 +39,7 @@ local function callMethod(name, method)
     ui.msgbox(#parts > 0 and table.concat(parts, "\n") or "(sem retorno)", method)
 end
 
-local function showMethods(item)
+function showMethods(item)
     local methods = peripheral.getMethods(item.name)
     if not methods then ui.msgbox("Periferico sumiu.", "Ops") refresh() return end
     table.sort(methods)
@@ -53,6 +49,39 @@ local function showMethods(item)
     f.dirty = true
     if idx then callMethod(item.name, methods[idx]) f.dirty = true end
 end
+
+-- Ordem: a fila mede a propria altura, o rodape se ancora acima dela, a lista preenche o resto.
+local bar = ui.row(f, { bottom = 0, items = {
+    { text = "&Metodos", onClick = function()
+        local it = list:getSelected()
+        if it then showMethods(it) end
+    end },
+    { text = "&Atualizar", alt = true, onClick = function() refresh() end },
+    { text = "&Resumo", alt = true, onClick = function()
+        local lines = {}
+        local e = hal.energy()
+        if e then
+            lines[#lines + 1] = string.format("Energia: %s / %s (%.0f%%)",
+                strutil.short(e.stored), strutil.short(e.capacity), e.percent)
+        end
+        local st = hal.storage()
+        if st then lines[#lines + 1] = "Storage: bridge " .. st.kind:upper() .. " conectada" end
+        local players = hal.players()
+        if #players > 0 then lines[#lines + 1] = "Jogadores online: " .. table.concat(players, ", ") end
+        local env = hal.environment()
+        if env then
+            lines[#lines + 1] = string.format("Ambiente: %s, chuva=%s", tostring(env.biome), tostring(env.raining))
+        end
+        if hal.has("chatBox") then lines[#lines + 1] = "Chat Box pronto (hal.chat)" end
+        ui.msgbox(#lines > 0 and table.concat(lines, "\n") or "Nenhum periferico especial detectado.", "Resumo")
+    end },
+} })
+info = f:add(ui.label { x = 1, above = bar, w = "fill", text = "",
+    bg = theme.taskbarBg, fg = theme.taskbarFg })
+list = f:add(ui.list {
+    x = 1, y = 1, w = "fill", fillTo = info,
+    render = function(it) return string.format(" %-22s %s", strutil.ellipsis(it.name, 22), it.type) end,
+})
 
 list.onActivate = function(_, item) if item then showMethods(item) end end
 list.onContext = function(_, item, _, lx, ly)
@@ -72,38 +101,9 @@ list.onContext = function(_, item, _, lx, ly)
     if idx then actions[idx].run() end
 end
 
-local bx = 1
-local function addBtn(text, fn, alt)
-    local b = f:add(ui.button { x = bx, y = h - 1, text = text, alt = alt, onClick = fn })
-    bx = bx + b:width() + 1
-end
-addBtn("&Metodos", function() local it = list:getSelected() if it then showMethods(it) end end)
-addBtn("&Atualizar", refresh, true)
-addBtn("&Resumo", function()
-    local lines = {}
-    local e = hal.energy()
-    if e then lines[#lines + 1] = string.format("Energia: %s / %s (%.0f%%)", strutil.short(e.stored), strutil.short(e.capacity), e.percent) end
-    local st = hal.storage()
-    if st then lines[#lines + 1] = "Storage: bridge " .. st.kind:upper() .. " conectada" end
-    local players = hal.players()
-    if #players > 0 then lines[#lines + 1] = "Jogadores online: " .. table.concat(players, ", ") end
-    local env = hal.environment()
-    if env then
-        lines[#lines + 1] = string.format("Ambiente: %s, chuva=%s", tostring(env.biome), tostring(env.raining))
-    end
-    if hal.has("chatBox") then lines[#lines + 1] = "Chat Box pronto (hal.chat)" end
-    ui.msgbox(#lines > 0 and table.concat(lines, "\n") or "Nenhum periferico especial detectado.", "Resumo")
-end, true)
-
 f.onEvent = function(_, ev)
     if ev == "peripheral" or ev == "peripheral_detach" then refresh() return true end
-    if ev == "term_resize" then
-        w, h = term.getSize()
-        list.w, list.h = w, h - 3
-        info.y, info.w = h, w
-        f.dirty = true
-        return true
-    end
+    -- Sem term_resize: as ancoras do form cuidam do reposicionamento.
 end
 
 refresh()

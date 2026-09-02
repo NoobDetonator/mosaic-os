@@ -10,16 +10,15 @@ local f = ui.form()
 local installed = fsx.readJSON("/os/var/installed.json", {}) or {}
 local base = installed.base or mosaic.version.repo
 
-local infoLabel = f:add(ui.label { x = 2, y = 1, w = w - 2,
+local infoLabel = f:add(ui.label { x = 2, y = 1, w = -2,
     text = "Instalado: " .. mosaic.version.version .. (installed.version and (" (pacote " .. installed.version .. ")") or "") })
-local urlBox = f:add(ui.textbox { x = 2, y = 3, w = w - 3, text = base })
 f:add(ui.label { x = 2, y = 2, text = "Repositorio (raw do GitHub):", fg = theme.mutedFg })
-local list = f:add(ui.list { x = 1, y = 5, w = w, h = h - 7, render = function(it) return " " .. it.mark .. " " .. it.path end })
-local status = f:add(ui.label { x = 1, y = h, w = w, text = " Clique em Verificar para comecar.", bg = theme.taskbarBg, fg = theme.taskbarFg })
+local urlBox = f:add(ui.textbox { x = 2, y = 3, w = -3, text = base })
+local list, status, verify, apply
 
 local pending = {}
 
-local function verify()
+function verify()
     status.text = " Baixando manifest..."
     f:draw()
     local manifest, err = httpx.getJSON(urlBox.text .. "/manifest.json")
@@ -51,7 +50,7 @@ local function verify()
     f.dirty = true
 end
 
-local function apply()
+function apply()
     if #pending == 0 then
         ui.msgbox("Nada para atualizar.", "Atualizador")
         return
@@ -69,26 +68,22 @@ local function apply()
     f.dirty = true
 end
 
-local bx = 1
-local function addBtn(text, fn, alt)
-    local b = f:add(ui.button { x = bx, y = h - 1, text = text, alt = alt, onClick = fn })
-    bx = bx + b:width() + 1
-end
-addBtn("&Verificar", verify)
-addBtn("&Atualizar", apply)
-addBtn("&Espaco", function()
-    ui.msgbox(string.format("Livre: %s\nMosaic OS ocupa: %s",
-        strutil.bytes(fs.getFreeSpace("/")), strutil.bytes(fsx.treeSize("/os"))), "Disco")
-end, true)
+-- Ordem: a fila mede a propria altura, o rodape se ancora acima dela, a lista preenche o resto.
+local bar = ui.row(f, { bottom = 0, items = {
+    { text = "&Verificar", onClick = function() verify() end },
+    { text = "&Atualizar", onClick = function() apply() end },
+    { text = "&Espaco", alt = true, onClick = function()
+        ui.msgbox(string.format("Livre: %s\nMosaic OS ocupa: %s",
+            strutil.bytes(fs.getFreeSpace("/")), strutil.bytes(fsx.treeSize("/os"))), "Disco")
+    end },
+} })
+status = f:add(ui.label { x = 1, above = bar, w = "fill",
+    text = " Clique em Verificar para comecar.", bg = theme.taskbarBg, fg = theme.taskbarFg })
+list = f:add(ui.list { x = 1, y = 5, w = "fill", fillTo = status,
+    render = function(it) return " " .. it.mark .. " " .. it.path end })
 
 f.onEvent = function(_, ev)
-    if ev == "term_resize" then
-        w, h = term.getSize()
-        list.w, list.h = w, h - 9
-        status.y, status.w = h, w
-        f.dirty = true
-        return true
-    end
+    -- Sem term_resize: as ancoras do form cuidam do reposicionamento.
 end
 
 f:run()

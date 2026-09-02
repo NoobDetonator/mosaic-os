@@ -8,18 +8,12 @@ local w, h = term.getSize()
 local f = ui.form()
 local peers = {}
 
-local relayLine = f:add(ui.label { x = 2, y = 1, w = w - 2, text = "" })
-local relayInfo = f:add(ui.label { x = 2, y = 2, w = w - 2, text = "", fg = theme.mutedFg })
+local relayLine = f:add(ui.label { x = 2, y = 1, w = -2, text = "" })
+local relayInfo = f:add(ui.label { x = 2, y = 2, w = -2, text = "", fg = theme.mutedFg })
 f:add(ui.label { x = 2, y = 4, text = "Computadores na rede local:" })
-local list = f:add(ui.list {
-    x = 1, y = 5, w = w, h = h - 7,
-    render = function(p)
-        return string.format(" #%-4d %-16s %s", p.id, strutil.ellipsis(p.name or "?", 16), p.os or "")
-    end,
-})
-local status = f:add(ui.label { x = 1, y = h, w = w, text = "", bg = theme.taskbarBg, fg = theme.taskbarFg })
+local list, status, scan, refreshRelay
 
-local function refreshRelay()
+function refreshRelay()
     local url = settings.get("mosaic.relay.url")
     if not url or url == "" then
         relayLine.text = "Relay: nao configurado"
@@ -40,7 +34,7 @@ local function refreshRelay()
     f.dirty = true
 end
 
-local function scan()
+function scan()
     status.text = " Procurando computadores..."
     f:draw()
     local st = mosaic.netStatus and mosaic.netStatus() or nil
@@ -79,6 +73,26 @@ local function ask(peer, msg)
     return reply.result
 end
 
+-- Ordem: a fila mede a propria altura, o rodape se ancora acima dela, a lista preenche o resto.
+local bar = ui.row(f, { bottom = 0, items = {
+    { text = "&Procurar", onClick = function() scan() end },
+    { text = "&Acoes", alt = true, onClick = function()
+        local p = list:getSelected()
+        if p then list.onActivate(list, p) end
+    end },
+    { text = "&Config", alt = true, onClick = function()
+        mosaic.launchWith({ title = "Configuracoes" }, "/os/apps/settings.lua")
+    end },
+} })
+status = f:add(ui.label { x = 1, above = bar, w = "fill", text = "",
+    bg = theme.taskbarBg, fg = theme.taskbarFg })
+list = f:add(ui.list {
+    x = 1, y = 5, w = "fill", fillTo = status,
+    render = function(p)
+        return string.format(" #%-4d %-16s %s", p.id, strutil.ellipsis(p.name or "?", 16), p.os or "")
+    end,
+})
+
 list.onActivate = function(_, peer)
     if not peer then return end
     local actions = {
@@ -115,24 +129,9 @@ list.onActivate = function(_, peer)
     if idx then actions[idx].run() f.dirty = true end
 end
 
-local bx = 1
-local function addBtn(text, fn, alt)
-    local b = f:add(ui.button { x = bx, y = h - 1, text = text, alt = alt, onClick = fn })
-    bx = bx + b:width() + 1
-end
-addBtn("&Procurar", scan)
-addBtn("&Acoes", function() local p = list:getSelected() if p then list.onActivate(list, p) end end, true)
-addBtn("&Config", function() mosaic.launchWith({ title = "Configuracoes" }, "/os/apps/settings.lua") end, true)
-
 f.onEvent = function(_, ev)
     if ev == "mosaic:relay_state" then refreshRelay() return true end
-    if ev == "term_resize" then
-        w, h = term.getSize()
-        list.w, list.h = w, h - 9
-        status.y, status.w = h, w
-        f.dirty = true
-        return true
-    end
+    -- Sem term_resize: as ancoras do form cuidam do reposicionamento.
 end
 
 refreshRelay()
