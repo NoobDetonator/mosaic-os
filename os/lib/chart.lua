@@ -79,6 +79,15 @@ function chart.history(size)
             return self
         end,
         last = function(self) return self.data[#self.data] end,
+        -- Queda por minuto na janela, dado o intervalo entre amostras em segundos.
+        -- nil com amostras de menos para valer alguma coisa; 0 quando nao esta caindo
+        -- (subindo nao e' "queda negativa": seria projecao sem sentido).
+        fallPerMin = function(self, intervalSecs)
+            if #self.data < 5 then return nil end
+            local queda = self.data[1] - self.data[#self.data]
+            if queda <= 0 then return 0 end
+            return queda / ((#self.data - 1) * intervalSecs) * 60
+        end,
         -- Media da janela, para suavizar leitura que oscila muito.
         mean = function(self)
             if #self.data == 0 then return 0 end
@@ -121,6 +130,24 @@ function chart.demo()
     assert(#h.data == 3 and h.data[1] == 2, "history nao descartou o mais antigo")
     assert(h:last() == 4, "history:last errado")
     assert(h:mean() == 3, "history:mean errado: " .. h:mean())
+
+    -- Ritmo de queda: 5 amostras de 2 em 2 segundos = 8 s de janela.
+    local q = chart.history(10)
+    assert(q:fallPerMin(2) == nil, "com historico vazio nao da para estimar ritmo")
+    q:push(100):push(90):push(80):push(70)
+    assert(q:fallPerMin(2) == nil, "4 amostras ainda e pouco para estimar")
+    q:push(60)                              -- caiu 40 em 8 s = 300 por minuto
+    assert(q:fallPerMin(2) == 300, "ritmo de queda errado: " .. tostring(q:fallPerMin(2)))
+
+    -- Subindo nao vira projecao: seria dizer que "acaba" um valor que esta crescendo.
+    local sobe = chart.history(10)
+    sobe:push(1):push(2):push(3):push(4):push(5)
+    assert(sobe:fallPerMin(2) == 0, "serie subindo devia dar queda 0")
+
+    -- Estavel tambem e zero, nao divisao por zero mais adiante.
+    local flat2 = chart.history(10)
+    for _ = 1, 6 do flat2:push(7) end
+    assert(flat2:fallPerMin(2) == 0, "serie estavel devia dar queda 0")
     return true
 end
 

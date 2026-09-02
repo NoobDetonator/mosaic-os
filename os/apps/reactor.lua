@@ -54,6 +54,22 @@ local function low(key, value, limit)
     return value < limit
 end
 
+-- A temperatura do Powah mora no nucleo do multiblock, que fica cercado de pecas
+-- e nenhum Block Reader alcanca. O sinal util no lugar dela e o ritmo de consumo:
+-- quanto tempo falta ate acabar, que e o que o operador precisa saber.
+local function acabaEm(valor, hist)
+    local porMin = hist:fallPerMin(INTERVAL)
+    if not porMin or porMin <= 0 then return nil end
+    return valor / porMin
+end
+
+local function prazo(valor, hist)
+    local m = acabaEm(valor, hist)
+    if not m then return "" end
+    if m < 90 then return string.format(" ~%dmin", math.floor(m + 0.5)) end
+    return string.format(" ~%.1fh", m / 60)
+end
+
 local function sample()
     reading = powah.read(hw)
     if reading.error then
@@ -80,6 +96,21 @@ local function sample()
         local waterMin = settings.get("mosaic.reactor.waterMin") or 500
         alert("agua", low("agua", reading.tank.amount, waterMin),
             "Agua baixa: " .. reading.tank.amount .. " mB")
+    end
+
+    -- Multiblock desmontado: o unico sinal util que sobrou no NBT da peca.
+    if reading.built ~= nil then
+        alert("montagem", reading.built == false, "Reator DESMONTADO")
+    end
+
+    -- Projecao no lugar da temperatura: avisa antes de acabar, nao depois.
+    local mFuel = acabaEm(reading.fuel.count, hFuel)
+    alert("prazo do combustivel", mFuel ~= nil and low("prazo do combustivel", mFuel, 10),
+        string.format("Combustivel acaba em ~%d min no ritmo atual", math.floor((mFuel or 0) + 0.5)))
+    if reading.tank then
+        local mWater = acabaEm(reading.tank.amount, hWater)
+        alert("prazo da agua", mWater ~= nil and low("prazo da agua", mWater, 10),
+            string.format("Agua acaba em ~%d min no ritmo atual", math.floor((mWater or 0) + 0.5)))
     end
 
     local chest = settings.get("mosaic.reactor.chest")
@@ -150,14 +181,15 @@ local function drawPanel(t, reserva)
 
     -- Tela baixa (monitor pequeno) nao pode gastar linha em branco depois do titulo.
     local y = (th < 14) and 2 or 3
-    row(t, y, tw, "Combustivel", tostring(reading.fuel.count), reading.fuel.count / 64, colors.lime)
+    row(t, y, tw, "Combustivel", reading.fuel.count .. prazo(reading.fuel.count, hFuel),
+        reading.fuel.count / 64, colors.lime)
     y = y + 1
     if reading.coolant.count > 0 then
         row(t, y, tw, "Gelo seco", tostring(reading.coolant.count), reading.coolant.count / 64, colors.lightBlue)
         y = y + 1
     end
     if reading.tank then
-        row(t, y, tw, "Agua", reading.tank.amount .. " mB",
+        row(t, y, tw, "Agua", reading.tank.amount .. " mB" .. prazo(reading.tank.amount, hWater),
             tankMax > 0 and (reading.tank.amount / tankMax) or 0, colors.blue)
         y = y + 1
     end
@@ -174,7 +206,7 @@ local function drawPanel(t, reserva)
 
     -- Diz o que falta em vez de mostrar zero, que seria mentira.
     local faltando = {}
-    if not hw.blockReader then faltando[#faltando + 1] = "Block Reader (temperatura)" end
+    if not hw.blockReader then faltando[#faltando + 1] = "Block Reader (estado do multiblock)" end
     if not hw.energyDetector and not (reading.energy and reading.energy.rate) then
         faltando[#faltando + 1] = "Energy Detector (FE/t)"
     end
@@ -391,12 +423,15 @@ local function hardwareText()
         lines[#lines + 1] = "    Ligue o cabo na peca extratora."
     end
     if reading.coreHint then
-        -- O leitor esta numa peca do reator, nao no nucleo: o NBT util so existe la.
+        -- O leitor esta numa peca. O nucleo guarda a temperatura, mas fica cercado
+        -- de pecas no meio do multiblock: nao da para encostar nada nele sem
+        -- desmontar o reator. Informa e para de pedir -- nao e' bug, e' o mod.
         local c = reading.coreHint
-        lines[#lines + 1] = "[!] Block Reader esta numa peca."
-        lines[#lines + 1] = "    Mova para o nucleo: " .. c.x .. " " .. c.y .. " " .. c.z
+        lines[#lines + 1] = "[i] Le uma peca. O nucleo esta em"
+        lines[#lines + 1] = "    " .. c.x .. " " .. c.y .. " " .. c.z .. ", cercado: sem temperatura."
+        lines[#lines + 1] = "    Usando projecao de consumo."
     else
-        mark("Block Reader", hw.blockReader ~= nil, "temperatura")
+        mark("Block Reader", hw.blockReader ~= nil, "estado do multiblock")
     end
     mark("Energy Detector", hw.energyDetector ~= nil, "FE/t e limite de saida")
     mark("Chat Box", hw.chatBox ~= nil, "alertas no chat")

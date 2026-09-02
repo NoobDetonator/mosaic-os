@@ -52,7 +52,7 @@
     },
     {
       "path": "os/apps/reactor.lua",
-      "sha1": "6abf6d1ef6d88195dc8a4e2957ad354aad2233f9"
+      "sha1": "c51b97b53135bee6ad50dfcbf776ca45362d83d6"
     },
     {
       "path": "os/apps/registry.lua",
@@ -112,7 +112,7 @@
     },
     {
       "path": "os/lib/chart.lua",
-      "sha1": "f76c068b32ace5cef4641bce183b6e7115981915"
+      "sha1": "46d3785ca062e00f94585bf9813ed5cf4d725e59"
     },
     {
       "path": "os/lib/fsx.lua",
@@ -136,7 +136,7 @@
     },
     {
       "path": "os/lib/powah.lua",
-      "sha1": "0e9539d53dc166f98f3e64a7199517fddef85859"
+      "sha1": "3ea71ead3e319524eea0c66e0582dd199925fb2f"
     },
     {
       "path": "os/lib/strutil.lua",

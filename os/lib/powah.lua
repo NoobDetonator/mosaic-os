@@ -91,6 +91,9 @@ function powah.read(hw)
         if okB and type(data) == "table" then
             r.nbt = data
             r.blockName = hw.blockReader.getBlockName and hw.blockReader.getBlockName() or nil
+            -- built = 0 significa multiblock desmontado: vale um alerta, ao contrario
+            -- da temperatura, que so existe no nucleo e o nucleo e' inalcancavel.
+            if data.built ~= nil then r.built = data.built == 1 end
             local c = data.core_pos
             if c and (c.X or c.x) then
                 local cx, cy, cz = c.X or c.x, c.Y or c.y, c.Z or c.z
