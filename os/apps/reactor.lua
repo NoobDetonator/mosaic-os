@@ -384,6 +384,12 @@ local function hardwareText()
         lines[#lines + 1] = (ok and "[x] " or "[ ] ") .. nome .. (ok and "" or "  -> " .. para)
     end
     mark("Reator", hw.reactor ~= nil, "encoste o PC no reator")
+    -- Medido: so a peca EXTRATORA do multiblock publica energy_storage. Ligar o
+    -- cabo em outra peca da inventario e tanque, mas nenhuma leitura de energia.
+    if hw.reactor and not hw.reactor.getEnergy then
+        lines[#lines + 1] = "[!] Esta face do reator nao da energia."
+        lines[#lines + 1] = "    Ligue o cabo na peca extratora."
+    end
     if reading.coreHint then
         -- O leitor esta numa peca do reator, nao no nucleo: o NBT util so existe la.
         local c = reading.coreHint

@@ -52,7 +52,7 @@
     },
     {
       "path": "os/apps/reactor.lua",
-      "sha1": "669ca48f89dabad0ed33e42ec4cfb33ba7d34fe9"
+      "sha1": "6abf6d1ef6d88195dc8a4e2957ad354aad2233f9"
     },
     {
       "path": "os/apps/registry.lua",
