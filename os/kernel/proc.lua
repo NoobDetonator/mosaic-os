@@ -246,6 +246,48 @@ local function cycleFocus()
     proc.raise(target) proc.setFocus(target)
 end
 
+-- Cursor por teclado. Enquanto ligado, o kernel ENGOLE setas/Enter/Esc: se os apps tambem
+-- vissem essas teclas, a lista rolaria junto com o cursor. O clique sai como um mouse_click
+-- de verdade na fila de eventos, entao cai no mesmo caminho do mouse e nenhum app muda.
+local function pointerKey(name, code, isHeld)
+    local p = wm.pointer
+    local step = isHeld and 3 or 1        -- tecla segurada anda mais rapido
+    if name == "key" then
+        if code == keys.left then p.x = math.max(1, p.x - step)
+        elseif code == keys.right then p.x = math.min(wm.W, p.x + step)
+        elseif code == keys.up then p.y = math.max(1, p.y - step)
+        elseif code == keys.down then p.y = math.min(wm.H, p.y + step)
+        elseif code == keys.enter or code == keys.numPadEnter or code == keys.space then
+            -- isHeld tem que barrar: senao a repeticao do teclado dispara um clique por tique.
+            if not isHeld then
+                local button = (held[keys.leftShift] or held[keys.rightShift]) and 2 or 1
+                os.queueEvent("mouse_click", button, p.x, p.y)
+            end
+        elseif code == keys.escape then
+            p.on = false
+        else
+            return false
+        end
+        return true
+    elseif name == "key_up" and (code == keys.enter or code == keys.numPadEnter or code == keys.space) then
+        -- Sem o mouse_up o mouseOwner fica preso e todo evento seguinte vai para o alvo errado.
+        local button = (held[keys.leftShift] or held[keys.rightShift]) and 2 or 1
+        os.queueEvent("mouse_up", button, p.x, p.y)
+        return true
+    end
+    return false
+end
+
+function proc.togglePointer()
+    local p = wm.pointer
+    p.on = not p.on
+    if p.on then
+        p.x, p.y = math.floor(wm.W / 2), math.floor(wm.H / 2)
+        wm.toast("Cursor por teclado: setas movem, Enter clica, Esc sai", 5)
+    end
+    dirty = true
+end
+
 local function handleMouse(name, btn, x, y)
     if drag then
         if name == "mouse_drag" then
@@ -339,7 +381,11 @@ function proc.step()
         local ctrl = held[keys.leftCtrl] or held[keys.rightCtrl]
         -- Atalhos do sistema. Ctrl+T, Ctrl+R e Ctrl+S ficam de fora de proposito: o proprio CC
         -- os intercepta quando segurados, e reinicia ou desliga o computador.
-        if name == "key" and alt and ev[2] == keys.tab then
+        if name == "key" and alt and ev[2] == keys.m then
+            proc.togglePointer()
+        elseif wm.pointer.on and pointerKey(name, ev[2], ev[3]) then
+            dirty = true
+        elseif name == "key" and alt and ev[2] == keys.tab then
             cycleFocus()
         elseif name == "key" and ctrl and ev[2] == keys.escape then
             proc.toggleStartMenu()
@@ -425,6 +471,8 @@ function api.lib(name) return require("lib." .. name) end
 function api.emit(name, ...) os.queueEvent("mosaic:" .. name, ...) end
 function api.isTiny() return wm.tiny end
 function api.altHeld() return (held[keys.leftAlt] or held[keys.rightAlt]) and true or false end
+function api.pointer() return wm.pointer end
+function api.togglePointer() proc.togglePointer() end
 
 _G.mosaic = api
 return proc

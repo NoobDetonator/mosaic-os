@@ -9,6 +9,7 @@ for _, app in ipairs(registry.all()) do
     items[#items + 1] = { text = " " .. app.name, app = app }
 end
 items[#items + 1] = { separator = true }
+items[#items + 1] = { text = " Cursor por teclado", action = function() mosaic.togglePointer() end }
 items[#items + 1] = { text = " Desligar", action = function() mosaic.shutdown() end }
 items[#items + 1] = { text = " Reiniciar", action = function() mosaic.reboot() end }
 items[#items + 1] = { text = " Sair para o shell", action = function()

@@ -326,6 +326,42 @@ pump()
 check(not desk.dead, "area de trabalho morreu ao receber setas")
 check(#mosaic.list() > antes, "Enter na area de trabalho nao abriu o icone selecionado")
 
+-- 15. Cursor por teclado
+os.queueEvent("key", keys.leftAlt, false)
+os.queueEvent("key", keys.m, false)
+os.queueEvent("key_up", keys.leftAlt)
+pump()
+check(wm.pointer.on == true, "Alt+M nao ligou o cursor por teclado")
+local px, py = wm.pointer.x, wm.pointer.y
+os.queueEvent("key", keys.right, false)
+pump()
+check(wm.pointer.x == px + 1, "seta direita nao moveu o cursor")
+os.queueEvent("key", keys.down, false)
+pump()
+check(wm.pointer.y == py + 1, "seta baixo nao moveu o cursor")
+-- tecla segurada anda mais rapido
+os.queueEvent("key", keys.right, true)
+pump()
+check(wm.pointer.x == px + 4, "tecla segurada deveria andar 3 de uma vez")
+
+-- Enter vira clique de verdade: mira o botao Iniciar e o menu tem de abrir.
+if proc.startMenu and not proc.startMenu.dead then proc.kill(proc.startMenu) proc.startMenu = nil end
+wm.pointer.x, wm.pointer.y = 3, wm.H
+os.queueEvent("key", keys.enter, false)
+os.queueEvent("key_up", keys.enter)
+-- Dois pumps: o clique sintetico entra na fila DEPOIS do marcador deste pump, entao so e
+-- processado na rodada seguinte.
+pump()
+pump()
+if not (proc.startMenu and not proc.startMenu.dead) then snap() end
+check(proc.startMenu and not proc.startMenu.dead, "Enter do cursor nao clicou no botao Iniciar")
+
+-- Enquanto ligado, o cursor engole as setas: o app focado nao pode ve-las.
+check(wm.pointer.on == true, "o cursor deveria continuar ligado")
+os.queueEvent("key", keys.escape, false)
+pump()
+check(wm.pointer.on == false, "Esc nao desligou o cursor por teclado")
+
 -- Resultado
 term.redirect(term.native())
 term.setBackgroundColor(colors.black)

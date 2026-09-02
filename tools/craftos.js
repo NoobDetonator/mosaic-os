@@ -119,8 +119,10 @@ function bootAndShoot(actions, secs, outFile) {
 }
 
 if (cmd === 'shot') {
-  const actions = arg ? [`mosaic.launch("/os/apps/${arg}.lua")`, 'sleep(2)'] : [];
-  if (arg && !fs.existsSync(path.join(ROOT, 'os', 'apps', `${arg}.lua`))) {
+  const actions = arg === 'pointer'
+    ? ['mosaic.togglePointer()', 'local p = mosaic.pointer()', 'p.x, p.y = 20, 8', 'sleep(1)']
+    : (arg ? [`mosaic.launch("/os/apps/${arg}.lua")`, 'sleep(2)'] : []);
+  if (arg && arg !== 'pointer' && !fs.existsSync(path.join(ROOT, 'os', 'apps', `${arg}.lua`))) {
     console.error(`nao existe os/apps/${arg}.lua`);
     process.exit(2);
   }

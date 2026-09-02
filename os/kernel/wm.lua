@@ -12,6 +12,10 @@ wm.W, wm.H = 0, 0
 wm.slots = {}          -- taskbar: { {x1=, x2=, p=}, ... }
 wm.toasts = {}         -- { {text=, expires=}, ... }
 wm.last = {}           -- ultimo quadro enviado a tela, por linha: { text, fg, bg }
+-- Cursor por teclado. O CC nao manda evento de movimento do mouse (so clique e arrasto), entao
+-- um cursor que segue o mouse e impossivel. Este aqui anda com as setas e clica com Enter,
+-- e serve tambem como caminho de teclado para tudo que so tinha mouse.
+wm.pointer = { on = false, x = 1, y = 1 }
 wm.MIN_W, wm.MIN_H = 10, 3
 wm.startLabel = " Iniciar "
 
@@ -228,6 +232,13 @@ function wm.drawTaskbar(procs, focus)
             x = x + slotW + 1
         end
     end
+    if wm.pointer.on and clockX - 4 > x then
+        -- O modo nunca pode ficar invisivel: ele engole as setas dos apps enquanto esta ligado.
+        c.setCursorPos(clockX - 4, wm.H)
+        c.setBackgroundColor(theme.selBg)
+        c.setTextColor(theme.selFg)
+        c.write(" " .. wm.POINTER_CHAR .. " ")
+    end
     c.setCursorPos(clockX, wm.H)
     c.setBackgroundColor(theme.taskbarBg)
     c.setTextColor(theme.taskbarFg)
@@ -254,6 +265,24 @@ local function drawToasts()
 end
 
 function wm.hasToasts() return #wm.toasts > 0 end
+
+-- Desenhado por ultimo, invertendo as cores da propria celula: assim ele aparece sobre
+-- qualquer fundo e continua respeitando o limite de duas cores por celula.
+local function drawPointer()
+    local p = wm.pointer
+    if not p.on then return end
+    local ok, text, fg, bg = pcall(canvas.getLine, p.y)
+    if not ok or not text then return end
+    local i = p.x
+    if i < 1 or i > #text then return end
+    local f, b = fg:sub(i, i), bg:sub(i, i)
+    if f == b then f = (b == "0") and "f" or "0" end   -- celula lisa: garante contraste
+    canvas.setCursorPos(i, p.y)
+    canvas.blit(wm.POINTER_CHAR, b, f)
+end
+
+-- Seta cheia. Se a fonte do jogo nao trouxer esse caractere, troque por "+".
+wm.POINTER_CHAR = string.char(16)
 
 -- Sombra: uma coluna a direita e uma linha abaixo da janela. Fica dentro do mesmo laco do
 -- compositor, entao janela de cima cobre a sombra da de baixo sem z-order proprio.
@@ -292,6 +321,7 @@ function wm.render(procs, focus)
     end
     wm.drawTaskbar(procs, focus)
     drawToasts()
+    drawPointer()
     -- Canvas -> tela, linha a linha, so o que mudou.
     --
     -- O caminho obvio seria `c.setVisible(true); c.setVisible(false)`, mas a API window
@@ -309,7 +339,7 @@ function wm.render(procs, focus)
     end
     -- Cursor: so da janela focada, e so se a celula nao estiver coberta.
     local blink = false
-    if focus and focus.win and not focus.minimized and not focus.hidden then
+    if not wm.pointer.on and focus and focus.win and not focus.minimized and not focus.hidden then
         local cx, cy = focus.win.getCursorPos()
         local ax, ay = focus.x + cx - 1, clientTop(focus) + cy - 1
         if cx >= 1 and cx <= focus.w and cy >= 1 and cy <= focus.h
