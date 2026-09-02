@@ -5,6 +5,7 @@
 -- Geometria de um processo p: p.x, p.y (linha do titulo), p.w, p.h (linhas do cliente).
 -- Se p.chrome == false nao ha titulo: o cliente comeca em p.y.
 local theme = require("kernel.theme")
+local draw = require("kernel.draw")
 
 local wm = {}
 wm.W, wm.H = 0, 0
@@ -12,7 +13,7 @@ wm.slots = {}          -- taskbar: { {x1=, x2=, p=}, ... }
 wm.toasts = {}         -- { {text=, expires=}, ... }
 wm.last = {}           -- ultimo quadro enviado a tela, por linha: { text, fg, bg }
 wm.MIN_W, wm.MIN_H = 10, 3
-wm.startLabel = " M "
+wm.startLabel = " Iniciar "
 
 local root, canvas
 
@@ -95,7 +96,7 @@ end
 -- kind: "start" | "taskbar" | "client" | "title" | "min" | "max" | "close" | "desktop"
 function wm.hitTest(procs, x, y)
     if y == wm.H then
-        if x <= #wm.startLabel then return { kind = "start" } end
+        if x <= (wm.startW or #wm.startLabel) then return { kind = "start" } end
         for _, s in ipairs(wm.slots) do
             if x >= s.x1 and x <= s.x2 then return { kind = "taskbar", p = s.p } end
         end
@@ -163,16 +164,17 @@ end
 local function drawTitle(c, p, focused)
     local bg = focused and theme.titleBg or theme.titleBgInactive
     local fg = focused and theme.titleFg or theme.titleFgInactive
-    -- ultimas 3 colunas: minimizar, maximizar/restaurar, fechar (tiny: sem maximizar)
+    -- Ultimas 3 colunas: minimizar, maximizar/restaurar, fechar. No Win95 esses sao botoezinhos
+    -- em relevo, com a cor da face, e nao letras soltas sobre a barra.
     local right = wm.tiny and "_ x" or "_+x"
     if not wm.tiny and p.maximized then right = "_-x" end
-    local text = " " .. pad(p.title or "", math.max(0, p.w - 4)) .. right
-    text = text:sub(1, p.w)
-    local fgs = string.rep(colors.toBlit(fg), #text)
-    local bgs = string.rep(colors.toBlit(bg), #text)
-    if #text >= 1 then
-        fgs = fgs:sub(1, #text - 1) .. colors.toBlit(focused and theme.closeFg or fg)
-    end
+    local titleW = math.max(0, p.w - #right - 1)
+    local text = (" " .. pad(p.title or "", titleW) .. right):sub(1, p.w)
+
+    local titlePart = #text - #right
+    local fgs = string.rep(colors.toBlit(fg), titlePart) .. string.rep(colors.toBlit(theme.faceFg), #right)
+    local bgs = string.rep(colors.toBlit(bg), titlePart) .. string.rep(colors.toBlit(theme.face), #right)
+    fgs, bgs = fgs:sub(1, #text), bgs:sub(1, #text)
     c.setCursorPos(p.x, p.y)
     c.blit(text, fgs, bgs)
 end
@@ -190,13 +192,19 @@ function wm.drawTaskbar(procs, focus)
     c.setBackgroundColor(theme.taskbarBg)
     c.setTextColor(theme.taskbarFg)
     c.clearLine()
+
+    -- Botao Iniciar: sempre em relevo alto, como no Win95.
+    local label = wm.tiny and " M " or wm.startLabel
     c.setCursorPos(1, wm.H)
     c.setBackgroundColor(theme.startBg)
     c.setTextColor(theme.startFg)
-    c.write(wm.startLabel)
+    c.write(label)
+    draw.caps(c, 1, wm.H, #label, theme.startBg, true)
+    wm.startW = #label
+
     local clock = clockText()
     local clockX = wm.W - #clock
-    local x = #wm.startLabel + 2
+    local x = #label + 2
     wm.slots = {}
     local visible = {}
     for _, p in ipairs(procs) do
@@ -204,14 +212,18 @@ function wm.drawTaskbar(procs, focus)
     end
     if #visible > 0 then
         local avail = clockX - 1 - x
-        local slotW = math.max(3, math.min(12, math.floor(avail / #visible) - 1))
+        local slotW = math.max(4, math.min(14, math.floor(avail / #visible) - 1))
         for _, p in ipairs(visible) do
             if x + slotW > clockX - 1 then break end
+            -- Janela em foco = botao afundado. E' o unico jeito de mostrar qual esta ativa
+            -- sem depender de hover, que o CC nao tem.
             local active = p == focus and not p.minimized
             c.setCursorPos(x, wm.H)
             c.setBackgroundColor(active and theme.taskbarActiveBg or theme.taskbarBg)
-            c.setTextColor(p.minimized and theme.mutedFg or (active and theme.taskbarActiveFg or theme.taskbarFg))
-            c.write(pad(p.title or "?", slotW))
+            c.setTextColor(active and theme.taskbarActiveFg or theme.taskbarFg)
+            c.setCursorPos(x + 1, wm.H)
+            c.write(pad(p.title or "?", slotW - 2))
+            draw.caps(c, x, wm.H, slotW, active and theme.taskbarActiveBg or theme.taskbarBg, not active)
             table.insert(wm.slots, { x1 = x, x2 = x + slotW - 1, p = p })
             x = x + slotW + 1
         end

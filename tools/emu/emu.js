@@ -60,7 +60,12 @@ lualib.luaL_openlibs(L0);
 
 // ATENCAO: funcoes JS recebem o estado da *thread* que chamou (coroutines); nunca usar L0 dentro delas.
 const S = (s) => to_luastring(String(s));
-const arg = (L, i) => (lua.lua_isnoneornil(L, i) ? null : to_jsstring(lua.lua_tostring(L, i)));
+// latin1, nao utf8: os caracteres teletext do CC (128..159) sao bytes crus e o
+// to_jsstring do fengari rejeita como utf8 invalido.
+const arg = (L, i) => {
+  if (lua.lua_isnoneornil(L, i)) return null;
+  return Buffer.from(lua.lua_tostring(L, i)).toString('latin1');
+};
 const pushString = (L, s) => lua.lua_pushstring(L, S(s));
 function reg(name, fn) {
   lua.lua_pushjsfunction(L0, fn);

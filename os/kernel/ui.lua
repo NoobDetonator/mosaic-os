@@ -7,6 +7,7 @@
 --   f:add(ui.button{ x = 2, y = 4, text = "Sair", onClick = function() f:stop() end })
 --   f:run()
 local theme = require("kernel.theme")
+local draw = require("kernel.draw")
 
 local ui = {}
 
@@ -104,25 +105,39 @@ function Button:draw(t)
     local focused = self.form.focused == self
     local bg = self.bg or (self.alt and theme.buttonAltBg or theme.buttonBg)
     local fg = self.fg or (self.alt and theme.buttonAltFg or theme.buttonFg)
-    if self.disabled then bg, fg = theme.mutedFg, theme.dialogBg end
+    if self.disabled then bg, fg = theme.face, theme.shadow end
+    -- Sem hover no CC, o foco tem que aparecer de outro jeito. Inverter as cores custa zero
+    -- celula, enquanto os colchetes de antes roubavam duas do texto.
+    if focused and not self.disabled then bg, fg = theme.selBg, theme.selFg end
     t.setCursorPos(self.x, self.y)
     t.setBackgroundColor(bg)
     t.setTextColor(fg)
-    local label = " " .. tostring(self.text) .. " "
-    if self.w then label = pad(self.text, self.w, "center") end
-    if focused and not self.disabled then label = "[" .. label:sub(2, -2) .. "]" end
-    t.write(label)
+    -- O texto ocupa o miolo; as duas pontas ficam para o relevo.
+    t.write(" " .. pad(tostring(self.text), self.w - 2, "center") .. " ")
+    draw.caps(t, self.x, self.y, self.w, bg, not self.pressed)
 end
 function Button:width() return self.w or (#tostring(self.text) + 2) end
 function Button:onMouse(ev)
-    if ev == "mouse_click" and not self.disabled and self.onClick then self.onClick(self) end
+    if ev == "mouse_click" and not self.disabled then
+        -- Pintar o estado pressionado tem que passar pelo form: o Form:draw desloca w.y pelo
+        -- scroll, e desenhar direto daqui erraria a linha num formulario rolado.
+        self.pressed = true
+        if self.form then self.form:draw() end
+        if self.onClick then self.onClick(self) end
+        -- Se o onClick abriu um modal, o mouse_up foi para o modal e nunca chega aqui.
+        self.pressed = false
+        self:invalidate()
+    elseif ev == "mouse_up" then
+        self.pressed = false
+        self:invalidate()
+    end
 end
 function Button:onKey(code)
     if (code == keys.enter or code == keys.space) and not self.disabled and self.onClick then self.onClick(self) end
 end
 function ui.button(o)
     local b = newWidget(Button, o, { h = 1, focusable = true })
-    b.w = b.w or (#tostring(b.text) + 2)
+    b.w = b.w or (#tostring(b.text) + 2)   -- as duas pontas viram o relevo
     return b
 end
 
@@ -131,11 +146,11 @@ local Textbox = setmetatable({}, Widget) Textbox.__index = Textbox
 function Textbox:draw(t)
     self.text = self.text or ""
     self.cursor = math.max(0, math.min(self.cursor or #self.text, #self.text))
-    local inner = self.w
+    local inner = self.w - 2       -- as pontas ficam para o relevo afundado
     if self.cursor - (self.scroll or 0) >= inner then self.scroll = self.cursor - inner + 1 end
     if self.cursor < (self.scroll or 0) then self.scroll = self.cursor end
     self.scroll = self.scroll or 0
-    t.setCursorPos(self.x, self.y)
+    t.setCursorPos(self.x + 1, self.y)
     t.setBackgroundColor(self.bg or theme.inputBg)
     t.setTextColor(self.fg or theme.inputFg)
     local shown = self.text
@@ -146,10 +161,12 @@ function Textbox:draw(t)
         shown = self.placeholder
     end
     t.write(pad(shown, inner))
+    -- Campo de texto no Win95 e sempre afundado.
+    draw.caps(t, self.x, self.y, self.w, self.bg or theme.inputBg, false)
 end
 function Textbox:placeCursor(t)
     t.setTextColor(self.fg or theme.inputFg)
-    t.setCursorPos(self.x + self.cursor - self.scroll, self.y)
+    t.setCursorPos(self.x + 1 + self.cursor - self.scroll, self.y)
     t.setCursorBlink(true)
 end
 function Textbox:setText(s)
@@ -186,7 +203,7 @@ function Textbox:onKey(code)
 end
 function Textbox:onMouse(ev, btn, lx)
     if ev == "mouse_click" then
-        self.cursor = math.min(#(self.text or ""), (self.scroll or 0) + lx - 1)
+        self.cursor = math.max(0, math.min(#(self.text or ""), (self.scroll or 0) + lx - 2))
         self:invalidate()
     end
 end
@@ -226,8 +243,8 @@ function List:draw(t)
             t.setBackgroundColor(focused and theme.selBg or theme.mutedFg)
             t.setTextColor(theme.selFg)
         else
-            t.setBackgroundColor(self.bg or self.form.bg)
-            t.setTextColor(self.fg or self.form.fg)
+            t.setBackgroundColor(self.bg or theme.inputBg)
+            t.setTextColor(self.fg or theme.inputFg)
             if type(item) == "table" and item.fg then t.setTextColor(item.fg) end
         end
         local s = item ~= nil and self:itemText(item) or ""
@@ -241,7 +258,7 @@ function List:draw(t)
         for i = 0, self.h - 1 do
             t.setCursorPos(self.x + self.w - 1, self.y + i)
             local on = i >= barY and i < barY + barH
-            t.setBackgroundColor(on and theme.accent or theme.mutedFg)
+            t.setBackgroundColor(on and theme.face or theme.shadow)
             t.write(" ")
         end
     end
@@ -324,13 +341,14 @@ function Progress:draw(t)
     t.setCursorPos(self.x, self.y)
     t.setBackgroundColor(self.fg or theme.accent)
     t.write(string.rep(" ", filled))
-    t.setBackgroundColor(self.bg or theme.mutedFg)
+    t.setBackgroundColor(self.bg or theme.face)
     t.write(string.rep(" ", self.w - filled))
+    draw.caps(t, self.x, self.y, self.w, self.bg or theme.face, false)
     if self.label then
         local s = pad(self.label, self.w, "center")
         t.setCursorPos(self.x, self.y)
         for i = 1, #s do
-            t.setBackgroundColor(i <= filled and (self.fg or theme.accent) or (self.bg or theme.mutedFg))
+            t.setBackgroundColor(i <= filled and (self.fg or theme.accent) or (self.bg or theme.face))
             t.setTextColor(colors.white)
             t.write(s:sub(i, i))
         end
@@ -345,10 +363,17 @@ function Dropdown:current()
     return item ~= nil and List.itemText(self, item) or ""
 end
 function Dropdown:draw(t)
-    t.setCursorPos(self.x, self.y)
+    local focused = self.form and self.form.focused == self
+    t.setCursorPos(self.x + 1, self.y)
     t.setBackgroundColor(self.bg or theme.inputBg)
     t.setTextColor(self.fg or theme.inputFg)
-    t.write(pad(self:current(), self.w - 1) .. "v")
+    t.write(pad(self:current(), self.w - 3))
+    -- A seta e' o botao: relevo alto, e acesa quando o widget tem o foco.
+    t.setCursorPos(self.x + self.w - 2, self.y)
+    t.setBackgroundColor(focused and theme.selBg or theme.face)
+    t.setTextColor(focused and theme.selFg or theme.faceFg)
+    t.write("v")
+    draw.caps(t, self.x, self.y, self.w, self.bg or theme.inputBg, false)
 end
 function Dropdown:open()
     local idx = ui.menu(self.items, self.x, self.y + 1, self.w, { render = self.render })
@@ -748,6 +773,7 @@ function ui.menu(items, x, y, w, opts)
         build = function(f, dlg)
             local l = f:add(ui.list {
                 x = 1, y = 1, w = w, h = h, items = items, render = opts.render, activateOnClick = true,
+                bg = theme.face, fg = theme.faceFg,
                 onActivate = function(_, _, idx) dlg.close(idx) end,
             })
             f:setFocus(l)

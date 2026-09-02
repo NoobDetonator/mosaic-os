@@ -8,7 +8,7 @@ local dir = ""   -- convencao do fs.combine: raiz e "", nunca "/"
 local w, h = term.getSize()
 local f = ui.form()
 
-local pathLabel = f:add(ui.label { x = 1, y = 1, w = w, text = "", bg = theme.accent, fg = theme.accentFg })
+local pathLabel = f:add(ui.label { x = 1, y = 1, w = w, text = "", bg = theme.inputBg, fg = theme.inputFg })
 local list = f:add(ui.list {
     x = 1, y = 2, w = w, h = h - 3,
     render = function(item)

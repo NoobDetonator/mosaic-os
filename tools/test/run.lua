@@ -54,7 +54,7 @@ local desk = proc.launch("/os/apps/desktop.lua", {}, {
 })
 pump()
 check(not desk.dead, "desktop morreu ao iniciar")
-check(line(wm.H):sub(1, 3) == " M ", "taskbar sem botao Iniciar: " .. line(wm.H))
+check(line(wm.H):find("Iniciar", 1, true) ~= nil, "taskbar sem botao Iniciar: " .. line(wm.H))
 check(screen():find("Terminal", 1, true) ~= nil, "icone Terminal nao desenhado")
 
 -- 2. Programa simples numa janela
@@ -122,7 +122,7 @@ if screen():find("falha nativa", 1, true) ~= nil then snap() end
 check(screen():find("falha nativa", 1, true) == nil, "janela de erro nao fechou com Enter")
 
 -- 8. Menu Iniciar abre e fecha ao clicar fora
-os.queueEvent("mouse_click", 1, 2, wm.H)
+os.queueEvent("mouse_click", 1, 3, wm.H)
 pump()
 if not (proc.startMenu and not proc.startMenu.dead) then snap() end
 check(proc.startMenu and not proc.startMenu.dead, "menu iniciar nao abriu")
@@ -187,6 +187,8 @@ check(fsx.read("/tmp_test.txt") == "abc", "fsx.read falhou")
 check(fsx.writeJSON("/tmp_test.json", { a = 1 }) == true, "fsx.writeJSON falhou")
 check(fsx.readJSON("/tmp_test.json").a == 1, "fsx.readJSON falhou")
 check(fsx.uniqueName("/tmp_test.txt") == "/tmp_test (2).txt", "fsx.uniqueName errado: " .. fsx.uniqueName("/tmp_test.txt"))
+check(require("kernel.draw").demo() == true, "self-check do kernel.draw falhou")
+check(require("kernel.draw").HALF:byte() == 149, "caractere de meia celula errado")
 local hal = require("lib.hal")
 check(type(hal.list()) == "table", "hal.list nao devolveu tabela")
 check(hal.find("chatBox") == nil, "hal.find achou periferico inexistente")

@@ -20,7 +20,7 @@
     },
     {
       "path": "os/apps/files.lua",
-      "sha1": "7a67529ab122135ef5bad523e4c698364932e73b"
+      "sha1": "df547fee9052681a46236364775a972c45a51d94"
     },
     {
       "path": "os/apps/help.lua",
@@ -91,6 +91,10 @@
       "sha1": "6c919d85a8e9e8d80b9cdefbee26678655b87d0a"
     },
     {
+      "path": "os/kernel/draw.lua",
+      "sha1": "cce7a431481731cab416ca2751ff82af5d31166c"
+    },
+    {
       "path": "os/kernel/palette.lua",
       "sha1": "9e2db16e6ec9533c854e264b3f99a0ccaab9b848"
     },
@@ -108,11 +112,11 @@
     },
     {
       "path": "os/kernel/ui.lua",
-      "sha1": "a4cd1442a1c20e07f022e48a4107360aabf8a7fd"
+      "sha1": "a06a11f06281dd5215f5cc5f04c2f9f2116f104c"
     },
     {
       "path": "os/kernel/wm.lua",
-      "sha1": "a2dd9154753ba68a94b47cad37ea6b000c8d8848"
+      "sha1": "77c3c54447383f50bde87e9a0979aad91ef80e86"
     },
     {
       "path": "os/lib/chart.lua",
@@ -156,19 +160,19 @@
     },
     {
       "path": "os/var/log/crash.log",
-      "sha1": "e56d28be3f59786f98f79ec91bf0925704628fb2"
+      "sha1": "4ff847a109de61ee3d44f60d68efb9b958a23a80"
     },
     {
       "path": "os/var/log/kernel.log",
-      "sha1": "ad51c7cca6c60c65070e716a2656ef2969d50181"
+      "sha1": "2eac951c6ddb6c58daa6c9481219b5949f31e46a"
     },
     {
       "path": "os/var/log/netd.log",
-      "sha1": "caaff061e639036f049bdada606c30d0e6913b93"
+      "sha1": "e7650471c3b3ce3cb8b7e527403e7ad3e077ecda"
     },
     {
       "path": "os/var/log/teste.log",
-      "sha1": "83fc3319f875bcf7baf1b82a970daf5242a7c712"
+      "sha1": "8c010832caf40d8a95127341f3558895b51806a2"
     },
     {
       "path": "os/version.lua",
