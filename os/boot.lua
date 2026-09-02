@@ -4,7 +4,8 @@ package.path = "/os/?.lua;/os/?/init.lua;" .. package.path
 local version = require("version")
 
 -- Configuracoes persistentes (settings API da ROM, salvas em /.settings)
-settings.define("mosaic.theme", { description = "Tema visual", type = "string", default = "default" })
+settings.define("mosaic.theme", { description = "Tema visual: win95, classic ou dark", type = "string", default = "win95" })
+settings.define("mosaic.palette", { description = "Remapear as cores do CC para os tons do Win95 (volta ao normal ao sair)", type = "boolean", default = true })
 settings.define("mosaic.clock", { description = "Relogio da taskbar: real ou game", type = "string", default = "real" })
 settings.define("mosaic.relay.url", { description = "URL websocket do relay (ws://host:porta/ws/computer)", type = "string" })
 settings.define("mosaic.relay.token", { description = "Token de acesso do relay", type = "string" })
@@ -20,8 +21,13 @@ settings.load()
 local theme = require("kernel.theme")
 theme.load(settings.get("mosaic.theme"))
 
-local wm = require("kernel.wm")
 local root = term.current()
+-- A paleta tem que vir ANTES do wm.init: o canvas fotografa a paleta do pai ao ser criado
+-- e a reempurra a cada quadro, desfazendo qualquer mudanca feita depois.
+local palette = require("kernel.palette")
+if palette.enabled() then palette.apply(root) end
+
+local wm = require("kernel.wm")
 wm.init(root)
 
 -- Splash rapido
@@ -64,7 +70,8 @@ end
 
 proc.run()
 
--- Saiu do kernel (mosaic.exitToShell): limpa e volta para o shell da ROM.
+-- Saiu do kernel (mosaic.exitToShell): devolve as cores de fabrica e volta ao shell da ROM.
+palette.restore(root)
 root.setBackgroundColor(colors.black)
 root.setTextColor(colors.white)
 root.clear()

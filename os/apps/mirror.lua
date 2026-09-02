@@ -11,6 +11,9 @@ end
 
 mosaic.setTitle(nil, "Monitor " .. name)
 mon.setTextScale(0.5)
+-- O monitor tem paleta propria: sem isso o espelho sai com as cores erradas.
+local palette = mosaic.require("kernel.palette")
+if palette.enabled() then palette.apply(mon) end
 mon.setBackgroundColor(colors.black)
 mon.clear()
 

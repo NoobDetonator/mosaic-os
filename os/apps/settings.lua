@@ -30,9 +30,11 @@ y = y + 2
 
 -- Tema
 row("Tema:")
+local themeIndex = 1
+for i, n in ipairs(theme.names) do if n == theme.name then themeIndex = i end end
 local themeBox = f:add(ui.dropdown {
     x = 2, y = y, w = 14, items = theme.names,
-    selected = (theme.name == "dark") and 2 or 1,
+    selected = themeIndex,
     onChange = function(_, item)
         settings.set("mosaic.theme", item)
         theme.load(item)

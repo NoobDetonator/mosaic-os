@@ -32,7 +32,7 @@
     },
     {
       "path": "os/apps/mirror.lua",
-      "sha1": "eab0d48162ead054cd5bd954e78678594763b5b0"
+      "sha1": "d6d1e4b329028a651104ec7bafee1640c48e76cd"
     },
     {
       "path": "os/apps/netcenter.lua",
@@ -64,7 +64,7 @@
     },
     {
       "path": "os/apps/settings.lua",
-      "sha1": "c21574b439f83d1da49d167fef46e991e022fd59"
+      "sha1": "86ada50227d0d01e188c372a141e2fcce8a790ca"
     },
     {
       "path": "os/apps/taskman.lua",
@@ -72,7 +72,7 @@
     },
     {
       "path": "os/boot.lua",
-      "sha1": "c5a219dff105c301ec95162cd5541a82e1c95a61"
+      "sha1": "abf4cf64dcb9d67e81159cd6b3a463bf97b0f039"
     },
     {
       "path": "os/docs/01-primeiros-passos.md",
@@ -91,6 +91,10 @@
       "sha1": "6c919d85a8e9e8d80b9cdefbee26678655b87d0a"
     },
     {
+      "path": "os/kernel/palette.lua",
+      "sha1": "9e2db16e6ec9533c854e264b3f99a0ccaab9b848"
+    },
+    {
       "path": "os/kernel/proc.lua",
       "sha1": "27d10765ffe33b638492df0bcfc3a952dfa5102c"
     },
@@ -100,7 +104,7 @@
     },
     {
       "path": "os/kernel/theme.lua",
-      "sha1": "b99beb6df8b9442f90256742af1ea04b50bd7fa0"
+      "sha1": "9f2c0abcfddd33cb57857f64aaf92f279656b9d7"
     },
     {
       "path": "os/kernel/ui.lua",
@@ -152,19 +156,19 @@
     },
     {
       "path": "os/var/log/crash.log",
-      "sha1": "e7ca04266c0c40838d420856b60afbc8827e72c1"
+      "sha1": "419047291dcc3db95f3ff71de0141ba9e4e7dca7"
     },
     {
       "path": "os/var/log/kernel.log",
-      "sha1": "9782abfb40df5cdcf99be16405078226197a29a1"
+      "sha1": "a9dbf78ce0d66c4af30a8249c7010e51a181e3bf"
     },
     {
       "path": "os/var/log/netd.log",
-      "sha1": "dd0984489a2d0d2af1d9460f8a1868cdf94a74ec"
+      "sha1": "c1184717757546b3ba3bcd95154490b8ee2c99f3"
     },
     {
       "path": "os/var/log/teste.log",
-      "sha1": "e902ad4ca9f10fd5d55f8b55043d3dc60bba176b"
+      "sha1": "8860f4b013d32635feddfe8f7174a863b83b7ee9"
     },
     {
       "path": "os/version.lua",
