@@ -18,7 +18,7 @@ else if (target && target[0] !== '/') target = '/' + target;
 
 let stderr = '';
 try {
-  execFileSync('node', [emu, '--script', ('/test/debug.lua ' + target).trim()], { encoding: 'utf8' });
+  execFileSync('node', [emu, '--script', ('/test/debug.lua ' + target + ' ' + process.argv.slice(3).join(' ')).trim()], { encoding: 'utf8' });
 } catch (e) {
   stderr = e.stderr || '';
 }

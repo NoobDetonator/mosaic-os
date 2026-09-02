@@ -49,13 +49,14 @@ Fatos do kernel que não são óbvios:
 - O app "Terminal" não é um arquivo: é a entrada `action = "shell"` do `apps/registry.lua`, que abre o shell da ROM numa janela.
 - `ui.form` rola sozinho: `Form:draw` desloca `w.y` durante o desenho e devolve, e `Form:handle` soma `self.scroll` ao y do mouse.
   Nenhum widget sabe que existe scroll. Só `list` e `text` (com `scrollable = true`) consomem `mouse_scroll`; o resto deixa o form rolar.
+- Widget com `pinned = true` não rola nem conta na altura rolável: é como se faz barra de abas/rodapé fixo (ver `apps/reactor.lua`).
 - Sub-pixel (`lib/pixel`) é 2x3 por célula, e uma célula com sub-pixel só aceita 2 cores e nenhum texto: serve para imagem, não para interface.
 
 ## Como testar
 
 - `node tools/lint.js` — sintaxe Lua 5.1 (luaparse) + grep de APIs proibidas. Rode antes de dizer que terminou.
 - `node tools/test.js` — self-check do kernel no emulador embutido (`tools/emu`, fengari). Não precisa do CraftOS-PC.
-- `node tools/debug.js os/apps/files.lua` — abre um app no emulador e mostra a tela, antes e depois de rolar.
+- `node tools/debug.js os/apps/files.lua [x,y ...]` — abre um app no emulador, clica onde você mandar e mostra a tela a cada passo.
 - `node tools/emu/emu.js --show` — boota o OS de verdade e imprime a tela final; bom para conferir layout.
 - `node tools/manifest.js` — regenera `manifest.json` (usado por `install.lua` e pelo app `pkg`).
 - CraftOS-PC **v2.7.2** (ROM do CC:T 1.101.1; versões 2.8+ têm ROM Lua 5.2 e escondem bugs):

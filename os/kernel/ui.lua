@@ -405,10 +405,12 @@ function Form:viewHeight()
     return h
 end
 
+-- Widget com `pinned = true` fica preso na tela: nao rola com o conteudo e nao
+-- conta para a altura rolavel. Serve para barra de navegacao e rodape.
 function Form:contentHeight()
     local bottom = 0
     for _, w in ipairs(self.widgets) do
-        if w.visible ~= false then
+        if w.visible ~= false and not w.pinned then
             local b = w.y + (w.h or 1) - 1
             if b > bottom then bottom = b end
         end
@@ -428,7 +430,7 @@ end
 
 -- Traz o widget para dentro do viewport; sem isso o Tab manda o foco para fora da tela.
 function Form:reveal(w)
-    if not w then return end
+    if not w or w.pinned then return end
     local H = self:viewHeight()
     local off = self.scroll or 0
     if w.y - off < 1 then self:scrollTo(w.y - 1, H)
@@ -485,7 +487,7 @@ function Form:draw()
     for _, w in ipairs(self.widgets) do
         if w.visible ~= false then
             local y0 = w.y
-            w.y = y0 - off
+            w.y = y0 - (w.pinned and 0 or off)
             if w.y + (w.h or 1) - 1 >= 1 and w.y <= H then w:draw(t) end
             w.y = y0
         end
@@ -493,46 +495,54 @@ function Form:draw()
     self:drawScrollbar(t, W, H, off)
     if self.focused and self.focused.placeCursor and self.focused.visible ~= false then
         local y0 = self.focused.y
-        self.focused.y = y0 - off
+        self.focused.y = y0 - (self.focused.pinned and 0 or off)
         if self.focused.y >= 1 and self.focused.y <= H then self.focused:placeCursor(t) end
         self.focused.y = y0
     end
     self.dirty = false
 end
 
-function Form:widgetAt(x, y)
+-- y = coordenada no espaco do conteudo; rawY = coordenada na tela. Widget preso
+-- (pinned) vive na tela, os outros no conteudo.
+function Form:widgetAt(x, y, rawY)
     for i = #self.widgets, 1, -1 do
         local w = self.widgets[i]
-        if w.visible ~= false and w:contains(x, y) then return w end
+        if w.visible ~= false and w:contains(x, w.pinned and (rawY or y) or y) then return w end
     end
     return nil
 end
 
+-- Linha do widget para traduzir o clique: preso usa a da tela, o resto a do conteudo.
+local function localY(w, y, rawY)
+    return (w.pinned and (rawY or y) or y) - w.y + 1
+end
+
 function Form:handle(ev, a, b, c)
     -- Coordenada do mouse chega na tela; os widgets vivem no espaco do conteudo.
+    local rawC = c
     if ev == "mouse_click" or ev == "mouse_drag" or ev == "mouse_up" or ev == "mouse_scroll" then
         c = (c or 0) + (self.scroll or 0)
     end
     if ev == "mouse_click" then
-        local w = self:widgetAt(b, c)
+        local w = self:widgetAt(b, c, rawC)
         self.mouseTarget = w
         if w then
             if w.focusable and not w.disabled then self:setFocus(w) end
-            w:onMouse(ev, a, b - w.x + 1, c - w.y + 1)
+            w:onMouse(ev, a, b - w.x + 1, localY(w, c, rawC))
         elseif self.onClickEmpty then
             self.onClickEmpty(self, a, b, c)
         end
         return true
     elseif ev == "mouse_drag" or ev == "mouse_up" then
         local w = self.mouseTarget
-        if w then w:onMouse(ev, a, b - w.x + 1, c - w.y + 1) end
+        if w then w:onMouse(ev, a, b - w.x + 1, localY(w, c, rawC)) end
         if ev == "mouse_up" then self.mouseTarget = nil end
         return true
     elseif ev == "mouse_scroll" then
         -- So' widget que rola de verdade consome; senao o form inteiro rola (um label
         -- embaixo do cursor nao pode engolir a roda do mouse).
-        local w = self:widgetAt(b, c)
-        if w and w.scrollable then w:onMouse(ev, nil, b - w.x + 1, c - w.y + 1, a) return true end
+        local w = self:widgetAt(b, c, rawC)
+        if w and w.scrollable then w:onMouse(ev, nil, b - w.x + 1, localY(w, c, rawC), a) return true end
         if self:maxScroll() > 0 then self:scrollTo((self.scroll or 0) + a) return true end
     elseif ev == "key" then
         if a == keys.tab then

@@ -229,6 +229,17 @@ sf.scroll = 0
 sf:handle("mouse_scroll", 1, 1, 3)          -- roda do mouse fora de widget rolavel = rola o form
 check(sf.scroll == 1, "roda do mouse nao rolou o form: " .. tostring(sf.scroll))
 
+-- Widget preso (pinned): fica na tela quando o resto rola. Barra de navegacao usa isso.
+local fixo = sf:add(ui.button { x = 12, y = 5, text = "fixo", pinned = true })
+check(sf:contentHeight() == 12, "widget preso nao devia contar na altura rolavel: " .. sf:contentHeight())
+sf.scroll = 7
+sf:draw()
+check(vw.getLine(5):find("fixo", 1, true) ~= nil, "widget preso sumiu quando o form rolou")
+local fixoClicado = false
+fixo.onClick = function() fixoClicado = true end
+sf:handle("mouse_click", 1, 13, 5)          -- linha 5 da TELA, com o form rolado em 7
+check(fixoClicado, "clique no widget preso nao chegou nele")
+
 -- 15. Sombra da janela: coluna a direita e linha embaixo, sem invadir a taskbar
 for _, q in ipairs(proc.list()) do
     if not q.bottom and not q.hidden then proc.kill(q) end
