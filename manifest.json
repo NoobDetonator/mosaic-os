@@ -20,7 +20,7 @@
     },
     {
       "path": "os/apps/files.lua",
-      "sha1": "eb550b0b2d5782720f4f0a8a0b77331c1d97346e"
+      "sha1": "7a67529ab122135ef5bad523e4c698364932e73b"
     },
     {
       "path": "os/apps/help.lua",
@@ -149,6 +149,22 @@
     {
       "path": "os/net/relay.lua",
       "sha1": "3ae87a182c78b9894f0e344df9f70ffa2d85559e"
+    },
+    {
+      "path": "os/var/log/crash.log",
+      "sha1": "e7ca04266c0c40838d420856b60afbc8827e72c1"
+    },
+    {
+      "path": "os/var/log/kernel.log",
+      "sha1": "9782abfb40df5cdcf99be16405078226197a29a1"
+    },
+    {
+      "path": "os/var/log/netd.log",
+      "sha1": "dd0984489a2d0d2af1d9460f8a1868cdf94a74ec"
+    },
+    {
+      "path": "os/var/log/teste.log",
+      "sha1": "e902ad4ca9f10fd5d55f8b55043d3dc60bba176b"
     },
     {
       "path": "os/version.lua",

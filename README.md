@@ -62,6 +62,18 @@ cd relay && npm install && node relay.js   # http://localhost:8765
 node tools/test-relay.js                   # teste de integração do relay
 ```
 
+Com o [CraftOS-PC](https://www.craftos-pc.cc/) instalado dá para rodar contra a implementação real
+do CC (ROM, shell, `edit`, API `window` de verdade), sem abrir janela:
+
+```bash
+node tools/craftos.js test          # o mesmo self-check, na ROM verdadeira
+node tools/craftos.js boot          # liga o OS e mostra a tela
+node tools/craftos.js app files     # abre um app e fotografa a tela
+```
+
+O CraftOS-PC 2.8+ traz uma ROM mais nova que a do alvo (1.16.5), então ele acha bugs de integração
+mas não acusa uso de API nova demais — quem cuida disso é o `lint.js`.
+
 As regras de código (o que é proibido usar por causa do Lua 5.1 e do CC:T antigo) estão em
 [CLAUDE.md](CLAUDE.md) — vale a leitura antes de mandar PR.
 

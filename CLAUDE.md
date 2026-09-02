@@ -59,7 +59,16 @@ Fatos do kernel que não são óbvios:
 - `node tools/debug.js os/apps/files.lua [36x10] [12,18] [fake]` — abre um app no emulador: tamanho de tela, cliques, e `fake` instala um reator do Powah de mentira (`tools/test/fake-reactor.lua`) para conferir o painel com dados variando.
 - `node tools/emu/emu.js --show` — boota o OS de verdade e imprime a tela final; bom para conferir layout.
 - `node tools/manifest.js` — regenera `manifest.json` (usado por `install.lua` e pelo app `pkg`).
-- CraftOS-PC **v2.7.2** (ROM do CC:T 1.101.1; versões 2.8+ têm ROM Lua 5.2 e escondem bugs):
-  `craftos --headless --script tools/test/run.lua --mount-rw /os=<abs>/os --directory <tmp>`.
+- `node tools/craftos.js <test|boot|app <nome>|exec "<lua>"|run <arquivo>>` — roda no **CraftOS-PC**
+  instalado na máquina (implementação real do CC: ROM, shell, `edit`, `paint` e API `window` de verdade).
+  Acha o executável sozinho no Windows, ou use a variável `CRAFTOS`.
+  - `test` roda o mesmo `tools/test/run.lua` do emulador, mas contra a ROM verdadeira;
+  - `boot` liga o OS e devolve a tela composta; `app <nome>` abre um app de `os/apps` e fotografa.
+  - Como o relógio redesenha a cada segundo, a foto vem de dentro do OS (`mosaic.screenshotText`
+    gravado em `/out`, via um app de autostart) e não do despejo do headless.
+- **Cuidado com a versão do CraftOS-PC**: da 2.8 em diante ele traz uma ROM mais nova que a do alvo
+  (Lua 5.2, CC:T 1.109+). Ele pega bugs de integração, mas **não** acusa API nova demais nem sintaxe
+  de 5.2 — isso é papel do `tools/lint.js`, que continua sendo a autoridade. Para testar na ROM exata
+  da 1.16.5, extraia `assets/computercraft/lua` do jar do mod e passe `--rom <pasta>`.
 - Relay: `cd relay && npm install && node relay.js` → `http://localhost:8765`.
 - `node tools/test-relay.js` — teste de integração do relay (sobe o servidor, conecta, fecha).

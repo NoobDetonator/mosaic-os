@@ -4,7 +4,7 @@ local theme = mosaic.theme
 local fsx = mosaic.lib("fsx")
 local strutil = mosaic.lib("strutil")
 
-local dir = "/"
+local dir = ""   -- convencao do fs.combine: raiz e "", nunca "/"
 local w, h = term.getSize()
 local f = ui.form()
 
@@ -23,7 +23,7 @@ local status = f:add(ui.label { x = 1, y = h, w = w, text = "", bg = theme.taskb
 
 local function refresh(keep)
     local items = {}
-    if dir ~= "" and dir ~= "/" then items[1] = { up = true, name = "..", path = fs.getDir(dir), isDir = true } end
+    if dir ~= "" then items[1] = { up = true, name = "..", path = fs.getDir(dir), isDir = true } end
     for _, it in ipairs(fsx.listDetailed(dir)) do items[#items + 1] = it end
     list:setItems(items, keep)
     pathLabel.text = " /" .. dir
@@ -117,7 +117,7 @@ addBtn("Ir para", function()
 end, true)
 
 f.onEvent = function(_, ev, code)
-    if ev == "key" and code == keys.backspace and dir ~= "" and dir ~= "/" then
+    if ev == "key" and code == keys.backspace and dir ~= "" then
         dir = fs.getDir(dir)
         refresh()
         return true
