@@ -407,6 +407,34 @@ end
 proc.kill(anchored)
 pump()
 
+-- 17. Dialogo em janela apertada nao pode estourar
+local respondeu
+local tiny = proc.spawn { title = "T", x = 2, y = 2, w = 12, h = 3, fn = function()
+    respondeu = mosaic.ui.confirm("Texto bem comprido que nao cabe de jeito nenhum aqui.", "Confirmar")
+end }
+pump()
+local tela = screen()
+if tela:find("Sim", 1, true) == nil then snap() end
+check(tela:find("Nao", 1, true) ~= nil, "o botao Nao sumiu na janela apertada")
+check(tela:find("Sim", 1, true) ~= nil, "o botao Sim sumiu na janela apertada")
+-- Os botoes tem de ficar na ULTIMA linha do dialogo, com o texto acima.
+local linhaBotoes, linhaTexto
+do
+    local NL = string.char(10)
+    local y = 1
+    for linha in (tela .. NL):gmatch("(.-)" .. NL) do
+        if linha:find("Sim", 1, true) then linhaBotoes = y end
+        if linha:find("Texto", 1, true) then linhaTexto = y end
+        y = y + 1
+    end
+end
+check(linhaTexto and linhaBotoes and linhaTexto < linhaBotoes,
+    "o texto devia ficar acima dos botoes (texto=" .. tostring(linhaTexto) .. " botoes=" .. tostring(linhaBotoes) .. ")")
+os.queueEvent("key", keys.escape, false)
+pump()
+check(respondeu == false, "Esc devia responder nao")
+check(tiny.dead == true, "o dialogo apertado nao fechou")
+
 -- Resultado
 term.redirect(term.native())
 term.setBackgroundColor(colors.black)

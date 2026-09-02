@@ -883,18 +883,49 @@ function ui.dialog(opts)
     return dlg.result
 end
 
-local function buttonsRow(f, dlg, buttons)
-    -- buttons: { {text=, value=, alt=} ... } alinhados a direita na ultima linha; o ultimo e o padrao (focado)
-    local total = 0
-    for _, b in ipairs(buttons) do total = total + #b.text + 3 end
-    local x = dlg.w - total
-    local made = {}
+-- Posiciona uma fila de botoes numa caixa de `width` colunas, quebrando quando nao cabe.
+-- Devolve as posicoes e quantas linhas ocupou. Medir e posicionar tem de sair do MESMO
+-- calculo: quando eram dois calculos separados, a estimativa reservava duas linhas e a
+-- colocacao usava uma, e a fila subia para o topo do dialogo por cima do texto.
+local function layoutButtons(buttons, width)
+    local place, x, lines = {}, 1, 1
     for _, b in ipairs(buttons) do
+        local bw = #(ui.mnemonic(b.text)) + 2
+        if x > 1 and x + bw - 1 > width then lines = lines + 1 x = 1 end
+        place[#place + 1] = { b = b, x = x, line = lines, w = bw }
+        x = x + bw + 1
+    end
+    -- Numa unica linha os botoes ficam encostados a direita, como no Windows.
+    if lines == 1 then
+        local used = x - 2
+        local shift = math.max(0, width - used)
+        for _, it in ipairs(place) do it.x = it.x + shift end
+    end
+    return place, lines
+end
+
+-- Mede a caixa de um dialogo de texto+botoes, sempre dentro do que a janela comporta.
+local function dialogBox(text, title, buttons, wantW)
+    local pw, ph = term.current().getSize()
+    local minW = 0
+    for _, b in ipairs(buttons) do minW = minW + #(ui.mnemonic(b.text)) + 3 end
+    local w = math.min(math.max(wantW or 0, math.min(minW, pw), 16), pw)
+    local _, rows = layoutButtons(buttons, w)
+    local textLines = text and #ui.wrap(text, math.max(1, w - 2)) or 0
+    local titleH = title and 1 or 0
+    local h = math.min(ph, math.max(titleH + textLines + rows + 1, titleH + rows + 1))
+    return w, h, textLines, rows
+end
+
+local function buttonsRow(f, dlg, buttons)
+    local place, lines = layoutButtons(buttons, dlg.w)
+    local top = math.max(1, dlg.h - lines + 1)
+    local made = {}
+    for _, it in ipairs(place) do
         made[#made + 1] = f:add(ui.button {
-            x = x, y = dlg.h - 1, text = b.text, alt = b.alt,
-            onClick = function() dlg.close(b.value) end,
+            x = it.x, y = top + it.line - 1, text = it.b.text, alt = it.b.alt,
+            onClick = function() dlg.close(it.b.value) end,
         })
-        x = x + #b.text + 3
     end
     f:setFocus(made[#made])
     -- Enter aciona o ultimo (OK/Sim), Esc o primeiro (Cancelar/Nao), como no Windows.
@@ -905,33 +936,37 @@ end
 
 function ui.msgbox(text, title, opts)
     opts = opts or {}
-    local pw, ph = term.current().getSize()
-    local w = math.min(opts.w or math.max(24, math.min(pw - 2, #tostring(text) + 4)), pw)
-    local lines = ui.wrap(text, w - 4)
-    local h = math.min(ph, #lines + 5)
+    local buttons = { { text = opts.ok or "&OK", value = true } }
+    local wanted = opts.w or math.max(24, #tostring(text) + 4)
+    local w, h, _, rows = dialogBox(text, title, buttons, wanted)
     return ui.dialog {
         title = title or "Aviso", w = w, h = h,
         build = function(f, dlg)
-            f:add(ui.text { x = 3, y = dlg.contentY + 1, w = w - 4, h = h - 5 + (title and 0 or 1), text = text })
-            buttonsRow(f, dlg, { { text = opts.ok or "&OK", value = true } })
+            local top = dlg.contentY
+            -- Altura minima 1: numa janela apertada o dialogo encolhe, mas nunca fica com
+            -- area de texto negativa (antes disso o texto ia parar embaixo dos botoes).
+            local space = math.max(1, dlg.h - rows - top + 1)
+            f:add(ui.text { x = 2, y = top, w = math.max(1, w - 2), h = space, text = text })
+            buttonsRow(f, dlg, buttons)
         end,
     }
 end
 
 function ui.confirm(text, title, opts)
     opts = opts or {}
-    local pw, ph = term.current().getSize()
-    local w = math.min(opts.w or math.max(28, math.min(pw - 2, #tostring(text) + 4)), pw)
-    local lines = ui.wrap(text, w - 4)
-    local h = math.min(ph, #lines + 5)
+    local buttons = {
+        { text = opts.no or "&Nao", value = false, alt = true },
+        { text = opts.yes or "&Sim", value = true },
+    }
+    local wanted = opts.w or math.max(28, #tostring(text) + 4)
+    local w, h, _, rows = dialogBox(text, title, buttons, wanted)
     local r = ui.dialog {
         title = title or "Confirmar", w = w, h = h,
         build = function(f, dlg)
-            f:add(ui.text { x = 3, y = dlg.contentY + 1, w = w - 4, h = h - 5, text = text })
-            buttonsRow(f, dlg, {
-                { text = opts.no or "&Nao", value = false, alt = true },
-                { text = opts.yes or "&Sim", value = true },
-            })
+            local top = dlg.contentY
+            local space = math.max(1, dlg.h - rows - top + 1)
+            f:add(ui.text { x = 2, y = top, w = math.max(1, w - 2), h = space, text = text })
+            buttonsRow(f, dlg, buttons)
         end,
     }
     return r == true
@@ -939,20 +974,24 @@ end
 
 function ui.prompt(text, default, title, opts)
     opts = opts or {}
-    local pw = term.current().getSize()
-    local w = math.min(opts.w or 34, pw)
+    local buttons = {
+        { text = "&Cancelar", value = nil, alt = true },
+        { text = "&OK", value = "__ok" },
+    }
+    -- O rotulo e o campo ocupam duas linhas alem do titulo e dos botoes.
+    local w, h, _, rows = dialogBox(nil, title, buttons, opts.w or 34)
+    h = math.min(h + 2, select(2, term.current().getSize()))
     return ui.dialog {
-        title = title or "Digite", w = w, h = 7,
+        title = title or "Digite", w = w, h = h,
         build = function(f, dlg)
-            f:add(ui.label { x = 3, y = dlg.contentY + 1, text = tostring(text):sub(1, w - 4) })
+            local top = dlg.contentY
+            f:add(ui.label { x = 2, y = top, w = math.max(1, w - 2), text = tostring(text) })
             local tb = f:add(ui.textbox {
-                x = 3, y = dlg.contentY + 2, w = w - 4, text = default or "", mask = opts.mask,
+                x = 2, y = math.min(top + 1, dlg.h - rows - 1), w = math.max(3, w - 2),
+                text = default or "", mask = opts.mask,
                 onEnter = function(self) dlg.close(self.text) end,
             })
-            buttonsRow(f, dlg, {
-                { text = "&Cancelar", value = nil, alt = true },
-                { text = "&OK", value = "__ok" },
-            })
+            buttonsRow(f, dlg, buttons)
             f:setFocus(tb)
             local close = dlg.close
             dlg.close = function(v) if v == "__ok" then v = tb.text end close(v) end
