@@ -73,6 +73,40 @@ function ui.writeLabel(t, label, mark, fg, hotFg)
 end
 
 
+-- ---------------------------------------------------------------- ancoragem e layout
+--
+-- Antes disto, todo app reposicionava os widgets na mao no term_resize, e quem esquecia (ou
+-- errava a conta) ficava com botao fora da tela. Agora o widget DECLARA onde quer ficar e o
+-- form resolve sozinho sempre que o tamanho muda.
+--
+--   w = 20        20 colunas
+--   w = -3        largura da janela menos 3
+--   w = "fill"     largura inteira
+--   right = 0     encosta na borda direita   (right = 2 fica 2 colunas antes)
+--   bottom = 0    ultima linha               (bottom = 1 fica uma linha acima)
+--   above = outro    a linha logo acima do widget `outro`
+--   fillTo = outro   altura ate onde o widget `outro` comeca
+--
+-- As declaracoes ficam guardadas a parte, porque resolver em cima do valor ja resolvido
+-- encolheria o widget a cada redimensionamento.
+local function resolveSize(v, total)
+    if v == "fill" then return total end
+    if type(v) == "number" and v < 0 then return math.max(1, total + v) end
+    return v
+end
+
+local LAYOUT_KEYS = { "right", "bottom", "above", "fillTo" }
+
+local function captureLayout(w)
+    local lay
+    for _, k in ipairs(LAYOUT_KEYS) do
+        if w[k] ~= nil then lay = lay or {} lay[k] = w[k] end
+    end
+    if w.w == "fill" or (type(w.w) == "number" and w.w < 0) then lay = lay or {} lay.w = w.w end
+    if w.h == "fill" or (type(w.h) == "number" and w.h < 0) then lay = lay or {} lay.h = w.h end
+    w._lay = lay
+end
+
 -- ---------------------------------------------------------------- base
 local Widget = {}
 Widget.__index = Widget
@@ -449,6 +483,60 @@ end
 function Dropdown:activate() self:open() end
 function ui.dropdown(o) return newWidget(Dropdown, o, { w = 12, h = 1, focusable = true, items = {}, selected = 1 }) end
 
+-- ---------------------------------------------------------------- fila de botoes
+-- Uma fila que se ajusta sozinha: quando os botoes nao cabem na largura, ela quebra para
+-- CIMA, empilhando linhas a partir da ancora de baixo. Antes disso cada app montava a fila
+-- na mao somando larguras, e o que passava da borda simplesmente sumia — foi assim que o
+-- botao "Ir para" do Arquivos desapareceu numa tela de 51 colunas.
+--
+--   local barra = ui.row(f, { bottom = 1, items = {
+--       { text = "&Abrir", onClick = abrir },
+--       { text = "&Nova pasta", onClick = nova, alt = true },
+--   } })
+--   f:add(ui.list { x = 1, y = 2, w = "fill", fillTo = barra })
+--
+-- A fila entra no form antes da lista, porque o fillTo so enxerga quem ja foi adicionado.
+local Row = setmetatable({}, Widget) Row.__index = Row
+
+function Row:onLayout(W, H)
+    local gap = self.gap or 1
+    local x, lines = self.x, 1
+    -- Primeira passada: descobre quantas linhas a fila vai ocupar.
+    for _, b in ipairs(self.buttons) do
+        if x > self.x and x + b.w - 1 > W then lines = lines + 1 x = self.x end
+        x = x + b.w + gap
+    end
+    self.lines = lines
+    self.h = lines
+    self.y = math.max(1, H - (self.bottomAnchor or 0) - (lines - 1))
+    -- Segunda: posiciona de verdade, agora que a altura e conhecida.
+    local y = self.y
+    x = self.x
+    for _, b in ipairs(self.buttons) do
+        if x > self.x and x + b.w - 1 > W then y = y + 1 x = self.x end
+        b.x, b.y = x, y
+        x = x + b.w + gap
+    end
+end
+
+function Row:draw() end   -- quem desenha sao os botoes, que estao no form
+
+function ui.row(f, opts)
+    local r = newWidget(Row, {
+        x = opts.x or 1, y = 1, w = 1, h = 1,
+        gap = opts.gap, bottomAnchor = opts.bottom or 0,
+        buttons = {}, lines = 1,
+    })
+    f:add(r)
+    for _, spec in ipairs(opts.items or {}) do
+        r.buttons[#r.buttons + 1] = f:add(ui.button(spec))
+    end
+    -- Posiciona ja, para quem consultar r.y logo depois (o fillTo da lista) ver o valor certo.
+    local W, H = (f.term or term.current()).getSize()
+    r:onLayout(W, H)
+    return r
+end
+
 -- ---------------------------------------------------------------- Form
 local Form = {}
 Form.__index = Form
@@ -466,6 +554,7 @@ end
 
 function Form:add(w)
     w.form = self
+    captureLayout(w)
     self.widgets[#self.widgets + 1] = w
     if w.focusable and not self.focused and w.visible ~= false then self.focused = w end
     self.dirty = true
@@ -476,6 +565,26 @@ function Form:remove(w)
     for i, q in ipairs(self.widgets) do if q == w then table.remove(self.widgets, i) break end end
     if self.focused == w then self.focused = nil end
     self.dirty = true
+end
+
+-- Resolve as ancoras contra o tamanho atual. Roda na ordem em que os widgets foram
+-- adicionados, entao `fillTo` so enxerga quem entrou antes — e por isso a barra de botoes
+-- do rodape e adicionada antes da lista que vai ate ela.
+function Form:layout(W, H)
+    if not W then W, H = (self.term or term.current()).getSize() end
+    self.lastW, self.lastH = W, H
+    for _, w in ipairs(self.widgets) do
+        local lay = w._lay
+        if lay then
+            if lay.w then w.w = resolveSize(lay.w, W) end
+            if lay.h then w.h = resolveSize(lay.h, H) end
+            if lay.bottom then w.y = math.max(1, H - lay.bottom) end
+            if lay.above then w.y = math.max(1, lay.above.y - (w.h or 1)) end
+            if lay.right then w.x = math.max(1, W - (w.w or 1) + 1 - lay.right) end
+            if lay.fillTo then w.h = math.max(1, lay.fillTo.y - w.y) end
+        end
+        if w.onLayout then w:onLayout(W, H) end
+    end
 end
 
 function Form:clear()
@@ -558,6 +667,8 @@ end
 
 function Form:draw()
     local t = self.term or term.current()
+    local W, H = t.getSize()
+    if W ~= self.lastW or H ~= self.lastH then self:layout(W, H) end
     local W, H = t.getSize()
     t.setCursorBlink(false)
     if self.clear ~= false then
@@ -674,6 +785,7 @@ function Form:handle(ev, a, b, c)
     elseif ev == "paste" then
         if self.focused and not self.focused.disabled then self.focused:onPaste(a) return true end
     elseif ev == "term_resize" then
+        self:layout()
         if self.onResize then self.onResize(self) end
         self.dirty = true
         return true

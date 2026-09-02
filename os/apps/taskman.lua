@@ -10,11 +10,11 @@ local function describe(p)
     return string.format("%3d %-14s %s", p.id, tostring(p.title):sub(1, 14), state)
 end
 
-local list = f:add(ui.list { x = 1, y = 2, w = w, h = h - 4, render = describe })
-f:add(ui.label { x = 1, y = 1, w = w, text = " ID  Nome           Estado", bg = theme.accent, fg = theme.accentFg })
-local info = f:add(ui.label { x = 1, y = h - 1, w = w, text = "" })
+f:add(ui.label { x = 1, y = 1, w = "fill", text = " ID  Nome           Estado",
+    bg = theme.accent, fg = theme.accentFg })
+local list, info, refresh, selectedId
 
-local function refresh()
+function refresh()
     local items = mosaic.list()
     local keep = list.selected
     list:setItems(items, true)
@@ -24,24 +24,30 @@ local function refresh()
     f.dirty = true
 end
 
-local function selectedId()
+function selectedId()
     local it = list:getSelected()
     return it and it.id
 end
 
-local bx = 1
-local function addBtn(text, fn, alt)
-    local b = f:add(ui.button { x = bx, y = h, text = text, alt = alt, onClick = fn })
-    bx = bx + b:width() + 1
-end
-addBtn("&Focar", function() local id = selectedId() if id then mosaic.focus(id) end end)
-addBtn("&Terminar", function() local id = selectedId() if id then mosaic.terminate(id) refresh() end end)
-addBtn("&Matar", function()
-    local id = selectedId()
-    if id and id ~= mosaic.current() and ui.confirm("Matar o processo " .. id .. " sem aviso?") then mosaic.kill(id) end
-    refresh()
-end, true)
-addBtn("&Atualizar", refresh, true)
+-- Ordem importa: a fila descobre quantas linhas ocupa, o rodape se ancora acima dela, e a
+-- lista preenche ate o rodape. Cada ancora so enxerga quem ja entrou no form.
+local bar = ui.row(f, { bottom = 0, items = {
+    { text = "&Focar", onClick = function() local id = selectedId() if id then mosaic.focus(id) end end },
+    { text = "&Terminar", onClick = function()
+        local id = selectedId()
+        if id then mosaic.terminate(id) refresh() end
+    end },
+    { text = "&Matar", alt = true, onClick = function()
+        local id = selectedId()
+        if id and id ~= mosaic.current() and ui.confirm("Matar o processo " .. id .. " sem aviso?") then
+            mosaic.kill(id)
+        end
+        refresh()
+    end },
+    { text = "&Atualizar", alt = true, onClick = function() refresh() end },
+} })
+info = f:add(ui.label { x = 1, above = bar, w = "fill", text = "" })
+list = f:add(ui.list { x = 1, y = 2, w = "fill", fillTo = info, render = describe })
 
 local timer = os.startTimer(1)
 f.onEvent = function(_, ev, id)

@@ -39,6 +39,33 @@ ui.menu.
 O formulario rola sozinho quando fica mais alto que a janela, entao
 voce pode empilhar widgets sem se preocupar com o tamanho da tela.
 
+## Interface que se ajusta sozinha
+
+Em vez de dar x, y, largura e altura fixos, declare onde o widget deve ficar
+e o form resolve a cada mudanca de tamanho:
+
+  w = "fill"      largura inteira da janela
+  w = -3          largura menos 3
+  bottom = 0      ultima linha
+  right = 2       duas colunas antes da borda direita
+  above = outro   logo acima de outro widget
+  fillTo = outro  altura ate onde outro widget comeca
+
+E para uma fila de botoes existe o ui.row, que QUEBRA para cima quando os
+botoes nao cabem, em vez de deixar o ultimo sumir:
+
+  local bar = ui.row(f, { bottom = 0, items = {
+    { text = "&Abrir", onClick = abrir },
+    { text = "&Novo", onClick = novo, alt = true },
+  } })
+  local rodape = f:add(ui.label { x = 1, above = bar, w = "fill" })
+  f:add(ui.list { x = 1, y = 2, w = "fill", fillTo = rodape })
+
+A ordem importa: cada ancora so enxerga widgets ja adicionados. Por isso a
+fila entra antes do rodape, e o rodape antes da lista.
+
+Com isso o app nao precisa mais tratar term_resize para reposicionar nada.
+
 ## Atalho por letra
 
 Coloque & antes da letra no texto do botao ou do checkbox:

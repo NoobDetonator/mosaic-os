@@ -371,6 +371,42 @@ os.queueEvent("key", keys.escape, false)
 pump()
 check(wm.pointer.on == false, "Esc nao desligou o cursor por teclado")
 
+-- 16. Ancoragem e fila de botoes
+local uiL = require("kernel.ui")
+local anchored = proc.spawn { title = "Anc", x = 2, y = 2, w = 30, h = 10, fn = function()
+    local ui = mosaic.ui
+    local form = ui.form()
+    local bar = ui.row(form, { bottom = 0, items = {
+        { text = "Um" }, { text = "Dois" }, { text = "Tres" }, { text = "Quatro" },
+        { text = "Cinco" }, { text = "Seis" },
+    } })
+    local rodape = form:add(ui.label { x = 1, above = bar, w = "fill", text = "rodape" })
+    local lista = form:add(ui.list { x = 1, y = 1, w = "fill", fillTo = rodape, items = { "a" } })
+    _G.__anc = { bar = bar, rodape = rodape, lista = lista, form = form }
+    form:run()
+end }
+pump()
+local a = _G.__anc
+check(a ~= nil, "o app ancorado nao rodou")
+if a then
+    -- 6 botoes nao cabem em 30 colunas: a fila tem de quebrar em mais de uma linha
+    check(a.bar.lines > 1, "a fila devia ter quebrado em 30 colunas (linhas=" .. a.bar.lines .. ")")
+    check(a.rodape.y == a.bar.y - 1, "o rodape nao ficou logo acima da fila")
+    check(a.lista.h == a.rodape.y - 1, "a lista nao preencheu ate o rodape")
+    check(a.lista.w == 30, "a lista nao pegou a largura inteira: " .. a.lista.w)
+    -- Nenhum botao pode passar da borda: era assim que o botao sumia antes.
+    for _, b in ipairs(a.bar.buttons) do
+        check(b.x + b.w - 1 <= 30, "botao " .. b.text .. " passou da borda")
+    end
+    -- Janela mais larga: a fila volta para uma linha so e a lista cresce.
+    local altura = a.lista.h
+    a.form:layout(60, 10)
+    check(a.bar.lines == 1, "em 60 colunas a fila devia caber numa linha")
+    check(a.lista.h > altura, "a lista devia crescer quando a fila desocupa uma linha")
+end
+proc.kill(anchored)
+pump()
+
 -- Resultado
 term.redirect(term.native())
 term.setBackgroundColor(colors.black)
