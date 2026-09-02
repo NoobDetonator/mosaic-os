@@ -52,7 +52,7 @@
     },
     {
       "path": "os/apps/reactor.lua",
-      "sha1": "c51b97b53135bee6ad50dfcbf776ca45362d83d6"
+      "sha1": "de22e10412678cadc0b6e9161bef7743a84d0aba"
     },
     {
       "path": "os/apps/registry.lua",
@@ -112,7 +112,7 @@
     },
     {
       "path": "os/lib/chart.lua",
-      "sha1": "46d3785ca062e00f94585bf9813ed5cf4d725e59"
+      "sha1": "7cb4360869b349cdbaca79057212fd74fce19bfe"
     },
     {
       "path": "os/lib/fsx.lua",

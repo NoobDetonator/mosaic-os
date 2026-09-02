@@ -21,6 +21,8 @@ local firing = {}                       -- alertas ativos, para nao repetir no c
 local hFuel = chart.history(60)
 local hWater = chart.history(60)
 local hRate = chart.history(60)
+local hEnergy = chart.history(60)
+local netFeTick, netMax = nil, 0    -- balanco do buffer em FE/t, com sinal
 -- tanks() nao traz capacidade e o detector nao tem maximo: acompanha o maior valor
 -- ja visto para ter uma escala honesta em vez de barra cheia sem significado.
 local tankMax, rateMax = 0, 0
@@ -87,6 +89,15 @@ local function sample()
         rateMax = math.max(rateMax, reading.energy.rate)
         hRate:push(reading.energy.rate)
     end
+    -- Balanco do buffer: mais util que o throughput do detector, porque tem SINAL --
+    -- diz se esta carregando ou drenando. E funciona sem o detector estar na linha.
+    -- (medido no servidor: buffer caindo 132 FE/s = 6.6 FE/t, com o detector em 0.)
+    if reading.energy and reading.energy.capacity > 0 then
+        hEnergy:push(reading.energy.stored)
+        local porSeg = hEnergy:slopePerSec(INTERVAL)
+        netFeTick = porSeg and (porSeg / 20) or nil   -- 20 ticks por segundo
+        if netFeTick then netMax = math.max(netMax, math.abs(netFeTick)) end
+    end
 
     local fuelMin = settings.get("mosaic.reactor.fuelMin") or 8
     alert("combustivel", low("combustivel", reading.fuel.count, fuelMin),
@@ -111,6 +122,16 @@ local function sample()
         local mWater = acabaEm(reading.tank.amount, hWater)
         alert("prazo da agua", mWater ~= nil and low("prazo da agua", mWater, 10),
             string.format("Agua acaba em ~%d min no ritmo atual", math.floor((mWater or 0) + 0.5)))
+    end
+
+    -- Buffer drenando: quanto falta para zerar. Mais acionavel que "energia baixa",
+    -- porque 90% caindo rapido e pior que 20% estavel.
+    if reading.energy and netFeTick and netFeTick < 0 then
+        local minutos = reading.energy.stored / (-netFeTick * 20 * 60)
+        alert("energia drenando", low("energia drenando", minutos, 15),
+            string.format("Buffer zera em ~%d min no ritmo atual", math.floor(minutos + 0.5)))
+    else
+        alert("energia drenando", false, "")
     end
 
     local chest = settings.get("mosaic.reactor.chest")
@@ -196,6 +217,16 @@ local function drawPanel(t, reserva)
     if reading.energy and reading.energy.capacity > 0 then
         row(t, y, tw, "Energia", string.format("%d%%", reading.energy.percent),
             reading.energy.percent / 100, colors.red)
+        y = y + 1
+    end
+    if netFeTick then
+        -- Com sinal: verde carregando, laranja drenando. E o numero que responde
+        -- "estou produzindo mais do que gasto?", que o throughput sozinho nao responde.
+        local mag = math.abs(netFeTick)
+        local txt = (netFeTick >= 0 and "+" or "-") ..
+            (mag >= 1000 and strutil.short(mag) or string.format("%.1f", mag)) .. " FE/t"
+        row(t, y, tw, "Balanco", txt, netMax > 0 and (mag / netMax) or 0,
+            netFeTick >= 0 and colors.lime or colors.orange)
         y = y + 1
     end
     if reading.energy and reading.energy.rate then

@@ -79,14 +79,18 @@ function chart.history(size)
             return self
         end,
         last = function(self) return self.data[#self.data] end,
-        -- Queda por minuto na janela, dado o intervalo entre amostras em segundos.
-        -- nil com amostras de menos para valer alguma coisa; 0 quando nao esta caindo
-        -- (subindo nao e' "queda negativa": seria projecao sem sentido).
-        fallPerMin = function(self, intervalSecs)
+        -- Variacao por segundo na janela, COM SINAL: positivo sobe, negativo cai.
+        -- nil com amostras de menos para valer alguma coisa.
+        slopePerSec = function(self, intervalSecs)
             if #self.data < 5 then return nil end
-            local queda = self.data[1] - self.data[#self.data]
-            if queda <= 0 then return 0 end
-            return queda / ((#self.data - 1) * intervalSecs) * 60
+            return (self.data[#self.data] - self.data[1]) / ((#self.data - 1) * intervalSecs)
+        end,
+        -- Queda por minuto. 0 quando esta subindo ou parado: subir nao e' "queda
+        -- negativa", seria projecao de fim de estoque sem sentido.
+        fallPerMin = function(self, intervalSecs)
+            local s = self:slopePerSec(intervalSecs)
+            if not s then return nil end
+            return s < 0 and (-s * 60) or 0
         end,
         -- Media da janela, para suavizar leitura que oscila muito.
         mean = function(self)
@@ -148,6 +152,12 @@ function chart.demo()
     local flat2 = chart.history(10)
     for _ = 1, 6 do flat2:push(7) end
     assert(flat2:fallPerMin(2) == 0, "serie estavel devia dar queda 0")
+
+    -- slopePerSec mantem o sinal: e o que distingue carregar de drenar.
+    assert(q:slopePerSec(2) == -5, "declive errado: " .. tostring(q:slopePerSec(2)))
+    assert(sobe:slopePerSec(2) == 0.5, "subida devia dar declive positivo: " .. tostring(sobe:slopePerSec(2)))
+    assert(flat2:slopePerSec(2) == 0, "serie estavel devia dar declive 0")
+    assert(chart.history(10):slopePerSec(2) == nil, "sem amostras nao da para estimar declive")
     return true
 end
 
