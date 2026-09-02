@@ -40,7 +40,14 @@ relay/             -> relay.js (WS + HTTP API + dashboard), mcp.js (tools p/ Cla
 ```
 
 Fatos do kernel que não são óbvios:
-- `Window.redraw()`/`restoreCursor()` não fazem nada em janela invisível → compositor usa `setVisible(true); setVisible(false)`.
+- `Window.redraw()`/`restoreCursor()` não fazem nada em janela invisível → as janelas dos apps são copiadas
+  para o canvas com `setVisible(true); setVisible(false)`.
+- **O canvas NÃO vai para a tela por `setVisible`.** A API `window` fotografa a paleta do pai quando é criada
+  e a reempurra a cada `redraw()`; usar `setVisible` no canvas seria 16 `setPaletteColour` por quadro,
+  desfazendo a paleta do Win95. `wm.render` compara cada linha com `wm.last` e só faz `root.blit` no que mudou.
+  Quem mexer em `wm.resize` tem que limpar `wm.last`, senão sobram linhas velhas na tela.
+- A paleta (`kernel/palette.lua`) é aplicada em `root` **antes** de `wm.init`, pelo mesmo motivo.
+  **O emulador em JS não reproduz nada disso** — valide com `node tools/craftos.js`.
 - Root do WM é `term.current()` capturado no boot (não `term.native()`, pois o startup roda dentro do multishell da ROM).
 - `term.redirect` é global: `proc.resume` faz `prev = term.redirect(p.term) ... p.term = term.redirect(prev)`.
 - `terminate` ignora filtros de evento; vai só para o processo focado. `os.queueEvent` descarta funções → só ids.

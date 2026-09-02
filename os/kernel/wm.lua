@@ -1,7 +1,7 @@
 -- Window manager / compositor.
 -- Modelo: canvas invisivel do tamanho da tela; cada janela de app e uma window (invisivel, so buffer)
 -- filha do canvas. A cada frame desenhamos titulo + conteudo de cada janela no canvas (bottom->top),
--- a taskbar, e entao canvas.setVisible(true/false) = um unico blit para a tela real.
+-- a taskbar, e entao mandamos o canvas para a tela linha a linha, so o que mudou.
 -- Geometria de um processo p: p.x, p.y (linha do titulo), p.w, p.h (linhas do cliente).
 -- Se p.chrome == false nao ha titulo: o cliente comeca em p.y.
 local theme = require("kernel.theme")
@@ -10,6 +10,7 @@ local wm = {}
 wm.W, wm.H = 0, 0
 wm.slots = {}          -- taskbar: { {x1=, x2=, p=}, ... }
 wm.toasts = {}         -- { {text=, expires=}, ... }
+wm.last = {}           -- ultimo quadro enviado a tela, por linha: { text, fg, bg }
 wm.MIN_W, wm.MIN_H = 10, 3
 wm.startLabel = " M "
 
@@ -24,6 +25,7 @@ function wm.init(rootTerm)
     wm.W, wm.H = root.getSize()
     canvas = window.create(root, 1, 1, wm.W, wm.H, false)
     wm.canvas = canvas
+    wm.last = {}
     wm.nullTerm = window.create(canvas, 1, 1, 1, 1, false)
     wm.tiny = wm.W < 40 or wm.H < 15 or pocket ~= nil
 end
@@ -85,6 +87,7 @@ function wm.resize()
     if nw == wm.W and nh == wm.H then return false end
     wm.W, wm.H = nw, nh
     canvas.reposition(1, 1, nw, nh)
+    wm.last = {}       -- sem isso a tela guarda linhas velhas depois do resize
     return true
 end
 
@@ -277,8 +280,21 @@ function wm.render(procs, focus)
     end
     wm.drawTaskbar(procs, focus)
     drawToasts()
-    c.setVisible(true)
-    c.setVisible(false)
+    -- Canvas -> tela, linha a linha, so o que mudou.
+    --
+    -- O caminho obvio seria `c.setVisible(true); c.setVisible(false)`, mas a API window
+    -- reempurra a paleta que ela fotografou do pai a cada redraw: seriam 16 setPaletteColour
+    -- por quadro, desfazendo a paleta do Win95. Comparar as linhas evita isso e, de quebra,
+    -- um quadro parado custa 1 blit (a linha do relogio) em vez de 19.
+    for y = 1, wm.H do
+        local text, fg, bg = c.getLine(y)
+        local prev = wm.last[y]
+        if not prev or prev[1] ~= text or prev[2] ~= fg or prev[3] ~= bg then
+            root.setCursorPos(1, y)
+            root.blit(text, fg, bg)
+            wm.last[y] = { text, fg, bg }
+        end
+    end
     -- Cursor: so da janela focada, e so se a celula nao estiver coberta.
     local blink = false
     if focus and focus.win and not focus.minimized and not focus.hidden then
