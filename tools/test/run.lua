@@ -196,6 +196,8 @@ check(#logger:tail(10) >= 1, "log nao gravou")
 require("lib.httpx")
 local okPixel, errPixel = pcall(require("lib.pixel").demo)
 check(okPixel, "pixel.demo falhou: " .. tostring(errPixel))
+local okChart, errChart = pcall(require("lib.chart").demo)
+check(okChart, "chart.demo falhou: " .. tostring(errChart))
 -- O app Ajuda le /os/docs; sem isso ele abre vazio mandando "rode o Atualizar OS".
 check(fs.isDir("/os/docs"), "sem /os/docs: o app Ajuda fica vazio")
 local nmd = 0

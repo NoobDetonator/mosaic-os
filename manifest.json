@@ -107,6 +107,10 @@
       "sha1": "40cab539b0b2b00bb3f863c5f9a0d5d44fc62d74"
     },
     {
+      "path": "os/lib/chart.lua",
+      "sha1": "f76c068b32ace5cef4641bce183b6e7115981915"
+    },
+    {
       "path": "os/lib/fsx.lua",
       "sha1": "1b93f1b5fb789b70b5ed66ef93699d3c30b79df8"
     },

@@ -32,7 +32,7 @@ os/kernel/proc.lua -> scheduler: spawn/launch/resume/kill/terminate/setFocus/rai
 os/kernel/wm.lua   -> canvas offscreen (window.create(root,1,1,W,H,false)), z-order, hitTest, drag/resize, taskbar, screenshot
 os/kernel/ui.lua   -> widgets (form/label/button/textbox/list/checkbox/dropdown/progress) + msgbox/confirm/prompt modais
 os/kernel/theme.lua-> cores nomeadas
-os/lib/*           -> fsx, hal (periféricos), httpx, log, pixel (teletext 2x3), strutil
+os/lib/*           -> chart (gráfico de linha), fsx, hal (periféricos), httpx, log, pixel (teletext 2x3), strutil
 os/net/*           -> relay.lua (websocket p/ relay Node), netd.lua (rednet entre computadores Mosaic)
 os/docs/*          -> guias em markdown simples lidos pelo app Ajuda (entram no manifest)
 os/apps/*          -> desktop, launcher, registry, files, editor, netcenter, periph, taskman, settings, help, notes, calc, clock, remote, pkg, mirror
