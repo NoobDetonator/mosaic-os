@@ -284,23 +284,37 @@ end
 -- Seta cheia. Se a fonte do jogo nao trouxer esse caractere, troque por "+".
 wm.POINTER_CHAR = string.char(16)
 
--- Sombra: uma coluna a direita e uma linha abaixo da janela. Fica dentro do mesmo laco do
--- compositor, entao janela de cima cobre a sombra da de baixo sem z-order proprio.
+-- Sombra da janela, em MEIA celula.
+--
+-- Celula inteira dava 6 pixels de sombra numa tela de 306: uma tarja preta, nao uma sombra.
+-- Com os caracteres de teletexto ela cai para 3 pixels na lateral e 3 na base. O resto da
+-- celula fica com a cor do que ja estava desenhado ali, lida do proprio canvas, para a sombra
+-- nao abrir um buraco quando cai em cima de outra janela.
+--
+-- Fica dentro do mesmo laco do compositor, entao janela de cima cobre a sombra da de baixo
+-- sem precisar de z-order proprio.
+local HALF_LEFT = string.char(128 + 1 + 4 + 16)   -- metade esquerda acesa
+local THIRD_TOP = string.char(128 + 1 + 2)        -- terco de cima aceso
+
 local function drawShadow(c, p)
     local bottom = p.y + (p.chrome and 1 or 0) + p.h - 1
     local maxY = wm.H - 1   -- nunca invade a taskbar
-    c.setBackgroundColor(theme.shadowBg)
+    local shadow = colors.toBlit(theme.shadowBg)
+
     local sx = p.x + p.w
     if sx <= wm.W then
         for y = p.y + 1, math.min(bottom + 1, maxY) do
+            local _, _, bg = c.getLine(y)
             c.setCursorPos(sx, y)
-            c.write(" ")
+            c.blit(HALF_LEFT, shadow, bg:sub(sx, sx))
         end
     end
+
     local n = math.min(p.w, wm.W - p.x)
     if bottom + 1 <= maxY and n > 0 then
+        local _, _, bg = c.getLine(bottom + 1)
         c.setCursorPos(p.x + 1, bottom + 1)
-        c.write(string.rep(" ", n))
+        c.blit(string.rep(THIRD_TOP, n), string.rep(shadow, n), bg:sub(p.x + 1, p.x + n))
     end
 end
 

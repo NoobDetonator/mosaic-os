@@ -257,21 +257,29 @@ hs.close()
 local sombra = proc.launch("/sombra.lua", {}, { title = "Sombra", x = 3, y = 3, w = 10, h = 4 })
 pump()
 check(not sombra.dead, "processo da sombra morreu")
--- titulo na linha 3, cliente 4..7; sombra na coluna 13 (linhas 4..8) e na linha 8 (col 4..13)
-local function bgAt(y, x1, x2)
-    local _, _, bg = wm.canvas.getLine(y)
-    return bg:sub(x1, x2 or x1)
+-- titulo na linha 3, cliente 4..7; sombra na coluna 13 (linhas 4..8) e na linha 8 (col 4..13).
+-- A sombra e meia celula: a cor dela esta na FRENTE de um caractere de teletexto, e o fundo
+-- guarda o que ja estava desenhado atras.
+local function fgAt(y, x1, x2)
+    local _, fg = wm.canvas.getLine(y)
+    return fg:sub(x1, x2 or x1)
 end
-check(bgAt(4, 13) == sh, "sem sombra a direita da janela: " .. bgAt(4, 13))
-check(bgAt(8, 4, 13) == string.rep(sh, 10), "sem sombra embaixo da janela: " .. bgAt(8, 4, 13))
-check(bgAt(3, 13) ~= sh, "sombra subiu ate a linha do titulo")
-check(bgAt(4, 14) ~= sh, "sombra passou de uma coluna")
+local function charAt(y, x)
+    local text = wm.canvas.getLine(y)
+    return text:sub(x, x)
+end
+check(fgAt(4, 13) == sh, "sem sombra a direita da janela: " .. fgAt(4, 13))
+check(charAt(4, 13):byte() >= 128, "a sombra da direita nao usou meia celula")
+check(fgAt(8, 4, 13) == string.rep(sh, 10), "sem sombra embaixo da janela: " .. fgAt(8, 4, 13))
+check(charAt(8, 4):byte() >= 128, "a sombra de baixo nao usou terco de celula")
+check(fgAt(3, 13) ~= sh, "sombra subiu ate a linha do titulo")
+check(fgAt(4, 14) ~= sh, "sombra passou de uma coluna")
 proc.kill(sombra)
 pump()
 -- Janela colada na base nao pode pintar sombra na taskbar
 local rente = proc.launch("/sombra.lua", {}, { title = "Rente", x = 3, y = wm.H - 3, w = 10, h = 2 })
 pump()
-check(bgAt(wm.H, 4, 13) ~= string.rep(sh, 10), "sombra invadiu a taskbar")
+check(fgAt(wm.H, 4, 13) ~= string.rep(sh, 10), "sombra invadiu a taskbar")
 proc.kill(rente)
 pump()
 
