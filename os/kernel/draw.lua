@@ -67,6 +67,39 @@ function draw.caps(t, x, y, w, face, raised)
     t.blit(draw.HALF, f, colors.toBlit(right))     -- fundo na metade esquerda = quina direita
 end
 
+-- Moldura fina de agrupamento, no estilo do group box do Win95: uma linha gravada em volta
+-- de campos que pertencem ao mesmo assunto, com o titulo cavalgando a borda de cima.
+--
+-- Usa o terco do MEIO da celula na horizontal e a metade na vertical, porque uma moldura de
+-- celula inteira aqui pesaria tanto quanto a propria janela.
+draw.RULE = string.char(128 + 4 + 8)   -- terco do meio aceso
+
+function draw.etched(t, x, y, w, h, face, title)
+    if w < 2 or h < 2 then return end
+    local line = colors.toBlit(theme.shadow)
+    local bg = colors.toBlit(face)
+    -- bordas de cima e de baixo
+    t.setCursorPos(x, y)
+    t.blit(string.rep(draw.RULE, w), string.rep(line, w), string.rep(bg, w))
+    t.setCursorPos(x, y + h - 1)
+    t.blit(string.rep(draw.RULE, w), string.rep(line, w), string.rep(bg, w))
+    -- laterais
+    for i = 1, h - 2 do
+        t.setCursorPos(x, y + i)
+        t.blit(draw.HALF, line, bg)
+        t.setCursorPos(x + w - 1, y + i)
+        t.blit(draw.HALF, bg, line)
+    end
+    if title and title ~= "" then
+        local label = " " .. title .. " "
+        label = label:sub(1, math.max(0, w - 2))
+        t.setCursorPos(x + 1, y)
+        t.setBackgroundColor(face)
+        t.setTextColor(theme.faceFg)
+        t.write(label)
+    end
+end
+
 -- Self-check: roda com `require("kernel.draw").demo()`.
 function draw.demo()
     assert(#draw.HALF == 1, "HALF tem que ser um caractere so")
@@ -74,6 +107,7 @@ function draw.demo()
     local calls = {}
     local fake = {
         setBackgroundColor = function() end,
+        setTextColor = function() end,
         setCursorPos = function(x, y) calls[#calls + 1] = { x, y } end,
         write = function() end,
         blit = function() end,
@@ -83,6 +117,13 @@ function draw.demo()
     calls = {}
     draw.frame(fake, 1, 1, 1, 1)
     assert(#calls == 0, "frame nao pode desenhar em area menor que 2x2")
+    assert(draw.RULE:byte() == 140, "caractere da regua errado: " .. draw.RULE:byte())
+    calls = {}
+    draw.etched(fake, 1, 1, 10, 4, colors.lightGray, "Titulo")
+    assert(#calls > 0, "etched nao desenhou nada")
+    calls = {}
+    draw.etched(fake, 1, 1, 1, 1, colors.lightGray)
+    assert(#calls == 0, "etched nao pode desenhar em area menor que 2x2")
     return true
 end
 

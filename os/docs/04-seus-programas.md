@@ -66,6 +66,17 @@ fila entra antes do rodape, e o rodape antes da lista.
 
 Com isso o app nao precisa mais tratar term_resize para reposicionar nada.
 
+## Agrupar campos
+
+Campos do mesmo assunto ficam melhor dentro de uma caixa com titulo:
+
+  f:add(ui.group { x = 1, y = 1, w = -1, h = 4, text = "Aparencia" })
+  f:add(ui.label { x = 3, y = 2, text = "Tema:" })
+
+A caixa e so a moldura: ela nao captura clique nem foco, e os campos continuam
+sendo filhos do form, posicionados por dentro dela. A moldura gasta uma linha
+em cima, uma embaixo e duas colunas nas laterais.
+
 ## Atalho por letra
 
 Coloque & antes da letra no texto do botao ou do checkbox:

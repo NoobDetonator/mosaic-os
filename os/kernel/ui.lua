@@ -424,6 +424,15 @@ function ui.checkbox(o)
     return c
 end
 
+-- ---------------------------------------------------------------- Group (caixa de grupo)
+-- Agrupa campos que tratam do mesmo assunto, com titulo na borda. Nao captura clique nem
+-- foco: e so a moldura; os campos continuam sendo filhos do form, posicionados por dentro.
+local Group = setmetatable({}, Widget) Group.__index = Group
+function Group:draw(t)
+    draw.etched(t, self.x, self.y, self.w, self.h, self.bg or self.form.bg, self.text)
+end
+function ui.group(o) return newWidget(Group, o, { w = 20, h = 3 }) end
+
 -- ---------------------------------------------------------------- Progress
 local Progress = setmetatable({}, Widget) Progress.__index = Progress
 function Progress:draw(t)
@@ -660,7 +669,9 @@ function Form:drawScrollbar(t, W, H, off)
     local barY = math.floor(off / math.max(1, content - H) * (H - barH) + 0.5)
     for i = 0, H - 1 do
         t.setCursorPos(W, i + 1)
-        t.setBackgroundColor((i >= barY and i < barY + barH) and theme.accent or theme.mutedFg)
+        -- Face sobre sombra, igual a barra da lista: com o azul de destaque a barra pesava
+        -- mais que o conteudo do formulario.
+        t.setBackgroundColor((i >= barY and i < barY + barH) and theme.face or theme.shadow)
         t.write(" ")
     end
 end
