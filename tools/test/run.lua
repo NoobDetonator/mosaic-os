@@ -163,7 +163,7 @@ check(answer == true, "confirm nao devolveu true (" .. tostring(answer) .. ")")
 check(d.dead == true, "processo do dialogo nao terminou")
 
 -- 12. Todos os apps abrem sem quebrar
-local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman" }
+local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman", "reactor" }
 for _, name in ipairs(apps) do
     local path = "/os/apps/" .. name .. ".lua"
     local ap = proc.launch(path, {}, { title = name, x = 2, y = 2, w = wm.W - 4, h = wm.H - 5 })
@@ -196,6 +196,8 @@ check(#logger:tail(10) >= 1, "log nao gravou")
 require("lib.httpx")
 local okPixel, errPixel = pcall(require("lib.pixel").demo)
 check(okPixel, "pixel.demo falhou: " .. tostring(errPixel))
+local okPowah, errPowah = pcall(require("lib.powah").demo)
+check(okPowah, "powah.demo falhou: " .. tostring(errPowah))
 local okChart, errChart = pcall(require("lib.chart").demo)
 check(okChart, "chart.demo falhou: " .. tostring(errChart))
 -- O app Ajuda le /os/docs; sem isso ele abre vazio mandando "rode o Atualizar OS".

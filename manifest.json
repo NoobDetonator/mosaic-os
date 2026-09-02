@@ -51,8 +51,12 @@
       "sha1": "d301da7595701337c54a4931e5c177297b7c8e67"
     },
     {
+      "path": "os/apps/reactor.lua",
+      "sha1": "e168de5f27a575a575da02cb0a72ca63d9eb6f39"
+    },
+    {
       "path": "os/apps/registry.lua",
-      "sha1": "5471e8a133d4b61dfed34ea28622fa7238c95659"
+      "sha1": "cec3e17dbf6c8841a73526c8a5fc6f22d9e42f06"
     },
     {
       "path": "os/apps/remote.lua",
@@ -129,6 +133,10 @@
     {
       "path": "os/lib/pixel.lua",
       "sha1": "c24ab53fd55d70765e3a530dc9006745999573c7"
+    },
+    {
+      "path": "os/lib/powah.lua",
+      "sha1": "d9bf3f5f75a63159ee982f0f4cedc60e54b950d6"
     },
     {
       "path": "os/lib/strutil.lua",

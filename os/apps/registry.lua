@@ -15,6 +15,7 @@ registry.builtin = {
     { id = "calc", name = "Calculadora", icon = "+-", color = colors.cyan, path = "/os/apps/calc.lua" },
     { id = "clock", name = "Relogio", icon = "()", color = colors.blue, path = "/os/apps/clock.lua" },
     { id = "remote", name = "Controle remoto", icon = "Rm", color = colors.magenta, path = "/os/apps/remote.lua" },
+    { id = "reactor", name = "Reator", icon = "Re", color = colors.red, desktop = true, path = "/os/apps/reactor.lua" },
     { id = "pkg", name = "Atualizar OS", icon = "Up", color = colors.brown, path = "/os/apps/pkg.lua" },
     { id = "paint", name = "Paint", icon = "Pt", color = colors.pink, path = "/rom/programs/fun/advanced/paint.lua", args = { "/home/desenho.nfp" } },
     { id = "lua", name = "Lua REPL", icon = "Lu", color = colors.lightGray, path = "/rom/programs/lua.lua" },
