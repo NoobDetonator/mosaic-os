@@ -82,10 +82,24 @@ function powah.read(hw)
     end
     if (e.capacity or 0) > 0 or e.rate then r.energy = e end
 
-    -- Temperatura so existe via NBT do bloco.
+    -- Temperatura so existe no NBT, e so no NUCLEO do reator. Medido no servidor:
+    -- uma PECA (powah:reactor_part) so carrega built/variant/redstone_mode/extractor
+    -- e um core_pos apontando para o nucleo. Entao, se o leitor caiu numa peca, da
+    -- para dizer exatamente para onde mover em vez de so ficar sem temperatura.
     if hw.blockReader then
         local okB, data = pcall(hw.blockReader.getBlockData)
-        if okB and type(data) == "table" then r.nbt = data end
+        if okB and type(data) == "table" then
+            r.nbt = data
+            r.blockName = hw.blockReader.getBlockName and hw.blockReader.getBlockName() or nil
+            local c = data.core_pos
+            if c and (c.X or c.x) then
+                local cx, cy, cz = c.X or c.x, c.Y or c.y, c.Z or c.z
+                -- Se o leitor ja esta no nucleo, core_pos aponta para ele mesmo.
+                if cx ~= data.x or cy ~= data.y or cz ~= data.z then
+                    r.coreHint = { x = cx, y = cy, z = cz }
+                end
+            end
+        end
     end
     return r
 end
@@ -177,6 +191,26 @@ function powah.demo()
     -- fuelSlot cai no primeiro vazio quando nao ha combustivel.
     assert(powah.fuelSlot({ reactor = vazio }, r2) == 1, "fuelSlot nao achou slot livre")
     assert(powah.fuelSlot({ reactor = fake }, r) == 2, "fuelSlot devia usar o slot do combustivel")
+
+    -- Block Reader numa PECA do reator: o NBT util esta no nucleo, e core_pos diz onde.
+    local naPeca = { getBlockData = function()
+        return { x = 554, y = 96, z = -6497, core_pos = { X = 554, Y = 95, Z = -6496 } }
+    end }
+    local r5 = powah.read({ reactor = fake, blockReader = naPeca })
+    assert(r5.coreHint, "nao apontou o nucleo a partir do core_pos")
+    assert(r5.coreHint.x == 554 and r5.coreHint.y == 95 and r5.coreHint.z == -6496,
+        "coordenada do nucleo errada")
+
+    -- Ja no nucleo: core_pos aponta para o proprio bloco, nao pode pedir para mover.
+    local noNucleo = { getBlockData = function()
+        return { x = 554, y = 95, z = -6496, core_pos = { X = 554, Y = 95, Z = -6496 } }
+    end }
+    assert(powah.read({ reactor = fake, blockReader = noNucleo }).coreHint == nil,
+        "leitor ja no nucleo nao devia pedir para mover")
+
+    -- Leitor que nao le nada (apontado para o ar) nao pode derrubar a leitura.
+    local noAr = { getBlockData = function() return nil end }
+    assert(powah.read({ reactor = fake, blockReader = noAr }).nbt == nil, "nbt inventado do nada")
     return true
 end
 

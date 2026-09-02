@@ -384,7 +384,14 @@ local function hardwareText()
         lines[#lines + 1] = (ok and "[x] " or "[ ] ") .. nome .. (ok and "" or "  -> " .. para)
     end
     mark("Reator", hw.reactor ~= nil, "encoste o PC no reator")
-    mark("Block Reader", hw.blockReader ~= nil, "temperatura")
+    if reading.coreHint then
+        -- O leitor esta numa peca do reator, nao no nucleo: o NBT util so existe la.
+        local c = reading.coreHint
+        lines[#lines + 1] = "[!] Block Reader esta numa peca."
+        lines[#lines + 1] = "    Mova para o nucleo: " .. c.x .. " " .. c.y .. " " .. c.z
+    else
+        mark("Block Reader", hw.blockReader ~= nil, "temperatura")
+    end
     mark("Energy Detector", hw.energyDetector ~= nil, "FE/t e limite de saida")
     mark("Chat Box", hw.chatBox ~= nil, "alertas no chat")
     mark("Monitor", hw.monitor ~= nil, "painel na parede")

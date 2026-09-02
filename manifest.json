@@ -52,7 +52,7 @@
     },
     {
       "path": "os/apps/reactor.lua",
-      "sha1": "e2f1667aa817f8d0da07d78d7f3ea9e75af13ab6"
+      "sha1": "669ca48f89dabad0ed33e42ec4cfb33ba7d34fe9"
     },
     {
       "path": "os/apps/registry.lua",
@@ -136,7 +136,7 @@
     },
     {
       "path": "os/lib/powah.lua",
-      "sha1": "6efb73ad105874be3f3073f4419f84c2c159fc6e"
+      "sha1": "0e9539d53dc166f98f3e64a7199517fddef85859"
     },
     {
       "path": "os/lib/strutil.lua",
