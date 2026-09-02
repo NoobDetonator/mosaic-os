@@ -20,7 +20,7 @@
     },
     {
       "path": "os/apps/files.lua",
-      "sha1": "d3c8edb81f6a23c8834724b997c0f4c6ad368b15"
+      "sha1": "744b4c661394478c888d0a0425fa806854a2d457"
     },
     {
       "path": "os/apps/help.lua",
@@ -56,7 +56,7 @@
     },
     {
       "path": "os/apps/registry.lua",
-      "sha1": "cec3e17dbf6c8841a73526c8a5fc6f22d9e42f06"
+      "sha1": "eccada7f38e4b2f2355da298f63973eb2ee6ac72"
     },
     {
       "path": "os/apps/remote.lua",
@@ -112,7 +112,7 @@
     },
     {
       "path": "os/kernel/ui.lua",
-      "sha1": "74113f32c2b2e68591102f510eb236d035398949"
+      "sha1": "900aa9d665646704ddeb4caa2c66bab0879d4234"
     },
     {
       "path": "os/kernel/wm.lua",
@@ -123,12 +123,20 @@
       "sha1": "7cb4360869b349cdbaca79057212fd74fce19bfe"
     },
     {
+      "path": "os/lib/clip.lua",
+      "sha1": "7475ac92a1d40a0e4cb564cc4a5962527b294fe3"
+    },
+    {
+      "path": "os/lib/fileops.lua",
+      "sha1": "ac57bc7b011723d667a2e3b31e0e854ae41c8958"
+    },
+    {
       "path": "os/lib/fsx.lua",
       "sha1": "1b93f1b5fb789b70b5ed66ef93699d3c30b79df8"
     },
     {
       "path": "os/lib/hal.lua",
-      "sha1": "a6832969cf60b8a3410b3cb5b67072e0b00ce1f9"
+      "sha1": "0fef925328095fea8935a0f885e9f11b4d6c425f"
     },
     {
       "path": "os/lib/httpx.lua",
@@ -149,6 +157,14 @@
     {
       "path": "os/lib/powah.lua",
       "sha1": "257423bd1946995da23c5e7546a5967f5f111403"
+    },
+    {
+      "path": "os/lib/props.lua",
+      "sha1": "9642630acfb0c697c905a3bf998d3125155a51e9"
+    },
+    {
+      "path": "os/lib/shortcut.lua",
+      "sha1": "83c7553460888231bf1fa1e615b2c60a5fbf419d"
     },
     {
       "path": "os/lib/strutil.lua",
@@ -179,16 +195,36 @@
       "sha1": "2803981d5261068483b6c07a92892dba9078e3f3"
     },
     {
+      "path": "os/share/icons/disk.nfp",
+      "sha1": "d171a8fdb9f42bfa4145281570e3f8a5fb3a74cd"
+    },
+    {
+      "path": "os/share/icons/drive.nfp",
+      "sha1": "991a5ed0815981ad359123ba5cac28f3e4b009c6"
+    },
+    {
       "path": "os/share/icons/editor.nfp",
       "sha1": "fecbaccf74834d30e1b367e866981ac343510bed"
+    },
+    {
+      "path": "os/share/icons/file.nfp",
+      "sha1": "e3f5f23b98622300cfe6d9658fab8959c6502fde"
     },
     {
       "path": "os/share/icons/files.nfp",
       "sha1": "b03b434103346312f602a4c0ec36be587bcb76c5"
     },
     {
+      "path": "os/share/icons/folder.nfp",
+      "sha1": "b63a41efd96cdc120037b3e32fc265aaf47169d6"
+    },
+    {
       "path": "os/share/icons/help.nfp",
       "sha1": "9b116ef3dd38ca19456c3fe839b8f8c38e74b879"
+    },
+    {
+      "path": "os/share/icons/image.nfp",
+      "sha1": "7397eee8e1e98983fad428ee091887575ed559f8"
     },
     {
       "path": "os/share/icons/lua.nfp",
@@ -240,19 +276,19 @@
     },
     {
       "path": "os/var/log/crash.log",
-      "sha1": "0871c971eb5e9c8a8ee741c0c18169e8009f4e43"
+      "sha1": "c438e211c4ca3d8719c61cad06165f11306aac76"
     },
     {
       "path": "os/var/log/kernel.log",
-      "sha1": "eefe4eff6bf26445559c884a538e88b8a75ca56c"
+      "sha1": "b13414bedcd52a38e970e969509f92dec30b346d"
     },
     {
       "path": "os/var/log/netd.log",
-      "sha1": "936b58102f7c85e40dfba13cdf1149c0068c01d4"
+      "sha1": "df7b67f424ff1bf952a277126b885600889d5f35"
     },
     {
       "path": "os/var/log/teste.log",
-      "sha1": "fe13a71ea3fc18c4402bd716c23739aeaf74840d"
+      "sha1": "9d7466f386047e5c7e55f012eccafaf58bfab543"
     },
     {
       "path": "os/version.lua",

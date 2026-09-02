@@ -3,6 +3,7 @@ local ui = mosaic.ui
 local theme = mosaic.theme
 local fsx = mosaic.lib("fsx")
 local strutil = mosaic.lib("strutil")
+local registry = mosaic.require("apps.registry")
 
 local dir = ""   -- convencao do fs.combine: raiz e "", nunca "/"
 local f = ui.form()
@@ -65,24 +66,14 @@ function refresh(keep)
     f.dirty = true
 end
 
-function open(item)
+function open(item, x, y)
     if not item then return end
     if item.isDir then
-        dir = item.up and item.path or item.path
+        dir = item.path
         refresh()
         return
     end
-    local name = item.name:lower()
-    if name:match("%.nfp$") then
-        mosaic.launchWith({ title = "Paint" }, "/rom/programs/fun/advanced/paint.lua", item.path)
-    elseif name:match("%.lua$") then
-        local choices = { { text = "Executar" }, { text = "Editar" }, { text = "Cancelar" } }
-        local idx = ui.menu(choices, 4, 4, 14)
-        if idx == 1 then mosaic.launch("/" .. item.path)
-        elseif idx == 2 then mosaic.launchWith({ title = "Editor" }, "/rom/programs/edit.lua", item.path) end
-    else
-        mosaic.launchWith({ title = "Editor" }, "/rom/programs/edit.lua", item.path)
-    end
+    registry.openFile(item.path, x, y)
 end
 
 list.onActivate = function(_, item) open(item) end
@@ -90,7 +81,7 @@ list.onActivate = function(_, item) open(item) end
 list.onContext = function(_, item, _, lx, ly)
     if not item or item.up then return end
     local actions = {
-        { text = "Abrir", run = function() open(item) end },
+        { text = "Abrir", run = function() open(item, lx + 2, ly + 2) end },
         { text = "Renomear", run = function()
             local novo = ui.prompt("Novo nome:", item.name, "Renomear")
             if novo and #novo > 0 then

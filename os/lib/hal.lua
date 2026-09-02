@@ -224,4 +224,35 @@ function hal.environment()
     return env
 end
 
+-- ---------------------------------------------------------------- drives (disquete)
+-- Devolve um item por drive de disquete, esteja ele vazio ou nao. `mount` e' onde o CC
+-- montou o disquete (/disk, /disk2, ...), que e' o que a barra lateral do Arquivos abre.
+--
+-- A API `disk` nao existe no emulador em JS a nao ser como esboco: teste disquete no
+-- CraftOS-PC ou no jogo, nunca no `tools/test.js`.
+function hal.drives()
+    local out = {}
+    if not disk then return out end
+    for _, name in ipairs(peripheral.getNames()) do
+        if peripheral.getType(name) == "drive" then
+            local ok, present = pcall(disk.isPresent, name)
+            present = ok and present or false
+            local d = { side = name, present = present }
+            if present then
+                local function try(fn) local o, v = pcall(fn, name) return o and v or nil end
+                d.mount = try(disk.getMountPath)
+                d.id = try(disk.getID)
+                d.hasData = try(disk.hasData) or false
+                d.hasAudio = try(disk.hasAudio) or false
+                d.label = try(disk.getLabel)
+                if not d.label or d.label == "" then
+                    d.label = d.hasAudio and "Disco de musica" or ("Disquete " .. tostring(d.id or "?"))
+                end
+            end
+            out[#out + 1] = d
+        end
+    end
+    return out
+end
+
 return hal

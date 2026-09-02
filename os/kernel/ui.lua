@@ -394,6 +394,144 @@ function ui.list(o)
     return l
 end
 
+-- ---------------------------------------------------------------- IconView
+-- Grade de icones. Desenha a area de trabalho e as janelas de pasta: as duas mostram a
+-- mesma coisa (o conteudo de uma pasta), entao mostram do mesmo jeito.
+--
+-- Cada entrada e' { name = , icon = , path = , isDir = , spec = }. Quem monta a lista e' o
+-- app; este widget so' posiciona, seleciona e avisa.
+local icons = require("lib.icons")
+
+local IconView = setmetatable({}, Widget) IconView.__index = IconView
+-- 12 de largura deixa 11 colunas para o nome, o suficiente para "Perifericos".
+-- Altura: 4 linhas de icone + 1 de nome.
+IconView.ICON_W, IconView.ICON_H = 12, 5
+local ICON_DX = math.floor((IconView.ICON_W - 1 - icons.COLS) / 2)
+
+function IconView:cols() return math.max(1, math.floor(self.w / self.ICON_W)) end
+function IconView:visibleRows() return math.max(1, math.floor(self.h / self.ICON_H)) end
+function IconView:rowCount() return math.ceil(#(self.entries or {}) / self:cols()) end
+function IconView:maxScroll() return math.max(0, self:rowCount() - self:visibleRows()) end
+
+function IconView:setEntries(list, keepSelection)
+    self.entries = list or {}
+    if not keepSelection then self.selected = #self.entries > 0 and 1 or nil end
+    if self.selected and self.selected > #self.entries then self.selected = #self.entries end
+    if self.selected == 0 then self.selected = nil end
+    self:ensureVisible()
+    self:invalidate()
+end
+
+function IconView:getSelected() return self.selected and self.entries[self.selected] or nil end
+
+function IconView:ensureVisible()
+    self.scroll = self.scroll or 0
+    if not self.selected then return end
+    local row = math.floor((self.selected - 1) / self:cols())
+    if row < self.scroll then self.scroll = row end
+    if row >= self.scroll + self:visibleRows() then self.scroll = row - self:visibleRows() + 1 end
+end
+
+function IconView:select(idx, activate)
+    if #(self.entries or {}) == 0 then self.selected = nil return end
+    idx = math.max(1, math.min(idx, #self.entries))
+    local changed = idx ~= self.selected
+    self.selected = idx
+    self:ensureVisible()
+    if changed and self.onSelect then self.onSelect(self, self.entries[idx], idx) end
+    if activate and self.onActivate then self.onActivate(self, self.entries[idx], idx) end
+    self:invalidate()
+end
+
+-- Canto do icone `i` na tela, ou nil se ele estiver fora da parte visivel.
+function IconView:slotAt(i)
+    local cols = self:cols()
+    local row = math.floor((i - 1) / cols) - (self.scroll or 0)
+    if row < 0 or row >= self:visibleRows() then return nil end
+    return self.x + ((i - 1) % cols) * self.ICON_W, self.y + row * self.ICON_H
+end
+
+-- x, y em coordenadas do formulario.
+function IconView:indexAt(x, y)
+    for i = 1, #(self.entries or {}) do
+        local ix, iy = self:slotAt(i)
+        -- A area clicavel inclui a linha do nome: e' o alvo maior e o mais obvio de acertar.
+        if ix and x >= ix and x < ix + self.ICON_W - 1 and y >= iy and y <= iy + icons.ROWS then
+            return i
+        end
+    end
+    return nil
+end
+
+function IconView:draw(t)
+    self.entries = self.entries or {}
+    self.scroll = math.max(0, math.min(self.scroll or 0, self:maxScroll()))
+    local focused = self.form.focused == self
+    local bg = self.bg or self.form.bg
+    for i, e in ipairs(self.entries) do
+        local ix, iy = self:slotAt(i)
+        if ix then
+            icons.draw(t, e.icon, ix + ICON_DX, iy, bg)
+            t.setCursorPos(ix, iy + icons.ROWS)
+            local sel = i == self.selected
+            t.setBackgroundColor(sel and (focused and theme.selBg or theme.mutedFg) or bg)
+            t.setTextColor(sel and theme.selFg or (self.fg or self.form.fg))
+            t.write(pad(e.name, self.ICON_W - 1, "center"))
+        end
+    end
+end
+
+function IconView:onMouse(ev, btn, lx, ly, dir)
+    if ev == "mouse_scroll" then
+        self.scroll = math.max(0, math.min((self.scroll or 0) + dir, self:maxScroll()))
+        self:invalidate()
+        return
+    end
+    if ev ~= "mouse_click" then return end
+    local x, y = self.x + lx - 1, self.y + ly - 1
+    local i = self:indexAt(x, y)
+    if not i then
+        self:invalidate()
+        if self.onEmpty then self.onEmpty(self, btn, x, y) end
+        return
+    end
+    -- Clique duplo abre, clique simples so' seleciona: sem isso nao da para escolher um
+    -- icone para renomear ou apagar sem abrir o programa junto.
+    local now = os.clock()
+    local dbl = self.lastClick and self.lastClickIdx == i and now - self.lastClick < 0.5
+    self.lastClick, self.lastClickIdx = now, i
+    if btn == 2 then
+        self:select(i)
+        if self.onContext then self.onContext(self, self.entries[i], i, x, y) end
+    else
+        self:select(i, dbl or self.activateOnClick)
+    end
+end
+
+function IconView:onKey(code)
+    local n = #(self.entries or {})
+    if n == 0 then return end
+    if not self.selected then self:select(1) return end
+    local cols, page = self:cols(), self:cols() * self:visibleRows()
+    if code == keys.left then self:select(self.selected - 1)
+    elseif code == keys.right then self:select(self.selected + 1)
+    elseif code == keys.up then self:select(self.selected - cols)
+    elseif code == keys.down then self:select(self.selected + cols)
+    elseif code == keys.pageUp then self:select(self.selected - page)
+    elseif code == keys.pageDown then self:select(self.selected + page)
+    elseif code == keys.home then self:select(1)
+    elseif code == keys["end"] then self:select(n)
+    elseif code == keys.enter or code == keys.numPadEnter then self:select(self.selected, true)
+    end
+end
+
+function ui.iconview(o)
+    local v = newWidget(IconView, o, { w = 20, h = 10, focusable = true, scrollable = true,
+        entries = {}, takesEnter = true, scroll = 0 })
+    if v.selected == nil and #v.entries > 0 then v.selected = 1 end
+    return v
+end
+
 -- ---------------------------------------------------------------- Checkbox
 local Checkbox = setmetatable({}, Widget) Checkbox.__index = Checkbox
 function Checkbox:draw(t)
