@@ -98,8 +98,9 @@ end
 
 -- Roda um comando do shell numa janela invisivel e devolve o texto da tela.
 function handlers.shell(msg)
-    local cols = math.min(tonumber(msg.cols) or 51, 120)
-    local rows = math.min(tonumber(msg.rows) or 19, 50)
+    -- Sem tamanho pedido, usa o da tela: nem todo servidor roda 51x19.
+    local cols = math.min(tonumber(msg.cols) or mosaic.wm.W, 120)
+    local rows = math.min(tonumber(msg.rows) or mosaic.wm.H, 50)
     local win = window.create(mosaic.wm.canvas, 1, 1, cols, rows, false)
     local p = mosaic.proc.runCommand(msg.cmd or "", {
         hidden = true, term = win, title = "relay:" .. tostring(msg.cmd), holdOnError = false,

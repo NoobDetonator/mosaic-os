@@ -5,6 +5,13 @@
 //   node tools/craftos.js boot [segs]   liga o OS de verdade e mostra a tela final
 //   node tools/craftos.js exec "<lua>"  roda um trecho de Lua e mostra a tela
 //   node tools/craftos.js run <arquivo> roda um .lua do host dentro do computador
+//   node tools/craftos.js bench        mede o custo do compositor, dos icones e do kernel
+//
+// Qualquer comando aceita --size LxA (padrao 51x19, o do computador avancado). O alvo do
+// projeto e 80x30, que exige mexer no computercraft-server.toml do servidor; 51x19 continua
+// tendo de funcionar, porque nem todo servidor vai mudar.
+// ATENCAO: so o modo grafico (shot) respeita o tamanho. O headless do CraftOS-PC ignora
+// defaultWidth e computerWidth e sempre roda 51x19, entao test e bench medem nesse tamanho.
 //
 // Diferenca para tools/test.js (emulador proprio em JS): aqui rodam a ROM, o shell,
 // o edit/paint e a API window originais. Em troca, o CraftOS-PC 2.8+ traz uma ROM mais
@@ -42,6 +49,7 @@ const COMPUTER = path.join(DATA, 'computer', '0');
 function resetComputer() {
   fs.rmSync(COMPUTER, { recursive: true, force: true });
   fs.mkdirSync(COMPUTER, { recursive: true });
+  writeSize();
 }
 
 // A saida headless e um despejo do terminal a cada mudanca de tela: o final e o estado final.
@@ -64,7 +72,33 @@ const mounts = (rw) => [
 ];
 
 const cmd = process.argv[2] || 'test';
-const arg = process.argv[3];
+const arg = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : null;
+
+// Tamanho do terminal: o CraftOS-PC le de config/global.json na pasta de dados.
+const sizeArg = process.argv.indexOf('--size');
+const SIZE = sizeArg > 0 && process.argv[sizeArg + 1]
+  ? process.argv[sizeArg + 1].toLowerCase().split('x').map(Number)
+  : [51, 19];
+function writeSize() {
+  const dir = path.join(DATA, 'config');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'global.json'),
+    JSON.stringify({ defaultWidth: SIZE[0], defaultHeight: SIZE[1] }, null, 2));
+  // Tamanho por computador. Nem isso vale no headless, mas o modo grafico obedece.
+  fs.writeFileSync(path.join(dir, '0.json'),
+    JSON.stringify({ computerWidth: SIZE[0], computerHeight: SIZE[1], isColor: true }, null, 2));
+}
+
+if (cmd === 'bench') {
+  resetComputer();
+  const { out } = run([...mounts(true), '--script', path.join(ROOT, 'tools', 'test', 'bench.lua')]);
+  // O headless repete a tela a cada mudanca; o relatorio final e o que interessa.
+  const lines = out.replace(/\r/g, '').split('\n').map((l) => l.replace(/\s+$/, ''));
+  const marks = lines.filter((l) => /^Mosaic bench/.test(l));
+  const start = marks.length ? lines.lastIndexOf(marks[marks.length - 1]) : 0;
+  console.log(lines.slice(start, start + 16).join('\n'));
+  process.exit(0);
+}
 
 if (cmd === 'test') {
   resetComputer();

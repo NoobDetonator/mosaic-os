@@ -57,6 +57,9 @@ Fatos do kernel que não são óbvios:
 - `ui.form` rola sozinho: `Form:draw` desloca `w.y` durante o desenho e devolve, e `Form:handle` soma `self.scroll` ao y do mouse.
   Nenhum widget sabe que existe scroll. Só `list` e `text` (com `scrollable = true`) consomem `mouse_scroll`; o resto deixa o form rolar.
 - Widget com `pinned = true` não rola nem conta na altura rolável: é como se faz barra de abas/rodapé fixo (ver `apps/reactor.lua`).
+- **Tela: 51x19 é o padrão, 80x30 é o alvo.** O tamanho vem do `computercraft-server.toml` do servidor, não do Lua.
+  Nada no OS pode assumir 51x19: tudo lê `term.getSize()` e trata `term_resize`. `--size` no craftos.js só
+  funciona no modo gráfico (`shot`); o headless sempre roda 51x19.
 - Sub-pixel (`lib/pixel`) é 2x3 por célula, e uma célula com sub-pixel só aceita 2 cores e nenhum texto: serve para imagem, não para interface.
 - Ícone pequeno é `.nfp` (`lib/icons`, 12x12 = 6x4 células), **não** vetor: nesse tamanho cada ponto é uma decisão
   de desenho e rasterizar borra. `lib/vector` é para o que precisa mudar de tamanho (logo, gráfico).
@@ -70,6 +73,7 @@ Fatos do kernel que não são óbvios:
 - `node tools/emu/emu.js --show` — boota o OS de verdade e imprime a tela final; bom para conferir layout.
 - `node tools/svg.js <arquivo.svg>` — converte SVG para o formato vetorial de `os/lib/vector` em `os/share/vectors/`. Le viewBox, rect, circle, polygon e path com M/L/H/V/Z; **nao le** transform, curva nem grupo (achate no editor antes).
 - `node tools/icons.js` — regera os icones de `os/share/icons` a partir da arte em texto dentro do proprio script. `--from <pasta>` converte uma pasta de PNG (precisa de `npm install pngjs`).
+- `node tools/craftos.js bench` — mede compositor, icone, vetor e passo do kernel. Otimizar com numero, nao com palpite.
 - `node tools/manifest.js` — regenera `manifest.json` (usado por `install.lua` e pelo app `pkg`).
 - `node tools/craftos.js <test|boot|app <nome>|exec "<lua>"|run <arquivo>>` — roda no **CraftOS-PC**
   instalado na máquina (implementação real do CC: ROM, shell, `edit`, `paint` e API `window` de verdade).

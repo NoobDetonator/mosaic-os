@@ -164,7 +164,7 @@
     },
     {
       "path": "os/net/relay.lua",
-      "sha1": "3ae87a182c78b9894f0e344df9f70ffa2d85559e"
+      "sha1": "eb6c661f55b5ada70665a64fb08321ae9da58d32"
     },
     {
       "path": "os/share/icons/app.nfp",
@@ -240,19 +240,19 @@
     },
     {
       "path": "os/var/log/crash.log",
-      "sha1": "6acf88ac19c238c255ea6ba2145880dc5a855ddf"
+      "sha1": "aa085a644b90026bd742917a9c12b7d1e4b9aec0"
     },
     {
       "path": "os/var/log/kernel.log",
-      "sha1": "6066b9314fa33405542309972989775237f30e24"
+      "sha1": "471153f4fda7afa208ebd8981d6d871cdeaafcdb"
     },
     {
       "path": "os/var/log/netd.log",
-      "sha1": "53ad3dd3efee354a2db1699c597e36aae2361e54"
+      "sha1": "2536fab66c15b8edf2432caa3dd6fd04730195f7"
     },
     {
       "path": "os/var/log/teste.log",
-      "sha1": "5bf6ac426d42b953e3f609fdc95ca87dea6068f7"
+      "sha1": "393763b72ff43d2c5c852515087aa9a63da38fe9"
     },
     {
       "path": "os/version.lua",
