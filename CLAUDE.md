@@ -65,6 +65,7 @@ Fatos do kernel que não são óbvios:
 - `node tools/test.js` — self-check do kernel no emulador embutido (`tools/emu`, fengari). Não precisa do CraftOS-PC.
 - `node tools/debug.js os/apps/files.lua [36x10] [12,18] [fake]` — abre um app no emulador: tamanho de tela, cliques, e `fake` instala um reator do Powah de mentira (`tools/test/fake-reactor.lua`) para conferir o painel com dados variando.
 - `node tools/emu/emu.js --show` — boota o OS de verdade e imprime a tela final; bom para conferir layout.
+- `node tools/icons.js` — regera os icones de `os/share/icons` a partir da arte em texto dentro do proprio script. `--from <pasta>` converte uma pasta de PNG (precisa de `npm install pngjs`).
 - `node tools/manifest.js` — regenera `manifest.json` (usado por `install.lua` e pelo app `pkg`).
 - `node tools/craftos.js <test|boot|app <nome>|exec "<lua>"|run <arquivo>>` — roda no **CraftOS-PC**
   instalado na máquina (implementação real do CC: ROM, shell, `edit`, `paint` e API `window` de verdade).

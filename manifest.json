@@ -12,7 +12,7 @@
     },
     {
       "path": "os/apps/desktop.lua",
-      "sha1": "42430ea36b4e87a5e5b9de4349136d74181a9d6a"
+      "sha1": "b27737b4eedf4db386c087abc1924f02f85e8b8a"
     },
     {
       "path": "os/apps/editor.lua",
@@ -135,12 +135,16 @@
       "sha1": "81e44124ca1d0b9589cb37eb54a4fe1e0e1f62d1"
     },
     {
+      "path": "os/lib/icons.lua",
+      "sha1": "024f36b919209e9aac15ba3b3e595ce57a15b57d"
+    },
+    {
       "path": "os/lib/log.lua",
       "sha1": "94f730c6b055462d57123e6e7f3587ecbf769747"
     },
     {
       "path": "os/lib/pixel.lua",
-      "sha1": "c24ab53fd55d70765e3a530dc9006745999573c7"
+      "sha1": "de743d4716222588b4c67c2bf897df0ecc8ab987"
     },
     {
       "path": "os/lib/powah.lua",
@@ -159,20 +163,88 @@
       "sha1": "3ae87a182c78b9894f0e344df9f70ffa2d85559e"
     },
     {
+      "path": "os/share/icons/app.nfp",
+      "sha1": "7f87ec4090c527138892ac176bbe33b12aa644ef"
+    },
+    {
+      "path": "os/share/icons/calc.nfp",
+      "sha1": "7b7f3d42bff12465bc442bc9fdf30aaf1e45f553"
+    },
+    {
+      "path": "os/share/icons/clock.nfp",
+      "sha1": "2803981d5261068483b6c07a92892dba9078e3f3"
+    },
+    {
+      "path": "os/share/icons/editor.nfp",
+      "sha1": "fecbaccf74834d30e1b367e866981ac343510bed"
+    },
+    {
+      "path": "os/share/icons/files.nfp",
+      "sha1": "b03b434103346312f602a4c0ec36be587bcb76c5"
+    },
+    {
+      "path": "os/share/icons/help.nfp",
+      "sha1": "9b116ef3dd38ca19456c3fe839b8f8c38e74b879"
+    },
+    {
+      "path": "os/share/icons/lua.nfp",
+      "sha1": "19a31965067a4f3fe3135102e08cead02fe89a76"
+    },
+    {
+      "path": "os/share/icons/netcenter.nfp",
+      "sha1": "7649801745d99e501ddfa498546e68430dbdfea5"
+    },
+    {
+      "path": "os/share/icons/notes.nfp",
+      "sha1": "a7aac49228b8f1c704ec6b13d0a754ff21d5e699"
+    },
+    {
+      "path": "os/share/icons/paint.nfp",
+      "sha1": "37ff12a6ed19af988d374f4208f5bc81c5ab5c96"
+    },
+    {
+      "path": "os/share/icons/periph.nfp",
+      "sha1": "797a59d67a4a8d559522ec41d49f75b77d40aa43"
+    },
+    {
+      "path": "os/share/icons/pkg.nfp",
+      "sha1": "135197f5396fe05052feaade85a6fa388a002558"
+    },
+    {
+      "path": "os/share/icons/reactor.nfp",
+      "sha1": "b0e2f59e8ee7e42c6558a47f50429202fae3cc8e"
+    },
+    {
+      "path": "os/share/icons/remote.nfp",
+      "sha1": "0e3de4fe291ed3677f9ef39385714bc32f849b50"
+    },
+    {
+      "path": "os/share/icons/settings.nfp",
+      "sha1": "91e26a2b60c61cd9e2e627a06e27078fca8ddcf5"
+    },
+    {
+      "path": "os/share/icons/taskman.nfp",
+      "sha1": "4e33816c70fb54b8b8b9af3056bd450903502560"
+    },
+    {
+      "path": "os/share/icons/terminal.nfp",
+      "sha1": "3da174369a757562b6655a8acbf26e5836d237e8"
+    },
+    {
       "path": "os/var/log/crash.log",
-      "sha1": "4ff847a109de61ee3d44f60d68efb9b958a23a80"
+      "sha1": "c1b724b2940193afb619877cab86c132763d7db9"
     },
     {
       "path": "os/var/log/kernel.log",
-      "sha1": "2eac951c6ddb6c58daa6c9481219b5949f31e46a"
+      "sha1": "918c17b74b54d15557a499465b9bfe08ad501fe8"
     },
     {
       "path": "os/var/log/netd.log",
-      "sha1": "e7650471c3b3ce3cb8b7e527403e7ad3e077ecda"
+      "sha1": "20b295548d64239b424a64ea94ed9be696c9415f"
     },
     {
       "path": "os/var/log/teste.log",
-      "sha1": "8c010832caf40d8a95127341f3558895b51806a2"
+      "sha1": "10487a518b960ccbd7a53197a9cdf84efa737586"
     },
     {
       "path": "os/version.lua",

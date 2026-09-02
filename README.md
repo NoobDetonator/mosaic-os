@@ -56,6 +56,7 @@ computador in-game direto.
 cd tools && npm install     # luaparse + fengari
 node tools/lint.js          # sintaxe Lua 5.1 + APIs novas demais para 1.16.5
 node tools/test.js          # self-check do kernel no emulador CC embutido
+node tools/icons.js         # regenera os icones (arte em texto dentro do script)
 node tools/manifest.js      # regenera o manifest.json usado pelo instalador
 
 cd relay && npm install && node relay.js   # http://localhost:8765

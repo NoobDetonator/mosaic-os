@@ -56,7 +56,10 @@ function pixel.new(cols, rows, fill)
     return self
 end
 
+function Canvas:touch() self.blitCache = nil end
+
 function Canvas:clear(color)
+    self.blitCache = nil
     for y = 1, self.h do
         local row = {}
         for x = 1, self.w do row[x] = color end
@@ -68,6 +71,7 @@ function Canvas:set(x, y, color)
     x, y = math.floor(x), math.floor(y)
     if x < 1 or y < 1 or x > self.w or y > self.h then return end
     self.buf[y][x] = color
+    self.blitCache = nil
 end
 
 function Canvas:get(x, y)
@@ -125,6 +129,44 @@ function Canvas:render(t, ox, oy)
     end
 end
 
+-- Congela o canvas em linhas de blit: { { texto, frente, fundo }, ... }.
+-- Um icone e' estatico, entao requantizar 12x12 sub-pixels a cada quadro e' desperdicio.
+-- O cache morre em qualquer set/clear/rect/line (ver Canvas:touch).
+function Canvas:toBlit()
+    if self.blitCache then return self.blitCache end
+    local out, px = {}, {}
+    for row = 1, self.rows do
+        local chars, fgs, bgs = {}, {}, {}
+        local by = (row - 1) * 3
+        for col = 1, self.cols do
+            local bx = (col - 1) * 2
+            px[1] = self.buf[by + 1][bx + 1]
+            px[2] = self.buf[by + 1][bx + 2]
+            px[3] = self.buf[by + 2][bx + 1]
+            px[4] = self.buf[by + 2][bx + 2]
+            px[5] = self.buf[by + 3][bx + 1]
+            px[6] = self.buf[by + 3][bx + 2]
+            local ch, fg, bg = pixel.cell(px)
+            chars[col] = ch
+            fgs[col] = colors.toBlit(fg)
+            bgs[col] = colors.toBlit(bg)
+        end
+        out[row] = { table.concat(chars), table.concat(fgs), table.concat(bgs) }
+    end
+    self.blitCache = out
+    return out
+end
+
+-- Desenha usando o cache. Mesmo resultado do render, sem recalcular.
+function Canvas:blitTo(t, ox, oy)
+    ox, oy = ox or 1, oy or 1
+    local rows = self:toBlit()
+    for i = 1, #rows do
+        t.setCursorPos(ox, oy + i - 1)
+        t.blit(rows[i][1], rows[i][2], rows[i][3])
+    end
+end
+
 -- Monta um canvas a partir de uma imagem do paintutils, tratando cada pixel do
 -- arquivo como um SUB-pixel. Um .nfp de 102x57 vira uma tela cheia em alta resolucao.
 function pixel.fromImage(img, cols, rows, fill)
@@ -173,6 +215,13 @@ function pixel.demo()
     assert(c:get(999, 999) == nil, "get fora do canvas deveria dar nil")
     c:line(1, 1, 6, 1, B)
     assert(c:get(6, 1) == B, "linha horizontal nao chegou ao fim")
+
+    local rows = c:toBlit()
+    assert(#rows == c.rows, "toBlit devolveu numero de linhas errado")
+    assert(#rows[1][1] == c.cols, "linha do toBlit com largura errada")
+    assert(rows == c:toBlit(), "toBlit deveria devolver o mesmo cache")
+    c:set(2, 2, W)
+    assert(rows ~= c:toBlit(), "o cache do toBlit tinha de morrer depois do set")
     return true
 end
 

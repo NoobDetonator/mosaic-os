@@ -2,10 +2,15 @@
 local ui = mosaic.ui
 local theme = mosaic.theme
 local registry = mosaic.require("apps.registry")
+local iconlib = mosaic.lib("icons")
 
-local ICON_W, ICON_H = 12, 3   -- largura 12 = 11 col. de nome, o suficiente para "Perifericos"
+-- Largura 12 deixa 11 colunas para o nome, o suficiente para "Perifericos". O icone tem
+-- 6 celulas e fica centrado nelas. Altura: 4 do icone + 1 do nome.
+local ICON_W, ICON_H = 12, 5
+local ICON_DX = math.floor((ICON_W - 1 - iconlib.COLS) / 2)
 
 local icons = {}
+local sel = 1
 
 local function layout()
     local w, h = term.getSize()
@@ -62,15 +67,21 @@ f.onDraw = function(_, t)
     drawWallpaper(t, w, h)
     for _, ic in ipairs(icons) do
         local app = ic.app
-        t.setCursorPos(ic.x + math.floor((ICON_W - 4) / 2), ic.y)
-        t.setBackgroundColor(app.color or colors.white)
-        t.setTextColor(app.color == colors.black and colors.white or colors.black)
-        t.write(ui.pad(app.icon or "?", 3, "center"))
-        t.setCursorPos(ic.x, ic.y + 1)
-        t.setBackgroundColor(theme.desktopBg)
-        t.setTextColor(theme.desktopFg)
+        -- Icone de verdade quando existe arquivo; senao a plaquinha de duas letras, que e o
+        -- que ainda cabe em tela pequena.
+        if not iconlib.draw(t, app.icon_file or app.id, ic.x + ICON_DX, ic.y, theme.desktopBg) then
+            t.setCursorPos(ic.x + math.floor((ICON_W - 4) / 2), ic.y)
+            t.setBackgroundColor(app.color or colors.white)
+            t.setTextColor(app.color == colors.black and colors.white or colors.black)
+            t.write(ui.pad(app.icon or "?", 3, "center"))
+        end
+        t.setCursorPos(ic.x, ic.y + iconlib.ROWS)
+        local selected = ic == icons[sel]
+        t.setBackgroundColor(selected and theme.selBg or theme.desktopBg)
+        t.setTextColor(selected and theme.selFg or theme.desktopFg)
         t.write(ui.pad(app.name, ICON_W - 1, "center"))
     end
+
     local label = (os.getComputerLabel() or ("Computador #" .. os.getComputerID()))
     t.setCursorPos(w - #label, 1)
     t.setBackgroundColor(theme.desktopBg)
@@ -79,15 +90,18 @@ f.onDraw = function(_, t)
 end
 
 local function iconAt(x, y)
-    for _, ic in ipairs(icons) do
-        if x >= ic.x and x < ic.x + ICON_W - 1 and y >= ic.y and y <= ic.y + 1 then return ic end
+    for i, ic in ipairs(icons) do
+        if x >= ic.x and x < ic.x + ICON_W - 1 and y >= ic.y and y <= ic.y + iconlib.ROWS then
+            return ic, i
+        end
     end
 end
 
 f.onEvent = function(_, ev, btn, x, y)
     if ev == "mouse_click" then
-        local ic = iconAt(x, y)
+        local ic, idx = iconAt(x, y)
         if btn == 1 and ic then
+            sel = idx
             registry.open(ic.app)
             return true
         elseif btn == 2 then

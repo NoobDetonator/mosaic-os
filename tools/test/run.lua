@@ -188,6 +188,8 @@ check(fsx.writeJSON("/tmp_test.json", { a = 1 }) == true, "fsx.writeJSON falhou"
 check(fsx.readJSON("/tmp_test.json").a == 1, "fsx.readJSON falhou")
 check(fsx.uniqueName("/tmp_test.txt") == "/tmp_test (2).txt", "fsx.uniqueName errado: " .. fsx.uniqueName("/tmp_test.txt"))
 check(require("kernel.draw").demo() == true, "self-check do kernel.draw falhou")
+check(require("lib.pixel").demo() == true, "self-check do lib.pixel falhou")
+check(require("lib.icons").demo() == true, "self-check do lib.icons falhou")
 check(require("kernel.draw").HALF:byte() == 149, "caractere de meia celula errado")
 local hal = require("lib.hal")
 check(type(hal.list()) == "table", "hal.list nao devolveu tabela")

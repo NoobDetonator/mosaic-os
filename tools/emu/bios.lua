@@ -758,8 +758,44 @@ http = { checkURL = function() return true end, checkURLAsync = function() retur
     request = function(url) os.queueEvent("http_failure", type(url) == "table" and url.url or url, "Emulador sem rede") end,
     websocket = function() return false, "Emulador sem rede" end,
     websocketAsync = function(url) os.queueEvent("websocket_failure", url, "Emulador sem rede") end }
-paintutils = { loadImage = function() return nil end, drawImage = function() end, drawPixel = function() end,
-    drawLine = function() end, drawBox = function() end, drawFilledBox = function() end }
+paintutils = {}
+function paintutils.parseImage(data)
+    local img = {}
+    local NL = string.char(10)
+    for line in (tostring(data) .. NL):gmatch("(.-)" .. NL) do
+        local row = {}
+        for i = 1, #line do
+            local c = tonumber(line:sub(i, i), 16)
+            row[i] = c and 2 ^ c or 0
+        end
+        img[#img + 1] = row
+    end
+    while #img > 0 and #img[#img] == 0 do table.remove(img) end
+    return img
+end
+function paintutils.loadImage(path)
+    local h = fs.open(path, "r")
+    if not h then return nil end
+    local data = h.readAll()
+    h.close()
+    return paintutils.parseImage(data)
+end
+function paintutils.drawImage(img, x, y)
+    for iy = 1, #img do
+        for ix = 1, #img[iy] do
+            local c = img[iy][ix]
+            if c and c ~= 0 then
+                term.setBackgroundColor(c)
+                term.setCursorPos(x + ix - 1, y + iy - 1)
+                term.write(" ")
+            end
+        end
+    end
+end
+paintutils.drawPixel = function() end
+paintutils.drawLine = function() end
+paintutils.drawBox = function() end
+paintutils.drawFilledBox = function() end
 gps = { locate = function() return nil end }
 help = { path = function() return "/rom/help" end, lookup = function() return nil end, topics = function() return {} end }
 disk = { isPresent = function() return false end }
