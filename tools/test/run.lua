@@ -190,6 +190,7 @@ check(fsx.uniqueName("/tmp_test.txt") == "/tmp_test (2).txt", "fsx.uniqueName er
 check(require("kernel.draw").demo() == true, "self-check do kernel.draw falhou")
 check(require("lib.pixel").demo() == true, "self-check do lib.pixel falhou")
 check(require("lib.icons").demo() == true, "self-check do lib.icons falhou")
+check(require("lib.vector").demo() == true, "self-check do lib.vector falhou")
 check(require("kernel.draw").HALF:byte() == 149, "caractere de meia celula errado")
 local hal = require("lib.hal")
 check(type(hal.list()) == "table", "hal.list nao devolveu tabela")

@@ -90,6 +90,41 @@ f.onDraw = function(_, t)
     t.write(label)
 end
 
+-- Sobre: mostra o logo em vetor, que o lib/vector escala para o tamanho da caixa.
+-- E' o unico lugar do OS onde o desenho precisa mudar de tamanho; icone pequeno continua .nfp.
+local function showAbout()
+    local vector = mosaic.lib("vector")
+    local shape = vector.load("/os/share/vectors/logo.lua")
+    local v = mosaic.version
+    local lines = {
+        v.name .. " " .. v.version .. " (" .. v.codename .. ")",
+        tostring(_HOST),
+        "Computador #" .. os.getComputerID(),
+        math.floor(fs.getFreeSpace("/") / 1024) .. " KB livres",
+    }
+    if not shape then ui.msgbox(table.concat(lines, "\n"), "Sobre") return end
+    ui.dialog {
+        title = "Sobre", w = 40, h = 9,
+        build = function(form, dlg)
+            form.onDraw = function(_, t)
+                t.setBackgroundColor(theme.dialogTitleBg)
+                t.setTextColor(theme.dialogTitleFg)
+                t.setCursorPos(1, 1)
+                t.write(ui.pad(" Sobre", dlg.w))
+                vector.draw(t, shape, 2, 3, 6, 4, theme.dialogBg)
+            end
+            local y = dlg.contentY + 1
+            for _, line in ipairs(lines) do
+                form:add(ui.label { x = 10, y = y, w = dlg.w - 11, text = line })
+                y = y + 1
+            end
+            form:add(ui.button { x = dlg.w - 6, y = dlg.h - 1, text = "&OK",
+                onClick = function() dlg.close(true) end })
+            form.defaultButton = form.widgets[#form.widgets]
+        end,
+    }
+end
+
 local function iconAt(x, y)
     for i, ic in ipairs(icons) do
         if x >= ic.x and x < ic.x + ICON_W - 1 and y >= ic.y and y <= ic.y + iconlib.ROWS then
@@ -132,10 +167,7 @@ f.onEvent = function(_, ev, btn, x, y)
                 end },
                 { text = "Atualizar icones", run = function() layout() f.dirty = true end },
                 { text = "Configuracoes", run = function() mosaic.launchWith({ title = "Configuracoes" }, "/os/apps/settings.lua") end },
-                { text = "Sobre", run = function()
-                    ui.msgbox(mosaic.version.name .. " " .. mosaic.version.version .. " (" .. mosaic.version.codename .. ")\n" ..
-                        "CC:Tweaked " .. tostring(_HOST) .. "\nComputador #" .. os.getComputerID(), "Sobre")
-                end },
+                { text = "Sobre", run = function() showAbout() end },
             }
             local idx = ui.menu(opts, x, y, 18)
             f.dirty = true

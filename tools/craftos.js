@@ -119,10 +119,15 @@ function bootAndShoot(actions, secs, outFile) {
 }
 
 if (cmd === 'shot') {
-  const actions = arg === 'pointer'
-    ? ['mosaic.togglePointer()', 'local p = mosaic.pointer()', 'p.x, p.y = 20, 8', 'sleep(1)']
-    : (arg ? [`mosaic.launch("/os/apps/${arg}.lua")`, 'sleep(2)'] : []);
-  if (arg && arg !== 'pointer' && !fs.existsSync(path.join(ROOT, 'os', 'apps', `${arg}.lua`))) {
+  const special = {
+    pointer: ['mosaic.togglePointer()', 'local p = mosaic.pointer()', 'p.x, p.y = 20, 8', 'sleep(1)'],
+    // Clique direito na area de trabalho e depois "Sobre", para fotografar o dialogo com o logo.
+    // menu de 5 itens abre em (30,8); "Sobre" e o ultimo, na linha 12
+    about: ['os.queueEvent("mouse_click", 2, 30, 8)', 'sleep(1)',
+            'os.queueEvent("mouse_click", 1, 32, 12)', 'sleep(2)'],
+  };
+  const actions = special[arg] || (arg ? [`mosaic.launch("/os/apps/${arg}.lua")`, 'sleep(2)'] : []);
+  if (arg && !special[arg] && !fs.existsSync(path.join(ROOT, 'os', 'apps', `${arg}.lua`))) {
     console.error(`nao existe os/apps/${arg}.lua`);
     process.exit(2);
   }
