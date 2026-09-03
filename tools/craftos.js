@@ -244,6 +244,14 @@ if (cmd === 'shot') {
                 'sleep(3)'],
     terreno: ['mosaic.launchWith({ title = "Terreno", w = 50, h = 17 }, "/os/demos/terreno.lua")',
                 'sleep(3)'],
+    // O mesmo cubo com a paleta de oito degraus ligada (tecla P), para comparar lado a lado.
+    cubopal: ['mosaic.launchWith({ title = "Cubo 3D", w = 50, h = 17 }, "/os/demos/cubo.lua")',
+                'sleep(2)', 'os.queueEvent("key", keys.p, false)', 'sleep(2)'],
+    // Liga a paleta de 3D e SAI: prova que ela volta ao normal. Se o icone do Paint ou o do
+    // Reator sairem cinzas neste print, o restore nao funcionou.
+    cubopalvolta: ['mosaic.launchWith({ title = "Cubo 3D", w = 50, h = 17 }, "/os/demos/cubo.lua")',
+                'sleep(2)', 'os.queueEvent("key", keys.p, false)', 'sleep(1.5)',
+                'os.queueEvent("key", keys.q, false)', 'sleep(2)'],
     startctx: ['local _, H = mosaic.screenSize()',
                'os.queueEvent("mouse_click", 1, 3, H)', 'sleep(1)',
                'os.queueEvent("mouse_click", 2, 5, 5)', 'sleep(1.5)'],

@@ -10,6 +10,7 @@ local theme = mosaic.theme
 local pixel = mosaic.lib("pixel")
 local mesh = mosaic.lib("mesh")
 local three = mosaic.lib("three")
+local shade = mosaic.lib("shade")
 
 local INTERVALO = 0.05
 local N = 24                  -- celulas de cada lado
@@ -68,6 +69,10 @@ local function montaTerreno()
 end
 
 local terreno = montaTerreno()
+-- applyTinted guarda a cor por altura e escurece a partir dela: a encosta virada para a luz
+-- fica verde, a de costas cai para o cinza. Sem isso o terreno le como mapa topografico, e
+-- nao como paisagem.
+shade.applyTinted(terreno, 0.6, 1, -0.5, 0.3)
 
 local f = ui.form()
 local canvas, frame, cw, ch

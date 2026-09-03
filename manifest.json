@@ -4,7 +4,7 @@
   "files": [
     {
       "path": "os/apps/calc.lua",
-      "sha1": "3e2f5158fa30b698947d4a72280aca6fd8f6cddc"
+      "sha1": "f28711270beed3105a05b7586889672de7bd4581"
     },
     {
       "path": "os/apps/clock.lua",
@@ -80,11 +80,11 @@
     },
     {
       "path": "os/demos/cubo.lua",
-      "sha1": "3d8380062cba05c3720c1b16c8a4056c2d5646e0"
+      "sha1": "6750e7e6006c5994600d59b5ff6daea22062a8cc"
     },
     {
       "path": "os/demos/terreno.lua",
-      "sha1": "e1569a16da4a34d3b30768eea097b71f7e446419"
+      "sha1": "d9d67b9f26d4182908b801a905350541bb350c64"
     },
     {
       "path": "os/docs/01-primeiros-passos.md",
@@ -120,7 +120,7 @@
     },
     {
       "path": "os/kernel/palette.lua",
-      "sha1": "9e2db16e6ec9533c854e264b3f99a0ccaab9b848"
+      "sha1": "7086a3fce4cd39a334955000bf0974ac5f23403e"
     },
     {
       "path": "os/kernel/proc.lua",
@@ -205,6 +205,10 @@
     {
       "path": "os/lib/props.lua",
       "sha1": "9642630acfb0c697c905a3bf998d3125155a51e9"
+    },
+    {
+      "path": "os/lib/shade.lua",
+      "sha1": "ff79f7a2e4df6b261f00825ee9e512692369a5c4"
     },
     {
       "path": "os/lib/shortcut.lua",

@@ -219,3 +219,55 @@ Custo por triangulo: **1,69 → 1,14 µs**, ou de 590 mil para **~877 mil triang
 
 O desenho nao mudou: o print do cubo antes e depois e' o mesmo, e o teste do z-buffer continua
 passando nas duas ordens de desenho.
+
+---
+
+## Onda 3 — iluminacao
+
+`os/lib/shade.lua`: Lambert por face, normal pre-calculada no modelo (`tri[11..13]`, uma vez por
+malha e nao por quadro), e o resultado caindo num degrau de uma rampa.
+
+Por face e nao por vertice de proposito: com 16 cores nao existe degrade, e interpolar tom entre
+vertices so' aumentaria o numero de celulas com tres cores. A celula de sub-pixel aceita duas —
+o resultado seria pior, nao melhor.
+
+### O degrau mais escuro era o fundo
+
+A rampa de cinza comeca no **preto**, e o fundo do canvas 3D e' preto. Com ambiente 0,2, as faces
+de costas caiam no primeiro degrau e **sumiam no fundo**: o cubo do demo virou um losango
+achatado, porque so' o topo sobrava. Levei um print para perceber.
+
+Correcao: ambiente 0,3 nunca alcanca o primeiro degrau numa rampa de quatro, e isso virou teste.
+O `applyTinted` passou a medir os niveis **depois** de tirar o ambiente, entao a face mais escura
+possivel cai no cinza e nunca no preto.
+
+### O experimento da paleta: **confirmado**
+
+A rampa que a paleta do Win95 oferece e' 0, 128, 192, 255 — o primeiro salto e' o dobro dos
+outros dois. Na pratica, com o arredondamento para degrau, duas faces vizinhas do cubo caiam no
+mesmo tom e o cubo parecia chapado.
+
+O mapa `palette.render3d` **preenche os buracos em vez de substituir**: marrom, roxo, magenta e
+rosa — quatro cores que o tema nao usa — viram 48, 90, 160 e 224. A rampa passa a ser
+**0, 48, 90, 128, 160, 192, 224, 255**, oito degraus, maior salto de 48 em vez de 128.
+
+Preto, cinza, cinza claro e branco ficam onde estavam, entao **a barra de tarefas, o relevo dos
+botoes e a barra de titulo nao mudam de cor** — confirmado no print, com a taskbar e o teal da
+area de trabalho intactos ao lado do cubo.
+
+A paleta e' aplicada no terminal **raiz**, nao na janela: janela do CC guarda a paleta so' para
+si. Funciona porque o compositor nao reempurra paleta — ele so' faz `blit`. E volta ao sair,
+tanto pelo Q quanto pelo X da janela (o `terminate` tambem restaura). Conferido com um print da
+area de trabalho depois de sair: icones normais.
+
+### O que NAO funcionou: luz direcional em voxel
+
+Apliquei a mesma iluminacao na pre-visualizacao de blocos da calculadora e **ficou pior**. As
+faces de um voxel sao todas alinhadas aos eixos, entao existem seis normais so'; uma rampa de
+quatro degraus joga as terracas em tons muito diferentes e a esfera vira listra dura.
+
+O `topo / lado / base` que o `mesh.voxels` ja pintava e' **orientacao, nao direcao**: os quatro
+lados ficam no mesmo tom, entao nao ha assimetria entre esquerda e direita e a terraca nao
+salta. Para forma escalonada, isso e' melhor que Lambert.
+
+Revertido na calculadora, mantido nos demos de cubo e terreno, onde ajuda.

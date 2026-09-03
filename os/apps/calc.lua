@@ -267,6 +267,11 @@ local function montarMalha()
     if not build then malha = nil return end
     local m, faltando = mesh.voxels(build.layers, build.w, build.h, build.d, { maxFaces = 6000 })
     m:center():normalizeScale()
+    -- Sem iluminacao direcional aqui, de proposito. Testado e pior: as faces do voxel sao
+    -- todas alinhadas aos eixos, entao ha seis normais so', e uma rampa de quatro degraus
+    -- joga as terracas em tons muito diferentes - a esfera vira listra dura. O topo/lado/base
+    -- que o mesh.voxels ja pinta e' orientacao, nao direcao, e por isso nao cria assimetria
+    -- entre esquerda e direita. Ver docs/3d-medidas.md.
     malha, cortadas = m, faltando
 end
 
