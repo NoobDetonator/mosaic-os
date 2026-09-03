@@ -4,7 +4,7 @@
   "files": [
     {
       "path": "os/apps/calc.lua",
-      "sha1": "c8fd465681df6302b3a4633af05cc6db47e3390e"
+      "sha1": "08fe6dabf455def96137a6160348283d011b6932"
     },
     {
       "path": "os/apps/clock.lua",
@@ -133,6 +133,10 @@
     {
       "path": "os/lib/clip.lua",
       "sha1": "c69862fa1502b00fd9c78ee80157426e94e67caa"
+    },
+    {
+      "path": "os/lib/create.lua",
+      "sha1": "29c16c214f6c508c721dc7435b34bf328592ba07"
     },
     {
       "path": "os/lib/expr.lua",

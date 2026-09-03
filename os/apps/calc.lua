@@ -11,6 +11,7 @@ local mcmath = mosaic.lib("mcmath")
 local pixel = mosaic.lib("pixel")
 local plot = mosaic.lib("plot")
 local hal = mosaic.lib("hal")
+local createlib = mosaic.lib("create")
 
 local MAX_HIST = 200
 
@@ -29,6 +30,8 @@ local view = { x0 = -10, x1 = 10, y0 = -5, y1 = 5 }
 local curvas = {}
 local gctx = { vars = { x = 0 }, deg = false }
 local itensBox, stackDD, contDD, recBox, resBau, capBau, listaBau, estadoBaus
+local rpmBox, chainBox, resCreate, listaCreate, estadoCreate
+local cdata = createlib.load()
 local abas = {}
 
 -- ---------------------------------------------------------------- conta
@@ -176,6 +179,7 @@ aba("Conta", "conta")
 aba("Blocos", "blocos")
 aba("Grafico", "grafico")
 aba("Baus", "baus")
+aba("Create", "create")
 
 estado = f:add(ui.label { x = 1, bottom = 1, w = "fill", text = "", tab = "conta",
     bg = theme.taskbarBg, fg = theme.taskbarFg })
@@ -568,6 +572,110 @@ do
         end })
 end
 
+-- ---------------------------------------------------------------- aba Create
+
+local function rpmFinal()
+    local pares, motivo = createlib.parseChain(chainBox.text)
+    if not pares then return nil, motivo end
+    return createlib.speed(tonumber(rpmBox.text) or 0, pares)
+end
+
+local function calcCreate()
+    local v, estourou = rpmFinal()
+    if not v then
+        resCreate.text = "engrenagens: " .. tostring(estourou)
+        resCreate.fg = colors.red
+        estadoCreate.text = " corrija a corrente de engrenagens"
+        f.dirty = true
+        return
+    end
+    resCreate.fg = estourou and colors.red or theme.accent
+    resCreate.text = string.format("saida: %s RPM%s", expr.format(v),
+        estourou and ("  ACIMA DO TETO DE " .. createlib.RPM_MAX) or "")
+
+    local b = createlib.budget(cdata.items, v)
+    local marca = b.aConferir > 0 and ("  (" .. b.aConferir .. " a conferir)") or ""
+    estadoCreate.text = strutil.ellipsis(string.format(" gasta %s / aguenta %s | %s %s%s",
+        expr.format(b.impacto), expr.format(b.capacidade),
+        b.ok and "sobra" or "FALTA", expr.format(math.abs(b.saldo)), marca),
+        (tonumber(estadoCreate.w) or 40) - 1)
+    listaCreate:setItems(cdata.items, true)
+    f.dirty = true
+end
+
+local function editarQtd()
+    local it = listaCreate:getSelected()
+    if not it then return end
+    local novo = ui.prompt("Quantos '" .. it.name .. "'?", tostring(it.qty), "Quantidade")
+    if novo then
+        it.qty = math.max(0, math.floor(tonumber(novo) or 0))
+        calcCreate()
+    end
+end
+
+local function editarBase()
+    local it = listaCreate:getSelected()
+    if not it then return end
+    local novo = ui.prompt(it.name .. " - SU por RPM (veja nos Oculos de Engenheiro):",
+        tostring(it.base), "Valor base")
+    if novo and tonumber(novo) then
+        it.base = tonumber(novo)
+        it.check = false          -- conferido por voce: para de aparecer com interrogacao
+        calcCreate()
+    end
+end
+
+do
+    f:add(ui.label { x = 1, y = 1, text = "RPM:", tab = "create" })
+    rpmBox = f:add(ui.textbox { x = 6, y = 1, w = 7, text = tostring(cdata.rpm), tab = "create",
+        onEnter = calcCreate, onChange = calcCreate })
+    f:add(ui.label { x = 15, y = 1, text = "Engrenagens:", tab = "create" })
+    chainBox = f:add(ui.textbox { x = 28, y = 1, w = -28, text = cdata.chain, tab = "create",
+        placeholder = "8:24, 24:8", onEnter = calcCreate, onChange = calcCreate })
+    resCreate = f:add(ui.label { x = 1, y = 2, w = "fill", text = "", tab = "create",
+        fg = theme.accent })
+
+    local barra = ui.row(f, { bottom = 2, items = {
+        { text = "&Quantidade", onClick = editarQtd },
+        { text = "&Base", alt = true, onClick = editarBase },
+        { text = "&Salvar", alt = true, onClick = function()
+            cdata.rpm = tonumber(rpmBox.text) or cdata.rpm
+            cdata.chain = chainBox.text
+            if createlib.save(cdata) then mosaic.notify("Tabela do Create salva")
+            else ui.msgbox("Nao consegui gravar.", "Create") end
+        end },
+        { text = "&Padrao", alt = true, onClick = function()
+            if ui.confirm("Voltar a tabela de fabrica? Os valores que voce conferiu se perdem.",
+                "Create") then
+                cdata = createlib.load and createlib.load() or cdata
+                fs.delete(createlib.FILE)
+                cdata = createlib.load()
+                rpmBox:setText(tostring(cdata.rpm))
+                chainBox:setText(cdata.chain)
+                calcCreate()
+            end
+        end },
+    } })
+    for _, b in ipairs(barra.buttons) do b.tab = "create" end
+    barra.tab = "create"
+
+    estadoCreate = f:add(ui.label { x = 1, bottom = 1, w = "fill", text = "", tab = "create",
+        bg = theme.taskbarBg, fg = theme.taskbarFg })
+    listaCreate = f:add(ui.list { x = 1, y = 3, w = "fill", fillTo = barra, tab = "create",
+        items = cdata.items, render = function(it)
+            local largura = (tonumber(listaCreate.w) or 40) - 1
+            local v = rpmFinal() or 0
+            local su = createlib.su(it.base, v) * it.qty
+            local dir = string.format("x%d  base %s%s  %s SU", it.qty, expr.format(it.base),
+                it.check and "?" or " ", expr.format(su))
+            local marca = it.kind == "gerador" and "+" or "-"
+            local espaco = largura - #dir - 3
+            if espaco < 6 then return " " .. strutil.ellipsis(it.name .. " " .. dir, largura) end
+            return " " .. marca .. " " .. strutil.pad(strutil.ellipsis(it.name, espaco), espaco) .. " " .. dir
+        end })
+    listaCreate.onActivate = editarQtd
+end
+
 f.onDraw = function(_, t)
     if mode == "blocos" then drawPreview(t)
     elseif mode == "grafico" then drawGrafico(t) end
@@ -614,6 +722,7 @@ f:layout()
 gerar()
 redesenhar()
 calcBaus()
+calcCreate()
 refreshStatus()
 f:setFocus(box)
 f:run()
