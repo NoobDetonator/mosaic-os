@@ -502,6 +502,17 @@ os.queueEvent("key_up", keys.leftCtrl)
 pump()
 check(proc.api.ctrlHeld() == false, "ctrlHeld ficou preso depois do key_up")
 
+-- 19. Foco nao pode ficar preso num widget escondido: o teclado sumiria dentro dele.
+local hw2 = window.create(wm.canvas, 1, 1, 30, 6, false)
+local hf = ui.form { term = hw2 }
+local escondivel = hf:add(ui.list { x = 1, y = 1, w = 10, h = 4, items = { { text = "a" } } })
+local outro = hf:add(ui.textbox { x = 12, y = 1, w = 10 })
+hf:setFocus(escondivel)
+check(hf.focused == escondivel, "nao consegui focar o primeiro widget")
+escondivel.visible = false
+hf:layout(30, 6)
+check(hf.focused == outro, "foco ficou no widget escondido: o teclado sumiria ali dentro")
+
 -- Resultado
 term.redirect(term.native())
 term.setBackgroundColor(colors.black)

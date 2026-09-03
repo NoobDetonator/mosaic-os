@@ -173,7 +173,9 @@ if (cmd === 'shot') {
     // Escolhe pelo teclado (End vai para o ultimo item, que e' o Sobre) em vez de clicar numa
     // linha fixa: o menu mudou de 5 para 9 itens quando a area de trabalho virou pasta, e a
     // coordenada cravada passou a acertar "Atualizar".
-    about: ['os.queueEvent("mouse_click", 2, 30, 8)', 'sleep(1)',
+    // Linha 15 e' area vazia tanto em 51x19 quanto em 80x30; a linha 8 caia em cima de
+    // um icone no tamanho padrao, e ai o menu era o do item, sem "Sobre".
+    about: ['os.queueEvent("mouse_click", 2, 30, 15)', 'sleep(1)',
             'os.queueEvent("key", keys["end"], false)', 'sleep(0.5)',
             'os.queueEvent("key", keys.enter, false)', 'sleep(2)'],
     // Menu Iniciar aberto e o clique direito num programa dele. A altura vem do proprio

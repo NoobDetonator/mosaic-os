@@ -120,7 +120,7 @@
     },
     {
       "path": "os/kernel/ui.lua",
-      "sha1": "4f35d64db83820a273e6d3f16f7d5a91889fa459"
+      "sha1": "780df2b63d02a372766c97f85aef4231ff6f9ec9"
     },
     {
       "path": "os/kernel/wm.lua",

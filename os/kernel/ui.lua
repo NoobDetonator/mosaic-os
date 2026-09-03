@@ -758,6 +758,14 @@ function Form:layout(W, H)
         end
         if w.onLayout then w:onLayout(W, H) end
     end
+    -- Widget escondido nao pode ficar com o foco: o teclado sumiria dentro dele sem
+    -- nenhum sinal na tela. Acontece com a barra lateral do Arquivos, que some no F9 e
+    -- em tela estreita — e o `visible` dela e decidido agora, dentro do onLayout acima.
+    local foc = self.focused
+    if foc and (foc.visible == false or foc.disabled) then
+        self.focused = nil
+        self:focusNext(1)
+    end
 end
 
 function Form:clear()

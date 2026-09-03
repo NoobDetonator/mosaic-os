@@ -1,5 +1,4 @@
-os/var/log/
-os/var/*.json
+os/var/
 relay/.token
 relay/node_modules/
 tools/emu/last.txt
