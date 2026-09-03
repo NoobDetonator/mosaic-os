@@ -219,7 +219,7 @@ O caderno de medidas com previsao, medida e veredito de cada hipotese esta em
 [docs/3d-medidas.md](docs/3d-medidas.md). A ultima medida fica em `docs/bench-ultimo.txt`,
 e `docs/bench-base.txt` guarda a linha de base para dar diff.
 
-## Ondas 0 a 3: prontas
+## Ondas 0 a 4: prontas
 
 **Onda 0 — a balanca.** `tools/test/bench.lua` reescrito: mediana de 5 rodadas com
 `collectgarbage()` antes de cada uma, min e max no relatorio, `clear` e `render` medidos
@@ -256,21 +256,36 @@ Tres resultados negativos, todos no caderno: o degrau mais escuro da rampa e' pr
 tambem (as faces de costas sumiam), luz direcional **piora** forma de voxel (revertida na
 calculadora), e agrupar float por `string.format("%.0f")` passava no emulador e falhava na ROM.
 
+**Onda 4 — modelo de verdade.** `tools/obj.js` le `.obj` do Blender com o `.mtl` ao lado, casa cada
+`Kd` com a paleta do Mosaic e grava `os/share/models/*.lua`. Duas conversoes que ele faz calado:
+inverte o sinal de `z` (o `.obj` e' de mao direita, o Mosaic de mao esquerda) e confere a ordem
+dos cantos de cada face contra o `vn` do arquivo, dizendo quantas corrigiu. `closed` nao e'
+declarado, e' **medido**: toda aresta usada por exatamente duas faces significa casca fechada, e so'
+ai o descarte de face e' seguro.
+
+`mesh.load()` le esse arquivo com ambiente restrito, como o `vector.load`, e recusa modelo
+estragado com mensagem em vez de derrubar o app no meio do rasterizador. `mesh.list()` diz o que
+esta instalado.
+
+O modelo de prova e' `tools/test/fixtures/casa.obj`: 16 triangulos, quatro materiais, escrito a mao
+para caber numa conferencia na mao, com quad e triangulo, `v//vn` e `v/vt/vn`, indice negativo, e
+**uma parede com a ordem dos cantos invertida de proposito** — o conversor tem de achar as duas
+faces pela normal e corrigir. O self-check carrega a casa convertida e cobra os 16 triangulos, a
+marca de fechada e a caixa envolvente.
+
 **Demos prontos:** `os/demos/cubo.lua` (cubo girando, 20 fps, com luz que gira; C liga o descarte, R troca a rampa, P a paleta) e
-`os/demos/terreno.lua` (ruido de valor, 1.152 triangulos, camera WASD, iluminado com applyTinted). Nao aparecem no Iniciar
-nem em Programas de proposito: abrem pelo Arquivos em `/os/demos`. Os dois entram no teste de
-fumaca, num laco proprio.
+`os/demos/terreno.lua` (ruido de valor, 1.152 triangulos, camera WASD, iluminado com applyTinted) e `os/demos/modelo.lua`
+(visualizador: lista `/os/share/models`, N troca de modelo, setas giram, espaco para). Nao aparecem
+no Iniciar nem em Programas de proposito: abrem pelo Arquivos em `/os/demos`. Os tres entram no
+teste de fumaca, num laco proprio.
 
 ## Falta fazer, nesta ordem
 
-1. **Onda 4 — modelo de verdade.** `tools/obj.js` (le `.obj` + `.mtl` do Blender, casa a cor
-   difusa com a paleta do Mosaic, grava `os/share/models/*.lua`), `mesh.load()` com ambiente
-   restrito como o `vector.load`, e o demo `modelo.lua`.
-2. **Onda 5 — sair da janelinha.** Desenhar em monitor (`hal.monitor()`, padrao do
+1. **Onda 5 — sair da janelinha.** Desenhar em monitor (`hal.monitor()`, padrao do
    `reactor.lua`); um monitor 8x6 da 262x237 pontos, quatro vezes a tela do computador. E modo
    arame — mas **antes cortar a linha no retangulo do canvas**: o Bresenham do `pixel.lua` anda
    ponto a ponto mesmo fora da tela e trava o computador nos 7 segundos.
-3. **Onda 6 — fechamento.** Doc em `os/docs/`, `CLAUDE.md`, manifest, push.
+2. **Onda 6 — fechamento.** Doc em `os/docs/`, `CLAUDE.md`, manifest, push.
 
 ## Armadilhas ja encontradas (nao repetir)
 
@@ -295,5 +310,19 @@ fumaca, num laco proprio.
   terracas em tons muito diferentes. O topo/lado/base do `mesh.voxels` e' orientacao, nao direcao.
 - **Paleta se aplica no terminal RAIZ** (`term.native()`), nunca na janela: janela do CC guarda a
   paleta so' para si. Funciona porque o compositor nao reempurra paleta, so' faz `blit`.
+- **`applyTinted` sozinho apaga a cor de um modelo colorido.** A queda ia direto para cinza claro e
+  cinza, entao a casa com quatro materiais aparecia monocromatica. A saida foi a tabela
+  `shade.darker`, com o parente mais escuro de cada cor dentro das 16 (vermelho -> marrom, lima ->
+  verde). O piso continua sendo o cinza, nunca o preto.
+- **Luz parada no mundo estraga visualizador.** Quem gira e' o modelo, entao metade das voltas
+  mostra so' o lado escuro. A luz do `modelo.lua` sai da mesma formula do `orbit` mais um ombro.
+  Duas tentativas de escrever um angulo de luz solto deram a casa toda cinza — a segunda com o
+  sinal trocado, que poe a luz exatamente atras do modelo.
+- **Luz muito de cima nao sobra para os lados.** O vetor e' normalizado: com altura 0,8, as duas
+  paredes visiveis (90 graus uma da outra, 45 para a luz) caiam as duas em 0,55, exatamente no
+  corte do `applyTinted`, e o modelo saia chapado. Com 0,5 as duas ficam na cor propria.
+- **Pose ruim reprova modelo bom.** A casa parecia uma caixa com a tampa vermelha por causa da
+  camera: alta demais, a agua do telhado enchia a tela e escondia a empena. Antes de suspeitar do
+  conversor, gire o modelo.
 - **Rodar o `craftos.js test` ANTES de commitar, nao depois.** Ja subi um commit com o self-check
   vermelho na ROM por ter conferido so' o emulador.

@@ -1,0 +1,53 @@
+# Casa de teste do tools/obj.js: uma casca fechada de 16 triangulos, no formato que o
+# Blender exporta (Forward -Z, Up Y). Escrita a mao de proposito, para exercitar os
+# caminhos do leitor num arquivo pequeno o bastante para conferir na mao:
+#
+#   - quad e triangulo na mesma malha, com as duas formas de referencia (v//vn e v/vt/vn);
+#   - indice negativo (o oitao dos fundos);
+#   - quatro materiais no .mtl ao lado, um deles casando exato com a paleta;
+#   - a PAREDE DA DIREITA esta com a ordem dos cantos invertida DE PROPOSITO. O conversor
+#     tem de perceber pela normal declarada e corrigir: sao as duas faces que aparecem
+#     como "ordem dos cantos corrigida" na saida. Se esse numero mudar, algo quebrou.
+mtllib casa.mtl
+o Casa
+
+v -1.0 0.0 -1.0
+v  1.0 0.0 -1.0
+v  1.0 0.0  1.0
+v -1.0 0.0  1.0
+v -1.0 1.2 -1.0
+v  1.0 1.2 -1.0
+v  1.0 1.2  1.0
+v -1.0 1.2  1.0
+v  0.0 2.0 -1.0
+v  0.0 2.0  1.0
+
+vn  0.0 -1.0  0.0
+vn  0.0  0.0 -1.0
+vn  0.0  0.0  1.0
+vn -1.0  0.0  0.0
+vn  1.0  0.0  0.0
+vn -0.6247 0.7809 0.0
+vn  0.6247 0.7809 0.0
+
+vt 0.0 0.0
+vt 1.0 0.0
+vt 1.0 1.0
+vt 0.0 1.0
+
+usemtl chao
+f 1//1 2//1 3//1 4//1
+
+usemtl parede
+f 1//2 5//2 6//2 2//2
+f 2//5 3//5 7//5 6//5
+f 3//3 7//3 8//3 4//3
+f 4//4 8//4 5//4 1//4
+
+usemtl oitao
+f 5//2 9//2 6//2
+f -3//-5 -4//-5 -1//-5
+
+usemtl telhado
+f 5/1/6 8/2/6 10/3/6 9/4/6
+f 6/1/7 9/2/7 10/3/7 7/4/7

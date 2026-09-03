@@ -239,6 +239,47 @@ function mesh.voxels(layers, w, h, d, opts)
     return m, cortadas
 end
 
+-- ------------------------------------------------------------ modelo em arquivo
+
+-- Carrega uma malha gravada pelo `tools/obj.js` (ou escrita a mao no mesmo formato):
+-- uma tabela com `tris` e `closed`, exatamente os campos que o `mesh.new` recebe.
+--
+-- Mesmo cuidado do `vector.load`: ambiente restrito, porque modelo e' arquivo que o usuario
+-- larga na pasta e nao codigo de confianca, e a volta para o `loadfile` antigo em CC
+-- pre-1.109, que nao aceita modo nem ambiente.
+function mesh.load(path)
+    if not fs.exists(path) then return nil, "nao existe: " .. tostring(path) end
+    local fn, err = loadfile(path, "t", { colors = colors, colours = colours, math = math })
+    if not fn then fn, err = loadfile(path) end
+    if not fn then return nil, err end
+    local ok, t = pcall(fn)
+    if not ok then return nil, tostring(t) end
+    if type(t) ~= "table" or type(t.tris) ~= "table" then
+        return nil, "nao parece um modelo: falta a lista tris"
+    end
+    -- Conferir aqui custa uma passada no carregamento e evita um erro sem pe nem cabeca
+    -- vindo de dentro do rasterizador, a trinta quadros por segundo.
+    for i, tri in ipairs(t.tris) do
+        if type(tri) ~= "table" or type(tri[9]) ~= "number" then
+            return nil, "triangulo " .. i .. " nao tem os nove numeros"
+        end
+    end
+    return mesh.new(t.tris, t.closed)
+end
+
+-- Lista os modelos instalados, sem a extensao. Serve para quem quer montar um menu.
+function mesh.list(dir)
+    dir = dir or "/os/share/models"
+    local out = {}
+    if not fs.isDir(dir) then return out end
+    for _, n in ipairs(fs.list(dir)) do
+        local nome = n:match("^(.+)%.lua$")
+        if nome then out[#out + 1] = nome end
+    end
+    table.sort(out)
+    return out
+end
+
 function mesh.demo()
     local c = mesh.cube()
     assert(c:count() == 12, "um cubo sao 12 triangulos, deu " .. c:count())
@@ -299,6 +340,29 @@ function mesh.demo()
     -- o teto de faces corta e avisa
     local m3, cortadas = mesh.voxels(um, 1, 1, 1, { maxFaces = 2 })
     assert(m3:count() == 4 and cortadas == 4, "o teto de faces nao cortou direito")
+
+    -- load: o modelo que o tools/obj.js grava tem de voltar como malha de verdade, com a
+    -- marca de fechada, e arquivo estragado tem de devolver erro em vez de derrubar o app.
+    local casa, errCasa = mesh.load("/os/share/models/casa.lua")
+    assert(casa, "mesh.load nao leu a casa: " .. tostring(errCasa))
+    assert(casa:count() == 16, "a casa deveria ter 16 triangulos, deu " .. casa:count())
+    assert(casa.closed, "a casa e' casca fechada; sem a marca o descarte nao liga")
+    assert(mesh.isModel(casa), "mesh.load tem de devolver malha, nao a tabela crua")
+    -- A casa e' simetrica em x e em z, e vai de 0 a 2 na altura: se o conversor tivesse
+    -- errado a mao, a caixa nao fecharia assim.
+    local bx0, by0, bz0, bx1, by1, bz1 = casa:bounds()
+    assert(bx0 == -1 and bx1 == 1 and by0 == 0 and by1 == 2 and bz0 == -1 and bz1 == 1,
+        "a caixa da casa saiu errada: " .. bx0 .. "," .. by0 .. "," .. bz0 .. " a " .. bx1 .. "," .. by1 .. "," .. bz1)
+    assert(mesh.load("/nao/existe.lua") == nil, "mesh.load devia recusar caminho que nao existe")
+    local h = fs.open("/tmp_mesh_ruim.lua", "w")
+    h.write("return { tris = { { 1, 2, 3 } } }")
+    h.close()
+    assert(mesh.load("/tmp_mesh_ruim.lua") == nil, "mesh.load devia recusar triangulo incompleto")
+    fs.delete("/tmp_mesh_ruim.lua")
+    local vazios = mesh.list("/nao/existe")
+    assert(type(vazios) == "table" and #vazios == 0, "mesh.list devia devolver lista vazia")
+    local nomes = mesh.list()
+    assert(#nomes >= 1 and nomes[1] == "casa", "mesh.list nao achou a casa")
 
     -- grade
     local g = mesh.grid(3, 3, function() return 0 end)

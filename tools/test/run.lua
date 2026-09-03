@@ -199,7 +199,7 @@ end
 
 -- Demos 3D. Nao estao no registry de proposito (nao aparecem no Iniciar nem em Programas),
 -- entao nao entram no laco de cima: abrem pelo caminho.
-for _, nome in ipairs({ "cubo", "terreno" }) do
+for _, nome in ipairs({ "cubo", "terreno", "modelo" }) do
     local dp = proc.launch("/os/demos/" .. nome .. ".lua", {}, { title = nome, x = 2, y = 2,
         w = wm.W - 4, h = wm.H - 5 })
     pump()

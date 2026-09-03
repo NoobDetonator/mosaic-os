@@ -83,6 +83,10 @@
       "sha1": "6750e7e6006c5994600d59b5ff6daea22062a8cc"
     },
     {
+      "path": "os/demos/modelo.lua",
+      "sha1": "09aea356eee5de570abed3e950c97f1b8ca91ef4"
+    },
+    {
       "path": "os/demos/terreno.lua",
       "sha1": "d9d67b9f26d4182908b801a905350541bb350c64"
     },
@@ -188,7 +192,7 @@
     },
     {
       "path": "os/lib/mesh.lua",
-      "sha1": "8b052fd9a5d5edbeccc78b05cf2c4c2e424eb8a9"
+      "sha1": "1af0ccb373e14ab54f4425a6268e575e633b99d6"
     },
     {
       "path": "os/lib/pixel.lua",
@@ -208,7 +212,7 @@
     },
     {
       "path": "os/lib/shade.lua",
-      "sha1": "2d5695e64b3ca077e01f0d8e9f09e41ea2fbc4d4"
+      "sha1": "9930f757358221f4156891673f0b43f794e715d0"
     },
     {
       "path": "os/lib/shortcut.lua",
@@ -321,6 +325,10 @@
     {
       "path": "os/share/icons/terminal.nfp",
       "sha1": "3da174369a757562b6655a8acbf26e5836d237e8"
+    },
+    {
+      "path": "os/share/models/casa.lua",
+      "sha1": "5c359dd25766ac4a0ab2f8ede27d52548b89c059"
     },
     {
       "path": "os/share/vectors/logo.lua",

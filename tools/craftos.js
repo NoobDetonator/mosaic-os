@@ -244,6 +244,10 @@ if (cmd === 'shot') {
                 'sleep(3)'],
     terreno: ['mosaic.launchWith({ title = "Terreno", w = 50, h = 17 }, "/os/demos/terreno.lua")',
                 'sleep(3)'],
+    // Espaco para a foto: o modelo para no angulo inicial (frente e lateral, com a agua
+    // furtada do telhado de perfil) em vez de sair num quadro qualquer do giro.
+    modelo: ['mosaic.launchWith({ title = "Modelos", w = 50, h = 17 }, "/os/demos/modelo.lua")',
+                'sleep(1)', 'os.queueEvent("key", keys.space, false)', 'sleep(1.5)'],
     // O mesmo cubo com a paleta de oito degraus ligada (tecla P), para comparar lado a lado.
     cubopal: ['mosaic.launchWith({ title = "Cubo 3D", w = 50, h = 17 }, "/os/demos/cubo.lua")',
                 'sleep(2)', 'os.queueEvent("key", keys.p, false)', 'sleep(2)'],

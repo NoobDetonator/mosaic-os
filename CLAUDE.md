@@ -100,6 +100,23 @@ Fatos do kernel que não são óbvios:
 - **O rasterizador é por varredura de linha, e o caminho comum não encosta em tabela.** Passar os vértices por um
   vetor para dar conta do polígono cortado custou 21 operações de tabela por triângulo e **dobrou** o tempo da cena
   de 10 mil. Em Lua sem JIT, abstração no caminho quente custa medivelmente caro.
+- **`.obj` do Blender é de mão direita; o Mosaic é de mão esquerda.** O `tools/obj.js` inverte o sinal de `z`
+  na importação — sem isso o modelo sai espelhado, e espelhado quase não se nota num print. Depois dessa
+  inversão a ordem dos cantos do `.obj` **já é** a do Mosaic (produto vetorial de mão direita apontando para
+  dentro): não inverta de novo. As faces são conferidas uma a uma contra o `vn` do arquivo, e o conversor diz
+  quantas corrigiu — se esse número explodir num modelo novo, é o exportador, não o leitor.
+- **`closed` do modelo importado é medido, não declarado**: toda aresta usada por exatamente duas faces significa
+  casca fechada, e só aí o descarte de face é seguro. O leque de triangulação não atrapalha a conta (a diagonal
+  aparece duas vezes, uma por triângulo).
+- **`shade.applyTinted` escurece pela `shade.darker`**, uma tabela de "parente mais escuro" dentro das 16 cores
+  (vermelho→marrom, lima→verde, rosa→magenta). Antes dela a sombra de qualquer cor virava cinza, e um modelo com
+  quatro materiais aparecia monocromático. O piso é o **cinza**, nunca o preto: cor já escura demais (azul, roxo,
+  marrom) cai nele mesmo sendo mais clara, senão some no fundo preto do canvas.
+- **Num visualizador, a luz tem de acompanhar a câmera.** Luz parada no mundo deixa metade das voltas mostrando só
+  o lado escuro. O `demos/modelo.lua` tira a direção da **mesma fórmula do `orbit`** (`-sin`, `-cos`) mais um ombro;
+  escrever um ângulo de luz solto foi o que deixou a casa cinza duas vezes. E a componente vertical da luz é 0,5 e
+  não 0,8: o vetor é normalizado, então luz muito de cima não sobra para os lados e as duas paredes visíveis caem
+  as duas em cima do corte do `applyTinted`.
 - **Descarte de face de costas é propriedade da malha** (`m.closed`), não bandeira global: `mesh.voxels` e
   `mesh.cube` se declaram fechados; `plane` e `grid` não, e com descarte sumiriam vistos por baixo.
 - **Não agrupe float por `string.format("%.0f")`.** O zero negativo vira `"-0"` em algumas
@@ -131,6 +148,7 @@ Fatos do kernel que não são óbvios:
 - `node tools/debug.js os/apps/files.lua [36x10] [12,18] [fake]` — abre um app no emulador: tamanho de tela, cliques, e `fake` instala um reator do Powah de mentira (`tools/test/fake-reactor.lua`) para conferir o painel com dados variando.
 - `node tools/emu/emu.js --show` — boota o OS de verdade e imprime a tela final; bom para conferir layout.
 - `node tools/svg.js <arquivo.svg>` — converte SVG para o formato vetorial de `os/lib/vector` em `os/share/vectors/`. Le viewBox, rect, circle, polygon e path com M/L/H/V/Z; **nao le** transform, curva nem grupo (achate no editor antes).
+- `node tools/obj.js <arquivo.obj>` — converte um `.obj` do Blender (com o `.mtl` ao lado) para uma malha de `os/lib/mesh` em `os/share/models/`. Le `v`, `vn`, `f`, `usemtl` e `Kd`; **nao le** textura, curva nem transformacao. Carregue com `mesh.load()`.
 - `node tools/icons.js` — regera os icones de `os/share/icons` a partir da arte em texto dentro do proprio script. `--from <pasta>` converte uma pasta de PNG (precisa de `npm install pngjs`).
 - `node tools/craftos.js bench` — mede compositor, icone, vetor e passo do kernel. Otimizar com numero, nao com palpite.
 - `node tools/manifest.js` — regenera `manifest.json` (usado por `install.lua` e pelo app `pkg`).

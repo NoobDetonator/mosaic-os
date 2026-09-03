@@ -92,8 +92,26 @@ function shade.apply(model, dx, dy, dz, ramp, ambiente)
     return model
 end
 
--- Mesma ideia, mas guardando a cor base de cada triangulo e escurecendo a partir dela.
--- Serve para malha que ja tem cor propria (terreno colorido por altura, modelo importado).
+-- O vizinho mais escuro de cada cor, dentro das 16 que existem. Nao da' para escurecer uma
+-- cor arbitraria com paleta fixa, mas quase toda cor tem uma parente escura na propria
+-- paleta — vermelho tem marrom, lima tem verde, rosa tem magenta. Sem isso a sombra de
+-- qualquer modelo colorido virava cinza, e um modelo com quatro materiais aparecia
+-- monocromatico na tela: foi o que o visualizador da onda 4 mostrou.
+--
+-- Nenhuma entrada leva a preto DE PROPOSITO: o fundo do canvas 3D e' preto e a face sumiria.
+shade.darker = {
+    [colors.white] = colors.lightGray, [colors.lightGray] = colors.gray, [colors.gray] = colors.gray,
+    [colors.black] = colors.gray,
+    [colors.yellow] = colors.orange, [colors.orange] = colors.brown, [colors.brown] = colors.gray,
+    [colors.red] = colors.brown,
+    [colors.lime] = colors.green, [colors.green] = colors.gray,
+    [colors.lightBlue] = colors.cyan, [colors.cyan] = colors.blue, [colors.blue] = colors.gray,
+    [colors.pink] = colors.magenta, [colors.magenta] = colors.purple, [colors.purple] = colors.gray,
+}
+
+-- Mesma ideia do `apply`, mas guardando a cor base de cada triangulo e escurecendo a partir
+-- dela pelo `shade.darker`. Serve para malha que ja tem cor propria (terreno colorido por
+-- altura, modelo importado do Blender).
 --
 -- Os tres niveis sao medidos DEPOIS de tirar o ambiente, entao a face mais escura possivel cai
 -- no cinza e nunca no preto: sobre fundo preto ela sumiria.
@@ -115,12 +133,11 @@ function shade.applyTinted(model, dx, dy, dz, ambiente)
         if d < 0 then d = 0 end
         local f = ambiente + (1 - ambiente) * d
         local base = model.corBase[i]
-        -- Nao da' para escurecer uma cor arbitraria com 16 tons fixos, entao a queda vai para
-        -- o cinza. `g` e' a luz ja sem o ambiente, de 0 a 1, para o corte nao depender dele.
+        -- `g` e' a luz ja sem o ambiente, de 0 a 1, para o corte nao depender dele.
         local g = (f - ambiente) / (1 - ambiente)
         if g > 0.55 then t.c = base
-        elseif g > 0.25 then t.c = colors.lightGray
-        else t.c = colors.gray end
+        elseif g > 0.25 then t.c = shade.darker[base] or colors.lightGray
+        else t.c = shade.darker[shade.darker[base] or colors.gray] or colors.gray end
     end
     return model
 end
@@ -214,6 +231,27 @@ function shade.demo()
         assert(t.c ~= shade.ramps.cinza[1],
             "com ambiente 0,3 nenhuma face devia cair no degrau mais escuro")
     end
+
+    -- Nenhum caminho do shade.darker chega em preto, nem em dois passos: e' o que garante
+    -- que a sombra de qualquer cor continue visivel sobre o fundo preto do canvas.
+    for base, escura in pairs(shade.darker) do
+        assert(escura ~= colors.black, "shade.darker leva ao preto vindo de " .. base)
+        assert(shade.darker[escura], "shade.darker nao tem segundo degrau para " .. escura)
+        -- O cinza e' o piso: cor que ja e' escura demais para o fundo preto (azul, marrom,
+        -- roxo, preto) cai nele mesmo sendo mais clara. Nas outras a queda tem de ser real.
+        assert(escura == colors.gray or shade.lum[escura] <= shade.lum[base],
+            "shade.darker deixou mais claro em vez de mais escuro, vindo de " .. base)
+    end
+
+    -- A sombra de uma cor mantem a familia em vez de virar cinza. Vermelho vira marrom.
+    -- A luz vem inclinada de proposito: com ela reta em cima, nenhuma face do cubo cai na
+    -- faixa do meio (o topo da 1, os quatro lados dao 0) e o degrau intermediario nunca
+    -- seria exercitado.
+    local vermelho = mesh.cube():mapColor(colors.red)
+    shade.applyTinted(vermelho, 0.45, 0.89, 0, 0)
+    local viuMarrom = false
+    for _, t in ipairs(vermelho.tris) do if t.c == colors.brown then viuMarrom = true end end
+    assert(viuMarrom, "a face na meia-luz devia escurecer para marrom, nao para cinza")
 
     -- E o applyTinted nunca usa preto, por construcao.
     local escuro = mesh.cube():mapColor(colors.lime)

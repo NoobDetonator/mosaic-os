@@ -1,0 +1,9 @@
+# Materiais da casa de teste. So Kd importa: o motor nao tem textura nem brilho.
+newmtl chao
+Kd 0.500 0.500 0.500
+newmtl parede
+Kd 0.800 0.740 0.600
+newmtl telhado
+Kd 0.700 0.200 0.150
+newmtl oitao
+Kd 0.500 0.400 0.300
