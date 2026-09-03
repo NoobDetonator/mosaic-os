@@ -84,7 +84,7 @@
     },
     {
       "path": "os/demos/modelo.lua",
-      "sha1": "09aea356eee5de570abed3e950c97f1b8ca91ef4"
+      "sha1": "17e7d75e40c1612ef382c1bd3609c08bb288909d"
     },
     {
       "path": "os/demos/terreno.lua",
@@ -192,7 +192,7 @@
     },
     {
       "path": "os/lib/mesh.lua",
-      "sha1": "1af0ccb373e14ab54f4425a6268e575e633b99d6"
+      "sha1": "048abcab9857709b82dd85faf1dcb7c6df48c9ef"
     },
     {
       "path": "os/lib/pixel.lua",
@@ -328,7 +328,11 @@
     },
     {
       "path": "os/share/models/casa.lua",
-      "sha1": "5c359dd25766ac4a0ab2f8ede27d52548b89c059"
+      "sha1": "aedebfe006ada304bd332bd8c4aa26cfa9d68100"
+    },
+    {
+      "path": "os/share/models/monkey.lua",
+      "sha1": "6b4163c36a8def607708aea0a3ef790dfd4e4db4"
     },
     {
       "path": "os/share/vectors/logo.lua",

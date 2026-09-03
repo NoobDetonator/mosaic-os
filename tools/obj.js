@@ -100,12 +100,17 @@ function convert(file) {
         const decl = idx.map(([, ni]) => norms[ni]).filter(Boolean);
         if (decl.length) {
           const n = cross([b[0] - a[0], b[1] - a[1], b[2] - a[2]], [c[0] - a[0], c[1] - a[1], c[2] - a[2]]);
-          // shade.faceNormal nega o produto vetorial, entao "para fora" e' -n.
-          const dot = -(n[0] * decl[0][0] + n[1] * decl[0][1] + n[2] * decl[0][2]);
-          if (dot < 0) { const tmp = idx[1]; idx[1] = idx[2]; idx[2] = tmp; flipadas++; }
+          // shade.faceNormal nega o produto vetorial, entao "para fora" e' -n. Dividir pelo
+          // tamanho do produto vetorial (o dobro da area) tira o peso do triangulo da conta:
+          // o que importa e' o angulo, nao o tamanho.
+          const mag = Math.sqrt(n[0] ** 2 + n[1] ** 2 + n[2] ** 2) || 1;
+          const dot = -(n[0] * decl[0][0] + n[1] * decl[0][1] + n[2] * decl[0][2]) / mag;
+          // O corte em -0,1 (uns 6 graus) e' contra falso positivo. A Suzanne tem duas lascas
+          // de area 0,0006 cujo produto vetorial e' quase perpendicular a normal declarada: o
+          // sinal ali e' ruido de arredondamento, e virar a ordem nao muda nada no desenho.
+          if (dot < -0.1) { const tmp = idx[1]; idx[1] = idx[2]; idx[2] = tmp; flipadas++; }
         } else semNormal++;
-        const p = idx.map(([vi]) => verts[vi]);
-        tris.push({ p, c: cor });
+        tris.push({ a: idx[0][0], b: idx[1][0], c3: idx[2][0], c: cor });
         for (let e = 0; e < 3; e++) {
           const x = idx[e][0], y = idx[(e + 1) % 3][0];
           const key = x < y ? `${x},${y}` : `${y},${x}`;
@@ -121,26 +126,51 @@ function convert(file) {
   // de face de costas e' seguro — numa malha aberta ele faria sumir o lado de dentro.
   const fechada = tris.length > 0 && Object.keys(edges).every((e) => edges[e] === 2);
   if (semNormal) warn.add(`${semNormal} triangulo(s) sem vn: se o modelo sair de dentro para fora, exporte com normais`);
-  return { tris, fechada, warn: [...warn], flipadas };
+  return { tris, verts, fechada, warn: [...warn], flipadas };
 }
 
+// O arquivo e' indexado, e nao uma lista de triangulos com os nove numeros cada. A Suzanne
+// tem 507 vertices e 968 triangulos: repetir vertice dava 105 KB, e o computador do jogo tem
+// 1 MB de disco no total. Indexado da um terco disso. Quem desdobra e' o mesh.load, uma vez.
+//
+// Tudo em vetor plano (v, t, cores): em Lua, tabela aninhada custa uma tabela por elemento, e
+// aqui seriam milhares delas so' para serem jogadas fora depois de montar os triangulos.
 function toLua(name, m) {
   const n = (v) => {
     const r = Math.round(v * 10000) / 10000;
     return Object.is(r, -0) ? '0' : String(r);   // "-0" nao ajuda ninguem a ler
   };
+  // So' vertice usado por alguma face entra, renumerado: .obj com vertice solto e' comum.
+  const mapa = {};
+  const usados = [];
+  const idx = (vi) => {
+    if (mapa[vi] === undefined) { mapa[vi] = usados.length; usados.push(vi); }
+    return mapa[vi] + 1;                          // Lua conta de 1
+  };
+  const cores = [];
+  const corIdx = {};
+  const linhas = [];
+  for (const t of m.tris) {
+    if (corIdx[t.c] === undefined) { cores.push(t.c); corIdx[t.c] = cores.length; }
+    linhas.push(`${idx(t.a)}, ${idx(t.b)}, ${idx(t.c3)}, ${corIdx[t.c]},`);
+  }
+
   const out = [
     `-- ${name}: malha 3D, convertida de ${name}.obj por tools/obj.js.`,
-    `-- ${m.tris.length} triangulos, casca ${m.fechada ? 'fechada (descarte de face e seguro)' : 'aberta'}.`,
-    '-- Carregue com mesh.load("/os/share/models/' + name + '.lua").',
+    `-- ${m.tris.length} triangulos, ${usados.length} vertices, casca ` +
+      `${m.fechada ? 'fechada (descarte de face e seguro)' : 'aberta'}.`,
+    `-- Carregue com mesh.load("/os/share/models/${name}.lua"): v e' a lista de vertices`,
+    '-- (tres numeros cada) e t a de triangulos (tres indices em v, mais a cor em cores).',
     'return {',
     `    closed = ${m.fechada},`,
-    '    tris = {',
+    `    cores = { ${cores.map((c) => LUA_NAME[c]).join(', ')} },`,
+    '    v = {',
   ];
-  for (const t of m.tris) {
-    const v = t.p.map((p) => p.map(n).join(', ')).join(', ');
-    out.push(`        { ${v}, c = ${LUA_NAME[t.c]} },`);
+  for (let i = 0; i < usados.length; i += 4) {
+    out.push('        ' + usados.slice(i, i + 4).map((vi) => m.verts[vi].map(n).join(', ')).join(',  ') + ',');
   }
+  out.push('    },', '    t = {');
+  for (let i = 0; i < linhas.length; i += 4) out.push('        ' + linhas.slice(i, i + 4).join(' '));
   out.push('    },', '}', '');
   return out.join('\n');
 }

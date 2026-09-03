@@ -105,6 +105,10 @@ Fatos do kernel que não são óbvios:
   inversão a ordem dos cantos do `.obj` **já é** a do Mosaic (produto vetorial de mão direita apontando para
   dentro): não inverta de novo. As faces são conferidas uma a uma contra o `vn` do arquivo, e o conversor diz
   quantas corrigiu — se esse número explodir num modelo novo, é o exportador, não o leitor.
+- **Modelo em arquivo é indexado, não uma lista de triângulos prontos.** `v` são os vértices (três
+  números cada), `t` os triângulos (três índices em `v` mais o índice da cor em `cores`). Repetir os
+  vértices da Suzanne — 507 para 968 triângulos — dava **105 KB**; indexado dá **33 KB**, e o computador
+  do jogo tem 1 MB de disco no total. Quem desdobra é o `mesh.load`, uma vez, no carregamento.
 - **`closed` do modelo importado é medido, não declarado**: toda aresta usada por exatamente duas faces significa
   casca fechada, e só aí o descarte de face é seguro. O leque de triangulação não atrapalha a conta (a diagonal
   aparece duas vezes, uma por triângulo).

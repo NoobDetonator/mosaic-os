@@ -263,9 +263,17 @@ dos cantos de cada face contra o `vn` do arquivo, dizendo quantas corrigiu. `clo
 declarado, e' **medido**: toda aresta usada por exatamente duas faces significa casca fechada, e so'
 ai o descarte de face e' seguro.
 
-`mesh.load()` le esse arquivo com ambiente restrito, como o `vector.load`, e recusa modelo
-estragado com mensagem em vez de derrubar o app no meio do rasterizador. `mesh.list()` diz o que
-esta instalado.
+O arquivo e' **indexado**: `v` com tres numeros por vertice, `t` com tres indices e a cor por
+triangulo. Repetir os vertices da Suzanne (507 para 968 triangulos) dava **105 KB** contra **33 KB**
+assim, e o computador do jogo tem 1 MB de disco no total.
+
+`mesh.load()` le esse arquivo com ambiente restrito, como o `vector.load`, desdobra os indices uma
+vez, e recusa modelo estragado com mensagem em vez de derrubar o app no meio do rasterizador —
+indice fora da lista, lista pela metade, cor que nao existe. `mesh.list()` diz o que esta instalado.
+
+Os dois modelos que acompanham: a `casa` e a **Suzanne do Blender** (`monkey`, 968 triangulos,
+exportada da 5.2 com Forward -Z / Up Y). A Suzanne desenha em **3 ms**, dentro dos 50 ms de um
+tique, e o conversor nao teve nenhuma face para corrigir nela.
 
 O modelo de prova e' `tools/test/fixtures/casa.obj`: 16 triangulos, quatro materiais, escrito a mao
 para caber numa conferencia na mao, com quad e triangulo, `v//vn` e `v/vt/vn`, indice negativo, e
@@ -324,5 +332,17 @@ teste de fumaca, num laco proprio.
 - **Pose ruim reprova modelo bom.** A casa parecia uma caixa com a tampa vermelha por causa da
   camera: alta demais, a agua do telhado enchia a tela e escondia a empena. Antes de suspeitar do
   conversor, gire o modelo.
+- **Malha de verdade repete vertice seis vezes.** Gravar triangulo com os nove numeros e' o formato
+  certo para o rasterizador e o errado para o disco: 105 KB de Suzanne num computador de 1 MB.
+  Indexado no arquivo, desdobrado no carregamento.
+- **Lasca quase degenerada engana a conferencia de normal.** A Suzanne tem duas faces de area 0,0006
+  cujo produto vetorial fica quase perpendicular a normal declarada: o sinal ali e' ruido de
+  arredondamento. O conversor so' inverte a ordem quando o desacordo passa de uns 6 graus, senao o
+  aviso de "faces corrigidas" vira barulho e perde a serventia.
+- **A Suzanne sai do Blender de costas para a camera do `orbit`.** Ela olha para +z depois da
+  inversao de mao, e a camera de `giro = 0` fica em -z. Nao e' bug de conversor; e' so' virar.
+- **Silhueta em ASCII resolve o que print de 100x51 nao resolve.** Passei quatro prints achando que a
+  Suzanne estava torta ou espelhada. Desenhar a malha num canvas de 48x15 e imprimir com pontos
+  mostrou orelha, cranio e pescoco simetricos em dois segundos.
 - **Rodar o `craftos.js test` ANTES de commitar, nao depois.** Ja subi um commit com o self-check
   vermelho na ROM por ter conferido so' o emulador.

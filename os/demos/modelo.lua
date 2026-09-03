@@ -78,7 +78,10 @@ end
 f.onDraw = function(_, t)
     if not prepara(t) then return end
     local inicio = os.epoch("utc")
-    frame:orbit({ 0, 0, 0 }, 2.2, giro, altura)
+    -- 1,7 e nao 2,2: o normalizeScale poe a MAIOR dimensao em 1, entao um modelo achatado
+    -- (a Suzanne tem 2,73 de orelha a orelha e 1,97 de altura) sobra minusculo no meio da
+    -- tela se a camera ficar longe.
+    frame:orbit({ 0, 0, 0 }, 1.7, giro, altura)
     frame:clear(colors.black)
     if modelo then frame:draw({ { model = modelo } }) end
     canvas:render(t, 1, 1)

@@ -241,8 +241,11 @@ end
 
 -- ------------------------------------------------------------ modelo em arquivo
 
--- Carrega uma malha gravada pelo `tools/obj.js` (ou escrita a mao no mesmo formato):
--- uma tabela com `tris` e `closed`, exatamente os campos que o `mesh.new` recebe.
+-- Carrega uma malha gravada pelo `tools/obj.js`. O arquivo e' indexado — `v` com tres
+-- numeros por vertice, `t` com tres indices e a cor por triangulo, `cores` com a lista de
+-- cores — e nao uma lista de triangulos prontos: repetir os vertices da Suzanne (507 para
+-- 968 triangulos) custava 105 KB, contra 33 KB assim, num computador que tem 1 MB de disco.
+-- Desdobrar aqui e' uma passada so', no carregamento.
 --
 -- Mesmo cuidado do `vector.load`: ambiente restrito, porque modelo e' arquivo que o usuario
 -- larga na pasta e nao codigo de confianca, e a volta para o `loadfile` antigo em CC
@@ -252,19 +255,34 @@ function mesh.load(path)
     local fn, err = loadfile(path, "t", { colors = colors, colours = colours, math = math })
     if not fn then fn, err = loadfile(path) end
     if not fn then return nil, err end
-    local ok, t = pcall(fn)
-    if not ok then return nil, tostring(t) end
-    if type(t) ~= "table" or type(t.tris) ~= "table" then
-        return nil, "nao parece um modelo: falta a lista tris"
+    local ok, d = pcall(fn)
+    if not ok then return nil, tostring(d) end
+    if type(d) ~= "table" or type(d.v) ~= "table" or type(d.t) ~= "table" then
+        return nil, "nao parece um modelo: faltam as listas v e t"
     end
-    -- Conferir aqui custa uma passada no carregamento e evita um erro sem pe nem cabeca
-    -- vindo de dentro do rasterizador, a trinta quadros por segundo.
-    for i, tri in ipairs(t.tris) do
-        if type(tri) ~= "table" or type(tri[9]) ~= "number" then
-            return nil, "triangulo " .. i .. " nao tem os nove numeros"
+    local v, t, cores = d.v, d.t, d.cores or {}
+    if #v % 3 ~= 0 then return nil, "a lista de vertices nao e' multipla de tres" end
+    if #t % 4 ~= 0 then return nil, "a lista de triangulos nao e' multipla de quatro" end
+    local nv = #v / 3
+    local tris = {}
+    for i = 1, #t, 4 do
+        local a, b, c = t[i], t[i + 1], t[i + 2]
+        -- Indice fora da lista viraria nil dentro do rasterizador, a trinta quadros por
+        -- segundo e sem dizer de onde veio. Melhor recusar o arquivo aqui.
+        if type(a) ~= "number" or a < 1 or a > nv
+            or type(b) ~= "number" or b < 1 or b > nv
+            or type(c) ~= "number" or c < 1 or c > nv then
+            return nil, "triangulo " .. ((i + 3) / 4) .. " aponta para vertice que nao existe"
         end
+        a, b, c = (a - 1) * 3, (b - 1) * 3, (c - 1) * 3
+        tris[#tris + 1] = {
+            v[a + 1], v[a + 2], v[a + 3],
+            v[b + 1], v[b + 2], v[b + 3],
+            v[c + 1], v[c + 2], v[c + 3],
+            c = cores[t[i + 3]] or colors.lightGray,
+        }
     end
-    return mesh.new(t.tris, t.closed)
+    return mesh.new(tris, d.closed)
 end
 
 -- Lista os modelos instalados, sem a extensao. Serve para quem quer montar um menu.
@@ -354,11 +372,24 @@ function mesh.demo()
     assert(bx0 == -1 and bx1 == 1 and by0 == 0 and by1 == 2 and bz0 == -1 and bz1 == 1,
         "a caixa da casa saiu errada: " .. bx0 .. "," .. by0 .. "," .. bz0 .. " a " .. bx1 .. "," .. by1 .. "," .. bz1)
     assert(mesh.load("/nao/existe.lua") == nil, "mesh.load devia recusar caminho que nao existe")
-    local h = fs.open("/tmp_mesh_ruim.lua", "w")
-    h.write("return { tris = { { 1, 2, 3 } } }")
-    h.close()
-    assert(mesh.load("/tmp_mesh_ruim.lua") == nil, "mesh.load devia recusar triangulo incompleto")
-    fs.delete("/tmp_mesh_ruim.lua")
+    local function gravaRuim(corpo)
+        local h = fs.open("/tmp_mesh_ruim.lua", "w")
+        h.write(corpo)
+        h.close()
+        local m, e = mesh.load("/tmp_mesh_ruim.lua")
+        fs.delete("/tmp_mesh_ruim.lua")
+        return m, e
+    end
+    assert(gravaRuim("return { tris = { { 1, 2, 3 } } }") == nil,
+        "mesh.load devia recusar arquivo sem as listas v e t")
+    assert(gravaRuim("return { v = { 0, 0, 0, 1, 0, 0, 0, 1, 0 }, t = { 1, 2, 9, 1 } }") == nil,
+        "mesh.load devia recusar indice de vertice fora da lista")
+    assert(gravaRuim("return { v = { 0, 0 }, t = { 1, 1, 1, 1 } }") == nil,
+        "mesh.load devia recusar lista de vertices pela metade")
+    -- A cor vem por indice; indice que nao existe cai no cinza claro em vez de virar nil e
+    -- derrubar o rasterizador.
+    local semCor = gravaRuim("return { v = { 0, 0, 0, 1, 0, 0, 0, 1, 0 }, t = { 1, 2, 3, 7 } }")
+    assert(semCor and semCor.tris[1].c == colors.lightGray, "cor fora da lista devia virar cinza claro")
     local vazios = mesh.list("/nao/existe")
     assert(type(vazios) == "table" and #vazios == 0, "mesh.list devia devolver lista vazia")
     local nomes = mesh.list()
