@@ -219,7 +219,7 @@ O caderno de medidas com previsao, medida e veredito de cada hipotese esta em
 [docs/3d-medidas.md](docs/3d-medidas.md). A ultima medida fica em `docs/bench-ultimo.txt`,
 e `docs/bench-base.txt` guarda a linha de base para dar diff.
 
-## Ondas 0, 1 e 2: prontas
+## Ondas 0 a 3: prontas
 
 **Onda 0 — a balanca.** `tools/test/bench.lua` reescrito: mediana de 5 rodadas com
 `collectgarbage()` antes de cada uma, min e max no relatorio, `clear` e `render` medidos
@@ -244,27 +244,33 @@ corrigido, e `frame:begin()` para quem desenha em laco.
 
 Custo por triangulo: 1,69 -> 1,14 us (~877 mil por segundo).
 
-**Demos prontos:** `os/demos/cubo.lua` (cubo girando, 20 fps, C liga e desliga o descarte) e
-`os/demos/terreno.lua` (ruido de valor, 1.152 triangulos, camera WASD). Nao aparecem no Iniciar
+**Onda 3 — iluminacao.** `os/lib/shade.lua`: Lambert por face, normal pre-calculada em
+`tri[11..13]` (uma vez por malha, nao por quadro), e o resultado caindo num degrau de rampa.
+`shade.applyTinted` para malha que ja tem cor propria. O experimento da paleta foi
+**confirmado**: `palette.render3d` preenche os buracos da rampa de cinza (marrom, roxo, magenta e
+rosa viram 48, 90, 160 e 224) sem tocar em preto, cinza, cinza claro e branco, entao a barra de
+tarefas e o relevo nao mudam. Tecla P no demo do cubo liga e desliga; a paleta volta ao sair,
+inclusive pelo X da janela.
+
+Tres resultados negativos, todos no caderno: o degrau mais escuro da rampa e' preto e o fundo
+tambem (as faces de costas sumiam), luz direcional **piora** forma de voxel (revertida na
+calculadora), e agrupar float por `string.format("%.0f")` passava no emulador e falhava na ROM.
+
+**Demos prontos:** `os/demos/cubo.lua` (cubo girando, 20 fps, com luz que gira; C liga o descarte, R troca a rampa, P a paleta) e
+`os/demos/terreno.lua` (ruido de valor, 1.152 triangulos, camera WASD, iluminado com applyTinted). Nao aparecem no Iniciar
 nem em Programas de proposito: abrem pelo Arquivos em `/os/demos`. Os dois entram no teste de
 fumaca, num laco proprio.
 
 ## Falta fazer, nesta ordem
 
-1. **Onda 3 — iluminacao.** `os/lib/shade.lua` com Lambert por face, normal pre-calculada no
-   modelo (`tri[11..13]`), e rampas de cor. Depois o experimento da paleta: um mapa `render3d`
-   em `kernel/palette.lua` com rampa de cinza uniforme, aplicado e restaurado por um demo em
-   tela cheia. **Se a barra de tarefas piscar de cor ou a paleta nao voltar, o experimento morre
-   e vai para o caderno como nao confirmado.** O terreno hoje parece mapa topografico: e a
-   iluminacao que resolve.
-2. **Onda 4 — modelo de verdade.** `tools/obj.js` (le `.obj` + `.mtl` do Blender, casa a cor
+1. **Onda 4 — modelo de verdade.** `tools/obj.js` (le `.obj` + `.mtl` do Blender, casa a cor
    difusa com a paleta do Mosaic, grava `os/share/models/*.lua`), `mesh.load()` com ambiente
    restrito como o `vector.load`, e o demo `modelo.lua`.
-3. **Onda 5 — sair da janelinha.** Desenhar em monitor (`hal.monitor()`, padrao do
+2. **Onda 5 — sair da janelinha.** Desenhar em monitor (`hal.monitor()`, padrao do
    `reactor.lua`); um monitor 8x6 da 262x237 pontos, quatro vezes a tela do computador. E modo
    arame — mas **antes cortar a linha no retangulo do canvas**: o Bresenham do `pixel.lua` anda
    ponto a ponto mesmo fora da tela e trava o computador nos 7 segundos.
-4. **Onda 6 — fechamento.** Doc em `os/docs/`, `CLAUDE.md`, manifest, push.
+3. **Onda 6 — fechamento.** Doc em `os/docs/`, `CLAUDE.md`, manifest, push.
 
 ## Armadilhas ja encontradas (nao repetir)
 
@@ -281,3 +287,13 @@ fumaca, num laco proprio.
 - **Geometria de teste ruim reprova codigo bom.** O primeiro teste do corte usava uma parede
   inclinada cuja parte visivel projetava toda fora do canvas: falhava por geometria, nao por bug.
 - **O relatorio do bench nao cabe em 19 linhas** — por isso ele sai em arquivo.
+- **Nunca agrupar float por `string.format("%.0f")`.** O zero negativo vira `"-0"` numa
+  implementacao de Lua e `"0"` noutra: um teste passava no emulador em JS e falhava na ROM.
+- **O degrau mais escuro da rampa de cinza e' preto, e o fundo do canvas 3D tambem.** Face que cai
+  nele some. Ambiente 0,3 numa rampa de quatro ja resolve.
+- **Luz direcional piora forma de voxel.** Seis normais so', e a rampa de quatro degraus joga as
+  terracas em tons muito diferentes. O topo/lado/base do `mesh.voxels` e' orientacao, nao direcao.
+- **Paleta se aplica no terminal RAIZ** (`term.native()`), nunca na janela: janela do CC guarda a
+  paleta so' para si. Funciona porque o compositor nao reempurra paleta, so' faz `blit`.
+- **Rodar o `craftos.js test` ANTES de commitar, nao depois.** Ja subi um commit com o self-check
+  vermelho na ROM por ter conferido so' o emulador.
