@@ -220,7 +220,19 @@ grade fica nas janelas de pasta), e formatar/renomear disquete.
 
 ---
 
-# Estado em 02/09/2026 — onde a obra parou
+# CONCLUIDO em 02/09/2026
+
+As seis ondas foram entregues. O que sobrou de valor neste arquivo e o registro das
+decisoes (clique duplo, sem acento em nome de arquivo, atalho apagado nao volta) e a
+lista de "fora de escopo" no fim — que continua valendo para quando o assunto voltar.
+Os fatos que um desenvolvedor precisa saber estao no `CLAUDE.md`; o que o usuario
+precisa saber esta em `os/docs/05-arquivos-e-atalhos.md`.
+
+Da para apagar este arquivo: o historico do git guarda o resto.
+
+---
+
+# Estado em 02/09/2026 — onde a obra parou (historico)
 
 Commit feito no meio da onda 2, para trocar de PC. `node tools/lint.js` limpo (45 arquivos),
 `node tools/test.js` e `node tools/craftos.js test` com 122 checagens e 0 falhas.
