@@ -202,6 +202,11 @@ if (cmd === 'shot') {
                 'for _, p in ipairs(mosaic.list()) do if p.title == "Calculadora" then',
                 '  os.queueEvent("mouse_click", 1, p.x + 10, p.y + p.h) end end',
                 'sleep(1.5)'],
+    // Aba Grafico. Mesmo truque do calcblocos, so' que o botao fica mais a direita.
+    calcgraf: ['local r = mosaic.require("apps.registry") r.open(r.byId("calc"))', 'sleep(1.5)',
+                'for _, p in ipairs(mosaic.list()) do if p.title == "Calculadora" then',
+                '  os.queueEvent("mouse_click", 1, p.x + 20, p.y + p.h) end end',
+                'sleep(2)'],
     startctx: ['local _, H = mosaic.screenSize()',
                'os.queueEvent("mouse_click", 1, 3, H)', 'sleep(1)',
                'os.queueEvent("mouse_click", 2, 5, 5)', 'sleep(1.5)'],

@@ -264,29 +264,11 @@ end
 
 -- ---------------------------------------------------------------- porta de entrada
 
--- Devolve valor, ou nil, mensagem, coluna. O quarto retorno e' o nome da variavel quando a
--- conta era uma atribuicao.
-function expr.eval(texto, ctx)
-    ctx = ctx or {}
-    ctx.vars = ctx.vars or {}
-    texto = tostring(texto or "")
-    if texto:match("^%s*$") then return nil, "conta vazia", 1 end
-
-    local toks, err, col = tokenize(texto)
-    if not toks then return nil, err, col end
-
-    local p = setmetatable({ toks = toks, i = 1, ctx = ctx }, Parser)
-
-    -- Atribuicao: so vale quando a conta inteira e' `nome = ...`.
-    local nome
-    if toks[1].kind == "name" and toks[2] and toks[2].kind == "=" then
-        nome = toks[1].value
-        if expr.functions[nome] or expr.constants[nome] then
-            return nil, "'" .. nome .. "' ja e do sistema, escolha outro nome", toks[1].col
-        end
-        p.i = 3
-    end
-
+-- Roda o analisador sobre uma lista de tokens ja pronta. Separado do eval porque o grafico
+-- avalia a mesma expressao uma vez por coluna da tela: reanalisar o texto a cada ponto
+-- custaria o dobro do desenho inteiro.
+local function run(toks, ctx, inicio)
+    local p = setmetatable({ toks = toks, i = inicio or 1, ctx = ctx }, Parser)
     local ok, v = pcall(function()
         local r = p:addsub()
         if p:peek().kind ~= "eof" then fail(p, "sobrou '" .. p:peek().kind .. "' no fim") end
@@ -298,7 +280,45 @@ function expr.eval(texto, ctx)
     end
     if type(v) ~= "number" then return nil, "isso nao deu um numero", 1 end
     if v ~= v then return nil, "resultado indefinido", 1 end
+    return v
+end
 
+-- Prepara a expressao uma vez e devolve uma funcao que so' avalia. Serve para o grafico.
+-- Nao aceita atribuicao: quem desenha uma curva nao muda variavel do sistema.
+function expr.compile(texto)
+    local toks, err, col = tokenize(tostring(texto or ""))
+    if not toks then return nil, err, col end
+    if toks[1].kind == "eof" then return nil, "conta vazia", 1 end
+    return function(ctx)
+        ctx = ctx or {}
+        ctx.vars = ctx.vars or {}
+        return run(toks, ctx)
+    end
+end
+
+-- Devolve valor, ou nil, mensagem, coluna. O quarto retorno e' o nome da variavel quando a
+-- conta era uma atribuicao.
+function expr.eval(texto, ctx)
+    ctx = ctx or {}
+    ctx.vars = ctx.vars or {}
+    texto = tostring(texto or "")
+    if texto:match("^%s*$") then return nil, "conta vazia", 1 end
+
+    local toks, err, col = tokenize(texto)
+    if not toks then return nil, err, col end
+
+    -- Atribuicao: so' vale quando a conta inteira e' `nome = ...`.
+    local nome, inicio = nil, 1
+    if toks[1].kind == "name" and toks[2] and toks[2].kind == "=" then
+        nome = toks[1].value
+        if expr.functions[nome] or expr.constants[nome] then
+            return nil, "'" .. nome .. "' ja e do sistema, escolha outro nome", toks[1].col
+        end
+        inicio = 3
+    end
+
+    local v, msg, c = run(toks, ctx, inicio)
+    if v == nil then return nil, msg, c end
     if nome then ctx.vars[nome] = v end
     return v, nil, nil, nome
 end
@@ -436,6 +456,18 @@ function expr.demo()
     local _, msg, col = expr.eval("2 + naoexiste", ctx)
     assert(col == 5, "a coluna do erro deveria ser 5, veio " .. tostring(col))
     assert(msg:find("naoexiste"), "a mensagem deveria citar o nome desconhecido")
+
+    -- compile avalia varias vezes sem reanalisar o texto
+    local fn = assert(expr.compile("x^2 + 1"))
+    local c2 = { vars = {}, deg = false }
+    c2.vars.x = 3
+    assert(fn(c2) == 10, "compile deveria dar 10 para x = 3")
+    c2.vars.x = 0
+    assert(fn(c2) == 1, "compile deveria dar 1 para x = 0")
+    assert(select(1, fn({ vars = {} })) == nil, "sem a variavel, compile tem de recusar")
+    assert(expr.compile("2 +") ~= nil, "erro de sintaxe so aparece na hora de avaliar")
+    assert(select(1, expr.compile("2 +")({ vars = {} })) == nil, "conta quebrada deveria falhar")
+    assert(expr.compile("") == nil, "texto vazio nao compila")
 
     -- formatacao
     assert(expr.format(4) == "4", "inteiro nao devia ganhar casa decimal")

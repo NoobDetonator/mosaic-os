@@ -9,6 +9,7 @@ local expr = mosaic.lib("expr")
 local strutil = mosaic.lib("strutil")
 local mcmath = mosaic.lib("mcmath")
 local pixel = mosaic.lib("pixel")
+local plot = mosaic.lib("plot")
 
 local MAX_HIST = 200
 
@@ -22,6 +23,10 @@ local f = ui.form()
 local lista, box, estado, inserts
 local formaDD, ocoCB, espBox, dimBox, estadoBlocos
 local build, camada = nil, 1
+local fnBox, autoCB, estadoGraf
+local view = { x0 = -10, x1 = 10, y0 = -5, y1 = 5 }
+local curvas = {}
+local gctx = { vars = { x = 0 }, deg = false }
 local abas = {}
 
 -- ---------------------------------------------------------------- conta
@@ -167,6 +172,7 @@ local function aba(label, m)
 end
 aba("Conta", "conta")
 aba("Blocos", "blocos")
+aba("Grafico", "grafico")
 
 estado = f:add(ui.label { x = 1, bottom = 1, w = "fill", text = "", tab = "conta",
     bg = theme.taskbarBg, fg = theme.taskbarFg })
@@ -328,8 +334,157 @@ do
         bg = theme.taskbarBg, fg = theme.taskbarFg })
 end
 
+-- ---------------------------------------------------------------- aba Grafico
+
+local GRAF_LEFT = 7          -- colunas 1..6 ficam para os numeros do eixo y
+local CORES = { colors.lime, colors.yellow }
+
+-- Rotulo de eixo curto: %.0f quando e' inteiro, duas casas quando nao, sem zero a toa.
+local function eixoLabel(v)
+    if math.abs(v) < 1e-9 then return "0" end
+    if v == math.floor(v) and math.abs(v) < 1e5 then return string.format("%.0f", v) end
+    local t = string.format("%.2f", v)
+    t = (t:gsub("0+$", ""))
+    return (t:gsub("%.$", ""))
+end
+
+-- Le as duas caixas e prepara as funcoes. So' roda quando o texto muda, nao a cada quadro.
+local function compilar()
+    curvas = {}
+    for i, caixa in ipairs(fnBox) do
+        local texto = caixa.text
+        if texto and not texto:match("^%s*$") then
+            local fn, err, col = expr.compile(texto)
+            if not fn then
+                ui.msgbox("y" .. i .. ": " .. tostring(err) .. " (col " .. tostring(col) .. ")", "Grafico")
+            else
+                curvas[#curvas + 1] = { cor = CORES[i] or colors.white, fn = function(x)
+                    gctx.vars.x = x
+                    gctx.deg = ctx.deg
+                    return (fn(gctx))
+                end }
+            end
+        end
+    end
+end
+
+-- Quantas celulas o desenho ocupa. O rodape precisa do mesmo numero que o desenho, senao a
+-- escala automatica que ele anuncia nao e' a que aparece na tela.
+local function grafCells()
+    local W, H = (f.term or term.current()).getSize()
+    return W - GRAF_LEFT + 1, (H - 3) - 3 + 1
+end
+
+local function statusGraf()
+    local cols, rows = grafCells()
+    if autoCB.checked and #curvas > 0 and cols >= 8 and rows >= 2 then
+        local serie = {}
+        for _, c in ipairs(curvas) do serie[#serie + 1] = { fn = c.fn } end
+        view.y0, view.y1 = plot.autoRange(serie, view, cols * 2)
+    end
+    local meio = (view.x0 + view.x1) / 2
+    local partes = { "x " .. eixoLabel(view.x0) .. ".." .. eixoLabel(view.x1),
+                     "y " .. eixoLabel(view.y0) .. ".." .. eixoLabel(view.y1),
+                     "x=" .. eixoLabel(meio) }
+    for i, c in ipairs(curvas) do
+        local ok, v = pcall(c.fn, meio)
+        partes[#partes + 1] = "y" .. i .. "=" .. ((ok and v) and expr.format(v) or "-")
+    end
+    estadoGraf.text = " " .. strutil.ellipsis(table.concat(partes, " | "),
+        (tonumber(estadoGraf.w) or 40) - 2)
+end
+
+local function drawGrafico(t)
+    local W, H = t.getSize()
+    local topo, base = 3, H - 3
+    local cols, rows = W - GRAF_LEFT + 1, base - topo + 1
+    if cols < 8 or rows < 2 then return end
+
+    local canvas = pixel.new(cols, rows, colors.black)
+    local serie = {}
+    for _, c in ipairs(curvas) do serie[#serie + 1] = { fn = c.fn, color = c.cor } end
+    local marcas = plot.render(canvas, serie, view, { axis = colors.gray })
+
+    -- Cruz de leitura no meio da janela: e' o "onde estou" sem inventar um modo novo.
+    local meioPx = math.floor(canvas.w / 2)
+    for y = 1, canvas.h, 2 do canvas:set(meioPx, y, colors.red) end
+    canvas:render(t, GRAF_LEFT, topo)
+
+    -- Numeros dos eixos, fora do canvas: celula com sub-pixel nao aceita texto.
+    t.setBackgroundColor(theme.appBg)
+    t.setTextColor(theme.mutedFg)
+    local usada = {}
+    for _, m in ipairs(marcas.yTicks) do
+        local linha = topo + math.floor((m[2] - 1) / 3)
+        if not usada[linha] and linha >= topo and linha <= base then
+            usada[linha] = true
+            t.setCursorPos(1, linha)
+            t.write(strutil.pad(strutil.ellipsis(eixoLabel(m[1]), 6), 6, "right"))
+        end
+    end
+    t.setCursorPos(1, base + 1)
+    t.write(string.rep(" ", W))
+    for _, m in ipairs(marcas.xTicks) do
+        local col = GRAF_LEFT + math.floor((m[2] - 1) / 2)
+        local rot = eixoLabel(m[1])
+        local x = math.max(1, math.min(W - #rot, col - math.floor(#rot / 2)))
+        t.setCursorPos(x, base + 1)
+        t.write(rot)
+    end
+end
+
+local function redesenhar()
+    compilar()
+    statusGraf()
+    f.dirty = true
+end
+
+do
+    fnBox = {}
+    for i = 1, 2 do
+        f:add(ui.label { x = 1, y = i, text = "y" .. i .. "=", tab = "grafico" })
+        fnBox[i] = f:add(ui.textbox { x = 5, y = i, w = -18, tab = "grafico",
+            text = i == 1 and "sin(x)" or "", placeholder = "funcao de x",
+            onEnter = function() redesenhar() f:setFocus(nil) end })
+    end
+    autoCB = f:add(ui.checkbox { right = 1, y = 1, text = "&Auto", checked = true, tab = "grafico",
+        onChange = function() redesenhar() end })
+    f:add(ui.button { right = 1, y = 2, text = "&Desenhar", tab = "grafico",
+        onClick = function() redesenhar() end })
+    estadoGraf = f:add(ui.label { x = 1, bottom = 1, w = "fill", text = "", tab = "grafico",
+        bg = theme.taskbarBg, fg = theme.taskbarFg })
+end
+
+-- Setas andam pelo grafico, PageUp e PageDown aproximam e afastam. So' quando o foco nao
+-- esta numa caixa de texto, senao a seta andaria o cursor do texto.
+local function noGrafico()
+    if mode ~= "grafico" then return false end
+    for _, c in ipairs(fnBox) do if f.focused == c then return false end end
+    return true
+end
+
+local function pan(fx, fy)
+    local lx, ly = view.x1 - view.x0, view.y1 - view.y0
+    view.x0, view.x1 = view.x0 + lx * fx, view.x1 + lx * fx
+    if not autoCB.checked then
+        view.y0, view.y1 = view.y0 + ly * fy, view.y1 + ly * fy
+    end
+    statusGraf()
+    f.dirty = true
+end
+
+local function zoom(k)
+    local cx, cy = (view.x0 + view.x1) / 2, (view.y0 + view.y1) / 2
+    local lx, ly = (view.x1 - view.x0) * k / 2, (view.y1 - view.y0) * k / 2
+    view.x0, view.x1 = cx - lx, cx + lx
+    if not autoCB.checked then view.y0, view.y1 = cy - ly, cy + ly end
+    statusGraf()
+    f.dirty = true
+end
+
 f.onDraw = function(_, t)
-    if mode == "blocos" then drawPreview(t) end
+    if mode == "blocos" then drawPreview(t)
+    elseif mode == "grafico" then drawGrafico(t) end
 end
 
 -- ---------------------------------------------------------------- eventos
@@ -345,6 +500,14 @@ f.onEvent = function(_, ev, a)
             refreshStatus()
             f.dirty = true
             return true
+        elseif noGrafico() then
+            if a == keys.left then pan(-0.2, 0) return true
+            elseif a == keys.right then pan(0.2, 0) return true
+            elseif a == keys.up then pan(0, 0.2) return true
+            elseif a == keys.down then pan(0, -0.2) return true
+            elseif a == keys.pageUp then zoom(0.5) return true
+            elseif a == keys.pageDown then zoom(2) return true
+            end
         elseif mode == "blocos" and build and build.h > 1 then
             if a == keys.pageUp then
                 camada = math.min(build.h, camada + 1) statusBlocos() f.dirty = true return true
@@ -363,6 +526,7 @@ applyKeypad()
 setMode("conta")
 f:layout()
 gerar()
+redesenhar()
 refreshStatus()
 f:setFocus(box)
 f:run()
