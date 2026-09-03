@@ -222,6 +222,20 @@ three.clipNear = clipNear            -- exposto para o self-check
 -- quer mandar. Medido: tirava 25% do quadro quando o rasterizador era caro, e 13% depois que
 -- ele ficou barato — a face descartada ja pagou a transformacao dos tres vertices antes do
 -- teste de area, e essa parte nao some.
+-- Modo arame: as tres arestas do triangulo, sem preenchimento e SEM z-buffer — a linha
+-- passa por cima de tudo. Nao e' descuido: o z-buffer guarda a profundidade do que foi
+-- pintado, e no arame quase nada e' pintado, entao esconder aresta exigiria desenhar as faces
+-- antes so' para preencher o buffer. Isso e' remocao de linha escondida, outro assunto.
+--
+-- O descarte de face de costas continua valendo, e num modelo fechado ele ja' resolve metade
+-- do problema: sem ele o arame vira uma bagunca de arestas do outro lado.
+local function wireTri(canvas, x1, y1, x2, y2, x3, y3, cor, cull)
+    if cull and (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1) > 0 then return end
+    canvas:line(x1, y1, x2, y2, cor)
+    canvas:line(x2, y2, x3, y3, cor)
+    canvas:line(x3, y3, x1, y1, cor)
+end
+
 function Frame:draw(objetos, opts)
     opts = opts or {}
     local pre = self:begin()
@@ -232,6 +246,7 @@ function Frame:draw(objetos, opts)
     -- `closed`. Com z-buffer isso so' economiza tempo, nao muda o desenho — desde que a malha
     -- seja de fato fechada, e por isso quem sabe disso e' ela.
     local cullOpt = opts.cull
+    local wire = opts.wire
     local near = three.NEAR
     local pcx, pcy, pesc = pre.cx, pre.cy, pre.escala
 
@@ -276,10 +291,17 @@ function Frame:draw(objetos, opts)
                     -- vertices por um vetor intermediario custou 21 operacoes de tabela por
                     -- triangulo e DOBROU o tempo da cena de 10 mil triangulos. Medido.
                     local ia, ib, ic = 1 / az, 1 / bz, 1 / cz
-                    raster(buf, zb, W, H,
-                        pcx + ax * ia * pesc, pcy - ay * ia * pesc, ia,
-                        pcx + bx * ib * pesc, pcy - by * ib * pesc, ib,
-                        pcx + cx * ic * pesc, pcy - cy * ic * pesc, ic, cor, cull)
+                    if wire then
+                        wireTri(canvas,
+                            pcx + ax * ia * pesc, pcy - ay * ia * pesc,
+                            pcx + bx * ib * pesc, pcy - by * ib * pesc,
+                            pcx + cx * ic * pesc, pcy - cy * ic * pesc, cor, cull)
+                    else
+                        raster(buf, zb, W, H,
+                            pcx + ax * ia * pesc, pcy - ay * ia * pesc, ia,
+                            pcx + bx * ib * pesc, pcy - by * ib * pesc, ib,
+                            pcx + cx * ic * pesc, pcy - cy * ic * pesc, ic, cor, cull)
+                    end
                     enviados = enviados + 1
                 else
                     -- Caminho raro: alguem esta atras da camera. So' aqui o vetor entra.
@@ -291,11 +313,23 @@ function Frame:draw(objetos, opts)
                             py[k] = pcy - poly[k * 3 - 1] * iz * pesc
                             pw[k] = iz
                         end
-                        raster(buf, zb, W, H, px[1], py[1], pw[1], px[2], py[2], pw[2],
-                            px[3], py[3], pw[3], cor, cull)
-                        if nv == 4 then
-                            raster(buf, zb, W, H, px[1], py[1], pw[1], px[3], py[3], pw[3],
-                                px[4], py[4], pw[4], cor, cull)
+                        if wire then
+                            -- Contorno do poligono cortado, e nao as arestas dos dois
+                            -- triangulos: assim a diagonal interna nao aparece.
+                            if not (cull and (px[2] - px[1]) * (py[3] - py[1])
+                                - (py[2] - py[1]) * (px[3] - px[1]) > 0) then
+                                for k = 1, nv do
+                                    local j = k % nv + 1
+                                    canvas:line(px[k], py[k], px[j], py[j], cor)
+                                end
+                            end
+                        else
+                            raster(buf, zb, W, H, px[1], py[1], pw[1], px[2], py[2], pw[2],
+                                px[3], py[3], pw[3], cor, cull)
+                            if nv == 4 then
+                                raster(buf, zb, W, H, px[1], py[1], pw[1], px[3], py[3], pw[3],
+                                    px[4], py[4], pw[4], cor, cull)
+                            end
                         end
                         enviados = enviados + 1
                         cortados = cortados + 1
@@ -442,6 +476,36 @@ function three.demo()
     local qx, qy = f:project(3, 1, -2, pre)
     assert(math.abs(qx - meioX) < 0.01 and math.abs(qy - meioY) < 0.01,
         "projetar com o `pre` guardado tem de dar o mesmo que sem ele")
+
+    -- ---------------------------------------------------------------- arame
+    -- O arame desenha a borda e deixa o miolo vazio; o preenchido pinta os dois.
+    local umCubo = mesh.cube():center():mapColor(colors.red)
+    f:orbit({ 0, 0, 0 }, 2.5, 0.6, 0.4)
+    f:clear(colors.black)
+    f:draw({ { model = umCubo } }, { wire = true })
+    local mx, my = math.floor(meioX), math.floor(meioY)
+    assert(canvas:get(mx, my) == colors.black, "o miolo do arame tinha de ficar vazio")
+    local naBorda = 0
+    for y = 1, canvas.h do
+        for x = 1, canvas.w do if canvas:get(x, y) ~= colors.black then naBorda = naBorda + 1 end end
+    end
+    assert(naBorda > 20, "o arame mal desenhou aresta: " .. naBorda .. " pontos")
+
+    f:clear(colors.black)
+    f:draw({ { model = umCubo } })
+    assert(canvas:get(mx, my) == colors.red, "o preenchido tinha de pintar o miolo")
+    local cheio = 0
+    for y = 1, canvas.h do
+        for x = 1, canvas.w do if canvas:get(x, y) ~= colors.black then cheio = cheio + 1 end end
+    end
+    assert(cheio > naBorda, "o preenchido tinha de pintar mais que o arame")
+
+    -- Camera dentro do cubo: o poligono cortado no plano proximo tem de virar arame sem
+    -- travar. Sem o corte de linha do pixel.lua isto anda ate' os 7 segundos e mata o
+    -- computador — e' o motivo de o corte ter vindo antes do arame.
+    f:setCamera(0, 0, 0, 0, 0, 0)
+    f:clear(colors.black)
+    f:draw({ { model = mesh.cube():center():scale(4) } }, { wire = true, cull = false })
 
     return true
 end

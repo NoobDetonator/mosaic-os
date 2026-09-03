@@ -121,6 +121,27 @@ Fatos do kernel que não são óbvios:
   escrever um ângulo de luz solto foi o que deixou a casa cinza duas vezes. E a componente vertical da luz é 0,5 e
   não 0,8: o vetor é normalizado, então luz muito de cima não sobra para os lados e as duas paredes visíveis caem
   as duas em cima do corte do `applyTinted`.
+- **`Canvas:line` corta no retângulo ANTES do Bresenham** (Liang-Barsky). Sem isso o laço anda ponto a
+  ponto fora da tela e o `Canvas:set` descarta em silêncio: uma aresta com vértice logo atrás da câmera
+  projeta a milhões de pontos e **trava o computador nos 7 segundos**. É pré-requisito do modo arame,
+  não um refinamento.
+- **Modo arame (`draw(objs, { wire = true })`) não usa z-buffer** — a linha passa por cima de tudo. O
+  z-buffer guarda a profundidade do que foi *pintado*, e no arame quase nada é pintado; esconder aresta
+  seria remoção de linha escondida, outro assunto. O descarte de face continua valendo e já resolve
+  metade do problema num modelo fechado.
+- **Arame só se lê com pouco polígono.** A Suzanne de 968 triângulos em arame vira uma mancha cinza a
+  100x51 sub-pixels: as arestas se encostam. E é mais *lenta* que a versão preenchida (6 ms contra 3),
+  porque cada aresta interna é desenhada duas vezes e não há z-buffer para pular pixel.
+- **`normalizeScale` não é enquadramento.** Ele põe a maior dimensão em 1, mas um cubo visto de canto
+  ocupa a diagonal (1,73), e a escala do `three` sai de `w/2` nos **dois** eixos — numa janela mais larga
+  que alta quem aperta é a altura. Enquadre pela esfera que envolve o modelo
+  (`raio * begin().escala / (min(w,h)/2)`), que vale em qualquer ângulo e não muda enquanto ele gira.
+- **Monitor: 102x38 na escala 0,5 = 204x114 pontos, e custa 7 ms** contra 3 ms da janela (Suzanne, 968
+  triângulos). Vale desenhar nele a cada N quadros, não a cada um. Tudo dentro de `pcall`, e o monitor
+  sai fora na primeira falha: no jogo alguém quebra o bloco com o computador ligado.
+- **O CraftOS-PC headless não cria monitor** (`periphemu.create` responde "Monitors are not available in
+  this mode"). Para testar monitor é preciso o modo gráfico, e aí o `term.screenshot` fotografa só o
+  computador — a prova vem de `getSize()` e de o app não ter estourado, não de um print.
 - **Descarte de face de costas é propriedade da malha** (`m.closed`), não bandeira global: `mesh.voxels` e
   `mesh.cube` se declaram fechados; `plane` e `grid` não, e com descarte sumiriam vistos por baixo.
 - **Não agrupe float por `string.format("%.0f")`.** O zero negativo vira `"-0"` em algumas

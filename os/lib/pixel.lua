@@ -117,18 +117,57 @@ function Canvas:rect(x, y, w, h, color, outline)
     end
 end
 
+-- Um lado do corte de Liang-Barsky. Devolve o par de t apertado, ou nil quando a linha
+-- inteira esta do lado de fora daquele lado. Funcao solta e nao tabela de propriedades de
+-- proposito: o modo arame chama isso quatro vezes por aresta, milhares de vezes por quadro.
+local function fatia(p, q, t0, t1)
+    if p == 0 then
+        if q < 0 then return nil end
+        return t0, t1
+    end
+    local r = q / p
+    if p < 0 then
+        if r > t1 then return nil end
+        if r > t0 then t0 = r end
+    else
+        if r < t0 then return nil end
+        if r < t1 then t1 = r end
+    end
+    return t0, t1
+end
+
+-- Linha cortada no retangulo do canvas ANTES do Bresenham.
+--
+-- Sem o corte o laco anda ponto a ponto mesmo fora da tela, e o `Canvas:set` joga fora em
+-- silencio: uma aresta com um vertice logo atras da camera projeta a milhoes de pontos de
+-- distancia e o computador **trava nos 7 segundos** que o CC aguenta sem yield. Cortar antes
+-- e' o que faz o modo arame ser possivel.
 function Canvas:line(x0, y0, x1, y1, color)
+    local dx, dy = x1 - x0, y1 - y0
+    local t0, t1 = 0, 1
+    t0, t1 = fatia(-dx, x0 - 1, t0, t1)
+    if not t0 then return end
+    t0, t1 = fatia(dx, self.w - x0, t0, t1)
+    if not t0 then return end
+    t0, t1 = fatia(-dy, y0 - 1, t0, t1)
+    if not t0 then return end
+    t0, t1 = fatia(dy, self.h - y0, t0, t1)
+    if not t0 then return end
+    -- O fim sai primeiro: depois de mexer em x0 a origem do parametro nao vale mais.
+    if t1 < 1 then x1, y1 = x0 + t1 * dx, y0 + t1 * dy end
+    if t0 > 0 then x0, y0 = x0 + t0 * dx, y0 + t0 * dy end
+
     x0, y0, x1, y1 = math.floor(x0), math.floor(y0), math.floor(x1), math.floor(y1)
-    local dx, dy = math.abs(x1 - x0), -math.abs(y1 - y0)
+    local adx, ady = math.abs(x1 - x0), -math.abs(y1 - y0)
     local sx = x0 < x1 and 1 or -1
     local sy = y0 < y1 and 1 or -1
-    local err = dx + dy
+    local err = adx + ady
     while true do
         self:set(x0, y0, color)
         if x0 == x1 and y0 == y1 then break end
         local e2 = 2 * err
-        if e2 >= dy then err = err + dy x0 = x0 + sx end
-        if e2 <= dx then err = err + dx y0 = y0 + sy end
+        if e2 >= ady then err = err + ady x0 = x0 + sx end
+        if e2 <= adx then err = err + adx y0 = y0 + sy end
     end
 end
 
@@ -234,6 +273,36 @@ function pixel.demo()
     assert(c:get(999, 999) == nil, "get fora do canvas deveria dar nil")
     c:line(1, 1, 6, 1, B)
     assert(c:get(6, 1) == B, "linha horizontal nao chegou ao fim")
+
+    -- Corte no retangulo: linha que vem de longe e atravessa a tela pinta o pedaco de dentro,
+    -- e nao anda ponto a ponto la fora. Sem o corte, esta chamada sozinha estoura os 7 s.
+    local big = pixel.new(4, 2, colors.black)      -- 8 x 6 sub-pixels
+    big:line(-100000, 3, 100000, 3, colors.red)
+    assert(big:get(1, 3) == colors.red and big:get(8, 3) == colors.red,
+        "a linha de fora a fora devia pintar a faixa inteira")
+    assert(big:get(1, 1) == colors.black, "a linha vazou para outra faixa")
+
+    -- Linha inteiramente fora nao pinta nada, e tambem nao trava.
+    big:line(-50, -50, -10, -10, colors.white)
+    big:line(1000, 1000, 2000, 2000, colors.white)
+    for y = 1, 6 do
+        for x = 1, 8 do
+            assert(big:get(x, y) ~= colors.white, "linha fora da tela pintou em " .. x .. "," .. y)
+        end
+    end
+
+    -- O corte nao pode mexer no que ja cabia: a diagonal continua ligando os dois cantos.
+    local diag = pixel.new(4, 2, colors.black)
+    diag:line(1, 1, 8, 6, colors.lime)
+    assert(diag:get(1, 1) == colors.lime and diag:get(8, 6) == colors.lime,
+        "o corte comeu as pontas de uma linha que cabia inteira")
+
+    -- Meia de fora: comeca dentro e sai. O pedaco de dentro tem de continuar la.
+    local meia = pixel.new(4, 2, colors.black)
+    meia:line(4, 3, 400, 3, colors.cyan)
+    assert(meia:get(4, 3) == colors.cyan and meia:get(8, 3) == colors.cyan,
+        "a metade de dentro sumiu")
+    assert(meia:get(3, 3) == colors.black, "pintou antes do comeco")
 
     local rows = c:toBlit()
     assert(#rows == c.rows, "toBlit devolveu numero de linhas errado")

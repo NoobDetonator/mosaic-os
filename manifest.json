@@ -84,7 +84,7 @@
     },
     {
       "path": "os/demos/modelo.lua",
-      "sha1": "17e7d75e40c1612ef382c1bd3609c08bb288909d"
+      "sha1": "a5d9a43cb9d45fc886362c29f2e761806ee4fd41"
     },
     {
       "path": "os/demos/terreno.lua",
@@ -196,7 +196,7 @@
     },
     {
       "path": "os/lib/pixel.lua",
-      "sha1": "7367efa8433a15b6b84be2936df3ca6bc6090b7e"
+      "sha1": "e5bb4fadec51108317bf9c27913cb5e207e94f24"
     },
     {
       "path": "os/lib/plot.lua",
@@ -224,7 +224,7 @@
     },
     {
       "path": "os/lib/three.lua",
-      "sha1": "cdfecb9340a22d6d65ecc655e685c6e238fcd5df"
+      "sha1": "fe6f3159ff6a770316a4c980ed4bde659dd95c1d"
     },
     {
       "path": "os/lib/vector.lua",

@@ -219,7 +219,7 @@ O caderno de medidas com previsao, medida e veredito de cada hipotese esta em
 [docs/3d-medidas.md](docs/3d-medidas.md). A ultima medida fica em `docs/bench-ultimo.txt`,
 e `docs/bench-base.txt` guarda a linha de base para dar diff.
 
-## Ondas 0 a 4: prontas
+## Ondas 0 a 5: prontas
 
 **Onda 0 — a balanca.** `tools/test/bench.lua` reescrito: mediana de 5 rodadas com
 `collectgarbage()` antes de cada uma, min e max no relatorio, `clear` e `render` medidos
@@ -281,19 +281,35 @@ para caber numa conferencia na mao, com quad e triangulo, `v//vn` e `v/vt/vn`, i
 faces pela normal e corrigir. O self-check carrega a casa convertida e cobra os 16 triangulos, a
 marca de fechada e a caixa envolvente.
 
+**Onda 5 — sair da janelinha.** Primeiro o pre-requisito: `Canvas:line` corta no retangulo do
+canvas (Liang-Barsky) **antes** do Bresenham. Sem isso o laco anda ponto a ponto fora da tela e o
+`Canvas:set` descarta em silencio — uma aresta com vertice logo atras da camera projeta a milhoes
+de pontos e trava o computador nos 7 segundos.
+
+Com o corte no lugar, `three` ganhou `draw(objetos, { wire = true })`: as tres arestas em vez do
+preenchimento, com o descarte de face ainda valendo e **sem** z-buffer (a linha passa por cima de
+tudo; esconder aresta e' remocao de linha escondida, outro assunto). No poligono cortado no plano
+proximo o que sai e' o contorno, e nao as arestas dos dois triangulos, senao a diagonal interna
+aparece.
+
+E o `modelo.lua` desenha na parede: tecla M liga um monitor. Medido no CraftOS-PC grafico, um
+monitor 102x38 na escala 0,5 da **204x114 pontos** e custa **7 ms**, contra 3 ms da janela — por
+isso ele desenha a cada quarto quadro. Tudo em `pcall`, e o monitor sai fora na primeira falha.
+
+Junto veio um conserto que so' o arame revelou: a camera ficava a uma distancia fixa, e
+`normalizeScale` poe a MAIOR dimensao em 1, o que nao e' o mesmo que caber. Agora a distancia sai
+da esfera que envolve o modelo, contra a **menor** metade do canvas.
+
 **Demos prontos:** `os/demos/cubo.lua` (cubo girando, 20 fps, com luz que gira; C liga o descarte, R troca a rampa, P a paleta) e
 `os/demos/terreno.lua` (ruido de valor, 1.152 triangulos, camera WASD, iluminado com applyTinted) e `os/demos/modelo.lua`
-(visualizador: lista `/os/share/models`, N troca de modelo, setas giram, espaco para). Nao aparecem
+(visualizador: lista `/os/share/models`, N troca de modelo, A liga o arame, M joga no monitor,
+setas giram, espaco para). Nao aparecem
 no Iniciar nem em Programas de proposito: abrem pelo Arquivos em `/os/demos`. Os tres entram no
 teste de fumaca, num laco proprio.
 
 ## Falta fazer, nesta ordem
 
-1. **Onda 5 — sair da janelinha.** Desenhar em monitor (`hal.monitor()`, padrao do
-   `reactor.lua`); um monitor 8x6 da 262x237 pontos, quatro vezes a tela do computador. E modo
-   arame — mas **antes cortar a linha no retangulo do canvas**: o Bresenham do `pixel.lua` anda
-   ponto a ponto mesmo fora da tela e trava o computador nos 7 segundos.
-2. **Onda 6 — fechamento.** Doc em `os/docs/`, `CLAUDE.md`, manifest, push.
+1. **Onda 6 — fechamento.** Doc em `os/docs/`, `CLAUDE.md`, manifest, push.
 
 ## Armadilhas ja encontradas (nao repetir)
 
@@ -344,5 +360,14 @@ teste de fumaca, num laco proprio.
 - **Silhueta em ASCII resolve o que print de 100x51 nao resolve.** Passei quatro prints achando que a
   Suzanne estava torta ou espelhada. Desenhar a malha num canvas de 48x15 e imprimir com pontos
   mostrou orelha, cranio e pescoco simetricos em dois segundos.
+- **Arame se le com pouco poligono.** A Suzanne em arame vira mancha cinza: 968 triangulos e as
+  arestas se encostam a 100x51 sub-pixels. E' tambem mais LENTA que preenchida (6 ms contra 3),
+  porque cada aresta interna sai duas vezes e nao ha z-buffer para pular pixel.
+- **`normalizeScale` nao e' enquadramento.** Maior dimensao em 1 nao quer dizer que cabe: um cubo
+  visto de canto ocupa 1,73, e a escala sai de w/2 nos dois eixos, entao numa janela mais larga que
+  alta quem aperta e' a altura. A casa em arame saiu com os cantos para fora da tela.
+- **O CraftOS-PC headless nao cria monitor.** `periphemu.create` responde "Monitors are not available
+  in this mode"; so' o modo grafico cria. E la' o `term.screenshot` fotografa so' o computador, entao
+  a prova do monitor vem do `getSize()` e de o app nao estourar, nao de um print.
 - **Rodar o `craftos.js test` ANTES de commitar, nao depois.** Ja subi um commit com o self-check
   vermelho na ROM por ter conferido so' o emulador.

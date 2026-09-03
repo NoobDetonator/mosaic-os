@@ -263,6 +263,11 @@ if (cmd === 'shot') {
     cubopalvolta: ['mosaic.launchWith({ title = "Cubo 3D", w = 50, h = 17 }, "/os/demos/cubo.lua")',
                 'sleep(2)', 'os.queueEvent("key", keys.p, false)', 'sleep(1.5)',
                 'os.queueEvent("key", keys.q, false)', 'sleep(2)'],
+    // Modo arame, na casa e nao na Suzanne: com 968 triangulos as arestas se encostam e o
+    // arame vira uma mancha cinza. Arame se le com pouco poligono.
+    arame: ['mosaic.launchWith({ title = "Modelos", w = 50, h = 17 }, "/os/demos/modelo.lua")',
+                'sleep(1)', 'os.queueEvent("key", keys.space, false)', 'sleep(0.3)',
+                'os.queueEvent("key", keys.a, false)', 'sleep(1.5)'],
     startctx: ['local _, H = mosaic.screenSize()',
                'os.queueEvent("mouse_click", 1, 3, H)', 'sleep(1)',
                'os.queueEvent("mouse_click", 2, 5, 5)', 'sleep(1.5)'],
