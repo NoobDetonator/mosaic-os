@@ -192,12 +192,13 @@ end
 
 mcmath.STACK = 64
 
+-- O plural vem escrito: "Bau duplo" + "s" daria "Bau duplos", e "Barril" + "s", "Barrils".
 mcmath.containers = {
-    { id = "chest",   name = "Bau",       slots = 27 },
-    { id = "double",  name = "Bau duplo", slots = 54 },
-    { id = "barrel",  name = "Barril",    slots = 27 },
-    { id = "shulker", name = "Shulker",   slots = 27 },
-    { id = "hopper",  name = "Funil",     slots = 5 },
+    { id = "chest",   name = "Bau",       plural = "baus",        slots = 27 },
+    { id = "double",  name = "Bau duplo", plural = "baus duplos", slots = 54 },
+    { id = "barrel",  name = "Barril",    plural = "barris",      slots = 27 },
+    { id = "shulker", name = "Shulker",   plural = "shulkers",    slots = 27 },
+    { id = "hopper",  name = "Funil",     plural = "funis",       slots = 5 },
 }
 
 function mcmath.containerById(id)
@@ -232,12 +233,12 @@ function mcmath.capacity(n, tamanho, slots)
 end
 
 -- Texto curto: "2 baus + 3 stacks + 12".
-function mcmath.describe(n, tamanho, slots, nomeRecipiente)
+function mcmath.describe(n, tamanho, slots, nome, plural)
     local r = mcmath.containersFor(n, tamanho, slots)
     local partes = {}
     if r.containers > 0 then
-        partes[#partes + 1] = r.containers .. " " .. (nomeRecipiente or "bau") ..
-            (r.containers > 1 and "s" or "")
+        partes[#partes + 1] = r.containers .. " " ..
+            (r.containers > 1 and (plural or ((nome or "bau") .. "s")) or (nome or "bau"))
     end
     if r.stacks > 0 then partes[#partes + 1] = r.stacks .. " stack" .. (r.stacks > 1 and "s" or "") end
     if r.items > 0 or #partes == 0 then partes[#partes + 1] = tostring(r.items) end
@@ -322,8 +323,14 @@ function mcmath.demo()
     assert(mcmath.capacity(2, 64, 27) == 3456, "dois baus levam 3456 itens")
     assert(mcmath.capacity(1, 16, 27) == 432, "bau de item que empilha 16")
     assert(mcmath.describe(0, 64, 27, "bau") == "0", "zero deveria aparecer como 0")
-    assert(mcmath.describe(1729, 64, 27, "bau"):find("1 bau"), "descricao errada: " ..
-        mcmath.describe(1729, 64, 27, "bau"))
+    assert(mcmath.describe(1729, 64, 27, "bau", "baus"):find("1 bau"), "descricao errada: " ..
+        mcmath.describe(1729, 64, 27, "bau", "baus"))
+    assert(mcmath.describe(3458, 64, 27, "bau", "baus"):find("2 baus"), "plural errado")
+    assert(mcmath.describe(6913, 64, 54, "bau duplo", "baus duplos"):find("2 baus duplos"),
+        "o plural escrito e que vale, nao um s no fim")
+    for _, c in ipairs(mcmath.containers) do
+        assert(c.plural and c.slots > 0, "recipiente sem plural ou sem slots: " .. c.id)
+    end
 
     return true
 end

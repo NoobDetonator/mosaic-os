@@ -10,6 +10,7 @@ local strutil = mosaic.lib("strutil")
 local mcmath = mosaic.lib("mcmath")
 local pixel = mosaic.lib("pixel")
 local plot = mosaic.lib("plot")
+local hal = mosaic.lib("hal")
 
 local MAX_HIST = 200
 
@@ -27,6 +28,7 @@ local fnBox, autoCB, estadoGraf
 local view = { x0 = -10, x1 = 10, y0 = -5, y1 = 5 }
 local curvas = {}
 local gctx = { vars = { x = 0 }, deg = false }
+local itensBox, stackDD, contDD, recBox, resBau, capBau, listaBau, estadoBaus
 local abas = {}
 
 -- ---------------------------------------------------------------- conta
@@ -173,6 +175,7 @@ end
 aba("Conta", "conta")
 aba("Blocos", "blocos")
 aba("Grafico", "grafico")
+aba("Baus", "baus")
 
 estado = f:add(ui.label { x = 1, bottom = 1, w = "fill", text = "", tab = "conta",
     bg = theme.taskbarBg, fg = theme.taskbarFg })
@@ -279,7 +282,7 @@ local function statusBlocos()
     if not build then estadoBlocos.text = " nada gerado ainda" return end
     local partes = {
         build.total .. " blocos",
-        mcmath.describe(build.total, mcmath.STACK, 27, "bau"),
+        mcmath.describe(build.total, mcmath.STACK, 27, "bau", "baus"),
         build.w .. "x" .. build.h .. "x" .. build.d,
     }
     if build.h > 1 then
@@ -482,6 +485,89 @@ local function zoom(k)
     f.dirty = true
 end
 
+-- ---------------------------------------------------------------- aba Baus
+
+local TAMANHOS = { "64", "16", "1" }
+
+local function baseBau()
+    local st = tonumber(TAMANHOS[stackDD.selected or 1]) or mcmath.STACK
+    local c = mcmath.containers[contDD.selected or 1]
+    return st, c
+end
+
+local function calcBaus()
+    local st, c = baseBau()
+    local n = math.max(0, math.floor(tonumber(itensBox.text) or 0))
+    resBau.text = n .. " itens = " .. mcmath.describe(n, st, c.slots, c.name:lower(), c.plural)
+    local quantos = math.max(0, math.floor(tonumber(recBox.text) or 0))
+    capBau.text = "= " .. mcmath.capacity(quantos, st, c.slots) .. " itens"
+    estadoBaus.text = string.format(" %s: %d slots x %d = %d itens por %s",
+        c.name, c.slots, st, c.slots * st, c.name:lower())
+    f.dirty = true
+end
+
+-- Le tudo que estiver ligado ao computador. O CC nao diz o tamanho de stack de cada item,
+-- entao a conta usa o tamanho escolhido em cima, e nao o do jogo.
+local function lerBaus()
+    local st, c = baseBau()
+    local ok, itens = pcall(hal.items)
+    if not ok or type(itens) ~= "table" then
+        ui.msgbox("Nao consegui ler: " .. tostring(itens), "Baus")
+        return
+    end
+    local linhas = {}
+    for id, info in pairs(itens) do
+        linhas[#linhas + 1] = { nome = strutil.itemName(info.name or id), n = info.count or 0 }
+    end
+    table.sort(linhas, function(a, b) return a.n > b.n end)
+    if #linhas == 0 then
+        listaBau:setItems({ { nome = "nenhum inventario ligado no computador", n = -1 } })
+    else
+        listaBau:setItems(linhas)
+    end
+    f.dirty = true
+end
+
+do
+    f:add(ui.label { x = 1, y = 1, text = "Itens:", tab = "baus" })
+    itensBox = f:add(ui.textbox { x = 8, y = 1, w = 9, text = "1729", tab = "baus",
+        onEnter = calcBaus, onChange = calcBaus })
+    f:add(ui.label { x = 18, y = 1, text = "St:", tab = "baus" })
+    stackDD = f:add(ui.dropdown { x = 22, y = 1, w = 6, items = TAMANHOS, tab = "baus",
+        onChange = calcBaus })
+    f:add(ui.label { x = 29, y = 1, text = "Rec:", tab = "baus" })
+    do
+        local nomes = {}
+        for _, c in ipairs(mcmath.containers) do nomes[#nomes + 1] = c.name end
+        contDD = f:add(ui.dropdown { x = 34, y = 1, w = 14, items = nomes, tab = "baus",
+            onChange = calcBaus })
+    end
+
+    resBau = f:add(ui.label { x = 1, y = 2, w = "fill", text = "", tab = "baus",
+        fg = theme.accent })
+
+    f:add(ui.label { x = 1, y = 3, text = "Recip:", tab = "baus" })
+    recBox = f:add(ui.textbox { x = 8, y = 3, w = 6, text = "3", tab = "baus",
+        onEnter = calcBaus, onChange = calcBaus })
+    capBau = f:add(ui.label { x = 15, y = 3, w = -30, text = "", tab = "baus" })
+    f:add(ui.button { right = 1, y = 3, text = "&Ler baus", tab = "baus", onClick = lerBaus })
+
+    estadoBaus = f:add(ui.label { x = 1, bottom = 1, w = "fill", text = "", tab = "baus",
+        bg = theme.taskbarBg, fg = theme.taskbarFg })
+    listaBau = f:add(ui.list { x = 1, y = 5, w = "fill", fillTo = estadoBaus, tab = "baus",
+        items = { { nome = "clique em Ler baus para contar o que esta ligado no computador",
+            n = -1 } },
+        render = function(it)
+            local largura = (tonumber(listaBau.w) or 40) - 1
+            if it.n < 0 then return " " .. it.nome end
+            local st, c = baseBau()
+            local dir = mcmath.describe(it.n, st, c.slots, c.name:lower(), c.plural)
+            local espaco = largura - #dir - 2
+            if espaco < 6 then return " " .. strutil.ellipsis(it.nome .. " " .. dir, largura) end
+            return " " .. strutil.pad(strutil.ellipsis(it.nome, espaco), espaco) .. " " .. dir
+        end })
+end
+
 f.onDraw = function(_, t)
     if mode == "blocos" then drawPreview(t)
     elseif mode == "grafico" then drawGrafico(t) end
@@ -527,6 +613,7 @@ setMode("conta")
 f:layout()
 gerar()
 redesenhar()
+calcBaus()
 refreshStatus()
 f:setFocus(box)
 f:run()

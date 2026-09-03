@@ -4,7 +4,7 @@
   "files": [
     {
       "path": "os/apps/calc.lua",
-      "sha1": "211b20f675ae2d39bd03711d22648343259861cf"
+      "sha1": "c8fd465681df6302b3a4633af05cc6db47e3390e"
     },
     {
       "path": "os/apps/clock.lua",
@@ -164,7 +164,7 @@
     },
     {
       "path": "os/lib/mcmath.lua",
-      "sha1": "2198ce29da6ca31373cda0f5144dc954f8111c0d"
+      "sha1": "d043deccd115cbbb78736da8a5b27e8fe9786b2e"
     },
     {
       "path": "os/lib/pixel.lua",
