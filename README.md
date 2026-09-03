@@ -110,7 +110,7 @@ navegação completa por teclado.
 | `plot` | gráfico de função com eixos e escala |
 | `mcmath` | formas em bloco, stacks e recipientes |
 | `create` | razão de engrenagem e stress do mod Create |
-| `mesh` / `three` | malha 3D, câmera e rasterizador com z-buffer |
+| `mesh` / `three` | malha 3D, câmera e rasterizador por varredura com z-buffer |
 | `pixel` | canvas de sub-pixel (2x3 por célula) |
 | `vector` | rasterizador de vetor 2D |
 | `icons` | ícones `.nfp` de 12x12 |
@@ -118,6 +118,21 @@ navegação completa por teclado.
 | `fsx`, `strutil`, `httpx`, `log` | arquivo, texto, HTTP e registro |
 | `shortcut`, `clip`, `props`, `fileops` | atalhos, área de transferência e operações de arquivo |
 | `chart`, `powah` | série temporal e reator do Powah |
+
+### 3D
+
+Motor próprio: malha com transformações encadeáveis, geradores sem arquivo (cubo, plano, grade,
+voxel), câmera com órbita e voo, corte no plano próximo, e rasterizador por varredura de linha com
+z-buffer, desenhando em sub-pixel. Escrito olhando a arquitetura do
+[Pine3D](https://github.com/Xella37/Pine3D), mas sem depender dele — o CLAUDE.md proíbe
+dependência externa, e o nosso instalador é travado por sha1.
+
+~877 mil triângulos por segundo no CraftOS-PC. Cada otimização tem previsão, medida e veredito em
+[docs/3d-medidas.md](docs/3d-medidas.md) — inclusive as previsões minhas que a medida refutou.
+
+Dois demos em [`os/demos/`](os/demos): cubo girando e um terreno com câmera livre. Eles não
+aparecem no menu Iniciar nem na pasta Programas: abra o Arquivos, vá em `/os/demos` e mande
+Executar.
 
 ### Rede
 
