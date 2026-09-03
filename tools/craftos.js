@@ -185,6 +185,17 @@ if (cmd === 'shot') {
     // x = 2 com 12 colunas por icone, entao ele cai em 38..48 tanto em 51x19 quanto em 80x30.
     programas: ['os.queueEvent("mouse_click", 1, 42, 4)', 'sleep(0.2)',
                 'os.queueEvent("mouse_click", 1, 42, 4)', 'sleep(2)'],
+    // A calculadora com historico de verdade: digita algumas contas antes da foto, senao
+    // o print e' so' uma janela vazia. `calcpad` abre o teclado de botoes com F2.
+    calc: ['local r = mosaic.require("apps.registry") r.open(r.byId("calc"))', 'sleep(1.5)',
+                'local function digita(s) for i = 1, #s do os.queueEvent("char", s:sub(i, i)) end os.queueEvent("key", keys.enter, false) sleep(0.6) end',
+                'digita("2(3+4)")', 'digita("raio = 12")', 'digita("2pi raio")',
+                'digita("5!+sqrt(81)")', 'digita("1/0")', 'sleep(0.5)'],
+    calcpad: ['local r = mosaic.require("apps.registry") r.open(r.byId("calc"))', 'sleep(1.5)',
+                'local function digita(s) for i = 1, #s do os.queueEvent("char", s:sub(i, i)) end os.queueEvent("key", keys.enter, false) sleep(0.6) end',
+                'digita("2(3+4)")', 'digita("raio = 12")', 'digita("2pi raio")',
+                'digita("5!+sqrt(81)")', 'digita("1/0")', 'sleep(0.5)',
+                'os.queueEvent("key", keys.f2, false)', 'sleep(1.2)'],
     startctx: ['local _, H = mosaic.screenSize()',
                'os.queueEvent("mouse_click", 1, 3, H)', 'sleep(1)',
                'os.queueEvent("mouse_click", 2, 5, 5)', 'sleep(1.5)'],

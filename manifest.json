@@ -4,7 +4,7 @@
   "files": [
     {
       "path": "os/apps/calc.lua",
-      "sha1": "eaa7d0244c073874b3dde01df9366d2cadbf87af"
+      "sha1": "a9b7bab5c47ea990d3a7cd9fdee951c41df5de84"
     },
     {
       "path": "os/apps/clock.lua",
@@ -60,7 +60,7 @@
     },
     {
       "path": "os/apps/registry.lua",
-      "sha1": "08b27ce66ef0e6cf93b33ca2848df27531b4d0fe"
+      "sha1": "b8ea2cc5719cafc9fdfc025a269bd43dafb9c51e"
     },
     {
       "path": "os/apps/remote.lua",
@@ -133,6 +133,10 @@
     {
       "path": "os/lib/clip.lua",
       "sha1": "c69862fa1502b00fd9c78ee80157426e94e67caa"
+    },
+    {
+      "path": "os/lib/expr.lua",
+      "sha1": "018473e79e0bda654f86d466f1252c711331a027"
     },
     {
       "path": "os/lib/fileops.lua",

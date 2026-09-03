@@ -18,7 +18,7 @@ registry.builtin = {
     { id = "settings", name = "Config", icon = "Cf", color = colors.gray, desktop = true, path = "/os/apps/settings.lua" },
     { id = "help", name = "Ajuda", icon = "?", color = colors.lightBlue, desktop = true, path = "/os/apps/help.lua" },
     { id = "notes", name = "Notas", icon = "No", color = colors.lime, path = "/os/apps/notes.lua" },
-    { id = "calc", name = "Calculadora", icon = "+-", color = colors.cyan, path = "/os/apps/calc.lua" },
+    { id = "calc", name = "Calculadora", icon = "+-", color = colors.cyan, path = "/os/apps/calc.lua", w = 50, h = 17 },
     { id = "clock", name = "Relogio", icon = "()", color = colors.blue, path = "/os/apps/clock.lua" },
     { id = "remote", name = "Controle remoto", icon = "Rm", color = colors.magenta, path = "/os/apps/remote.lua" },
     { id = "reactor", name = "Reator", icon = "Re", color = colors.red, path = "/os/apps/reactor.lua" },
