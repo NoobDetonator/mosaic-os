@@ -166,9 +166,16 @@ function shade.demo()
     assert(achouBase, "nenhuma face do cubo aponta para baixo")
 
     -- As seis faces cobrem as seis direcoes, cada uma com duas dos doze triangulos.
+    --
+    -- A chave sai de comparacao e nao de string.format: com "%.0f" o zero negativo vira "-0"
+    -- em algumas implementacoes de Lua e "0" em outras, e as duas metades de uma face caiam
+    -- em grupos diferentes. Passava no emulador em JS e falhava na ROM do CraftOS-PC.
+    local function eixo(v)
+        if v > 0.5 then return "+" elseif v < -0.5 then return "-" else return "0" end
+    end
     local dirs = {}
     for _, t in ipairs(c.tris) do
-        local k = string.format("%.0f,%.0f,%.0f", t[11], t[12], t[13])
+        local k = eixo(t[11]) .. eixo(t[12]) .. eixo(t[13])
         dirs[k] = (dirs[k] or 0) + 1
     end
     local quantas = 0

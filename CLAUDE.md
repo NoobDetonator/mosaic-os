@@ -102,6 +102,19 @@ Fatos do kernel que não são óbvios:
   de 10 mil. Em Lua sem JIT, abstração no caminho quente custa medivelmente caro.
 - **Descarte de face de costas é propriedade da malha** (`m.closed`), não bandeira global: `mesh.voxels` e
   `mesh.cube` se declaram fechados; `plane` e `grid` não, e com descarte sumiriam vistos por baixo.
+- **Não agrupe float por `string.format("%.0f")`.** O zero negativo vira `"-0"` em algumas
+  implementações de Lua e `"0"` em outras: um teste de normais passava no emulador em JS e falhava
+  na ROM do CraftOS-PC. Compare com `> 0.5` / `< -0.5`.
+- **Iluminação: o degrau mais escuro da rampa de cinza é preto, e o fundo do canvas 3D também.**
+  Face que cai nesse degrau some no fundo — o cubo do demo virou um losango achatado. Use
+  `ambiente >= 0.3` numa rampa de quatro, ou fundo que não seja preto.
+- **Luz direcional piora forma de voxel.** As faces são todas alinhadas aos eixos (seis normais),
+  e uma rampa de quatro degraus joga as terraças em tons muito diferentes. O `topo/lado/base` do
+  `mesh.voxels` é orientação, não direção, e por isso não cria assimetria. Medido e revertido.
+- **`palette.render3d` preenche os buracos da rampa de cinza** (marrom, roxo, magenta e rosa viram
+  48, 90, 160 e 224) sem tocar em preto, cinza, cinza claro e branco — a barra de tarefas e o relevo
+  não mudam. Aplique no terminal **raiz** (`term.native()`), não na janela: janela do CC guarda a
+  paleta só para si. Funciona porque o compositor não reempurra paleta, só faz `blit`.
 - **`pixel.cell6` recebe os seis sub-pixels soltos.** A versão com vetor custava doze operações de tabela por
   célula, e são 765 células numa tela. O laço de contagem é desenrolado de propósito.
 - **`w = "fill"` e `w = -3` só viram número quando `Form:layout` roda.** Ler `widget.w` antes disso dá a string,

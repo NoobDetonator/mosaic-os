@@ -208,7 +208,7 @@
     },
     {
       "path": "os/lib/shade.lua",
-      "sha1": "ff79f7a2e4df6b261f00825ee9e512692369a5c4"
+      "sha1": "2d5695e64b3ca077e01f0d8e9f09e41ea2fbc4d4"
     },
     {
       "path": "os/lib/shortcut.lua",
