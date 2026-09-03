@@ -7,8 +7,25 @@ sempre funcionam aqui: ls, edit, lua, pastebin, wget.
 
 ## Arquivos
 
-Navega pelo disco. Abre, renomeia, copia, move e apaga. Arquivo .lua
-abre no editor; .nfp abre no paint.
+Navega pelo disco, com uma barra lateral de Lugares (Inicio, Area de
+trabalho, Programas, Downloads, Imagens, Documentos e Apps) e de Discos.
+Disquete que entrar no drive aparece na lista de Discos, e a taskbar
+avisa.
+
+Abre, renomeia, copia, recorta, cola, apaga e cria atalho. O que abre
+cada tipo de arquivo esta numa tabela so, entao a area de trabalho e o
+menu Iniciar abrem igual: .lua pergunta se e para executar ou editar,
+.nfp vai para o paint, o resto para o editor.
+
+Teclas: F2 renomeia, Del apaga, Ctrl+X, Ctrl+C e Ctrl+V movem e copiam,
+Backspace sobe um nivel, F5 recarrega e F9 esconde a barra lateral. Em
+janela estreita ela se esconde sozinha.
+
+## Pastas
+
+Pasta aberta pela area de trabalho vira uma janela de icones, com a
+mesma grade da area de trabalho. Backspace sobe um nivel na mesma
+janela, para nao entulhar a taskbar.
 
 ## Editor
 
@@ -37,10 +54,15 @@ real ou hora do jogo), relay, rede e papel de parede.
 O botao Ver todas as opcoes lista tudo que comeca com mosaic. e deixa
 editar na mao. A tela rola: use a roda do mouse.
 
-## Notas, Calculadora, Relogio
+## Notas e Relogio
 
-Notas guarda texto em /home. A calculadora entende expressoes Lua e
-guarda o ultimo resultado em ans. O relogio mostra hora real e do jogo.
+Notas guarda texto em /home. O relogio mostra hora real e do jogo.
+
+## Calculadora
+
+Cinco abas: contas, formas em bloco com desenho e 3D, grafico de
+funcao, contas de stack e bau, e matematica do mod Create. Tem um
+capitulo so para ela mais adiante.
 
 ## Controle remoto
 

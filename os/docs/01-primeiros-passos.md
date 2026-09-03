@@ -5,11 +5,21 @@ Precisa ser um computador avancado (advanced) para ter mouse e cores.
 
 ## A area de trabalho
 
-Os icones abrem os programas com um clique. Clique com o botao
-DIREITO em qualquer lugar vazio para o menu de contexto: abrir um
-terminal, criar um programa novo, atualizar os icones ou ver a versao.
+A area de trabalho e a pasta /home/desktop. O que esta la e o que
+aparece na tela: atalho, pasta ou arquivo.
+
+Clique DUPLO abre. Clique simples so seleciona, e e assim de proposito:
+sem isso nao daria para escolher um icone para renomear ou apagar sem
+abrir o programa junto.
+
+Clique com o botao DIREITO em cima de um icone da: abrir, renomear,
+excluir e propriedades. No vazio da: nova pasta, novo atalho, novo
+programa, colar, atualizar, terminal, configuracoes e sobre.
 
 Pelo teclado, as setas andam pelos icones e Enter abre o selecionado.
+
+Para por um programa na area de trabalho, clique nele com o botao
+direito no menu Iniciar e escolha criar atalho.
 
 O nome do computador aparece no canto superior direito. Para trocar,
 va em Config.

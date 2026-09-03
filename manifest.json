@@ -80,11 +80,11 @@
     },
     {
       "path": "os/docs/01-primeiros-passos.md",
-      "sha1": "854ca8173bb7b73ad096d3caecd545f3213d43fe"
+      "sha1": "deb82d719413c889c86b2e053539cca5a324b31a"
     },
     {
       "path": "os/docs/02-aplicativos.md",
-      "sha1": "54c07a74f2736db492cdb5f0a18f3c6d71264ae0"
+      "sha1": "da3468365e850367f1de8581d1c79b8c9fce161c"
     },
     {
       "path": "os/docs/03-rede-e-relay.md",
@@ -101,6 +101,10 @@
     {
       "path": "os/docs/06-calculadora.md",
       "sha1": "6eacc5e063702b33abc613171dcd83fa170c2a38"
+    },
+    {
+      "path": "os/docs/07-estado-e-limites.md",
+      "sha1": "228c1881d4bc001bc8ebc9baff673906afa9c644"
     },
     {
       "path": "os/kernel/draw.lua",

@@ -231,7 +231,15 @@ if (cmd === 'shot') {
                'os.queueEvent("mouse_click", 1, 3, H)', 'sleep(1)',
                'os.queueEvent("mouse_click", 2, 5, 5)', 'sleep(1.5)'],
   };
-  const actions = special[arg] || (arg ? [`mosaic.launch("/os/apps/${arg}.lua")`, 'sleep(2)'] : []);
+  // Abre pelo registry quando o app tem entrada la: e assim que o usuario abre, com o
+  // titulo e o tamanho de janela certos. Sem isso o print mostrava "files" no lugar de
+  // "Arquivos", e numa janela menor que a de verdade.
+  const actions = special[arg] || (arg ? [
+    'local r = mosaic.require("apps.registry")',
+    `local a = r.byId("${arg}")`,
+    `if a then r.open(a) else mosaic.launch("/os/apps/${arg}.lua") end`,
+    'sleep(2)',
+  ] : []);
   if (arg && !special[arg] && !fs.existsSync(path.join(ROOT, 'os', 'apps', `${arg}.lua`))) {
     console.error(`nao existe os/apps/${arg}.lua`);
     process.exit(2);
