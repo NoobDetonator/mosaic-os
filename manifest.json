@@ -99,6 +99,10 @@
       "sha1": "abb39a18e5b79b0683dcba364005d6778fafd15a"
     },
     {
+      "path": "os/docs/06-calculadora.md",
+      "sha1": "6eacc5e063702b33abc613171dcd83fa170c2a38"
+    },
+    {
       "path": "os/kernel/draw.lua",
       "sha1": "08578b66029c47eaeb57818153e258843d51bc8b"
     },

@@ -83,6 +83,25 @@ Fatos do kernel que não são óbvios:
 - Ícone pequeno é `.nfp` (`lib/icons`, 12x12 = 6x4 células), **não** vetor: nesse tamanho cada ponto é uma decisão
   de desenho e rasterizar borra. `lib/vector` é para o que precisa mudar de tamanho (logo, gráfico).
 - Ícone não cabe na taskbar nem na barra de título: ocupa 4 linhas e essas barras têm 1.
+- **A calculadora não usa `load`.** `lib/expr` é um analisador descendente recursivo: precedência de verdade,
+  multiplicação implícita (`2pi`), fatorial, graus/radianos e variáveis. `expr.compile` prepara uma vez e
+  devolve só o avaliador — é o que o gráfico usa, porque reanalisar o texto a cada coluna custaria mais que o desenho.
+- **`expr.format` não usa `%g`.** O fengari devolve `100000000000000000000` onde o C devolveria `1e+20`.
+  São três implementações de Lua rodando este código; quando o formato importa, decida no Lua e não no `string.format`.
+- **O 3D é nosso (`lib/mesh` + `lib/three`), e o Pine3D continua proibido.** A arquitetura foi copiada dele
+  (quadro, câmera, objeto, modelo, buffer) mas o código não: ele é dependência externa instalada por pastebin, e
+  o nosso instalador é travado por sha1. Diferenças: saída em sub-pixel (102x57 em 51x19), z-buffer por ponto,
+  cores pela paleta do Mosaic. `mesh.voxels` emite só a face que dá para fora — a esfera de 15 tem 1791 blocos
+  e sai com 2124 triângulos em vez de 10746.
+- **Antes de mexer no 3D, rode `node tools/craftos.js bench`.** Medido no CraftOS-PC: cubo 0,18 ms, círculo 15
+  maciço 1,55 ms, esfera oca 15 inteira 6,60 ms, contra 50 ms de um tique. É por isso que a pré-visualização é
+  sólida e não arame.
+- **`w = "fill"` e `w = -3` só viram número quando `Form:layout` roda.** Ler `widget.w` antes disso dá a string,
+  e `"fill" - 2` derruba o app. Use `tonumber(w.w) or padrao` em qualquer código que rode antes do primeiro layout.
+- **`x` não é chave de ancoragem.** Só `w`, `h`, `right`, `bottom`, `above` e `fillTo` são. `x = -20` não encosta
+  nada na direita: desenha fora da tela.
+- **O teste de fumaça de app olha a tela, não só se o processo morreu.** Com `holdOnError` o processo fica vivo
+  mostrando o erro, então "não morreu" não prova nada.
 
 ## Como testar
 
