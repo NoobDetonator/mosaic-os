@@ -93,9 +93,17 @@ Fatos do kernel que não são óbvios:
   o nosso instalador é travado por sha1. Diferenças: saída em sub-pixel (102x57 em 51x19), z-buffer por ponto,
   cores pela paleta do Mosaic. `mesh.voxels` emite só a face que dá para fora — a esfera de 15 tem 1791 blocos
   e sai com 2124 triângulos em vez de 10746.
-- **Antes de mexer no 3D, rode `node tools/craftos.js bench`.** Medido no CraftOS-PC: cubo 0,18 ms, círculo 15
-  maciço 1,55 ms, esfera oca 15 inteira 6,60 ms, contra 50 ms de um tique. É por isso que a pré-visualização é
-  sólida e não arame.
+- **Antes de mexer no 3D, rode `node tools/craftos.js bench`** e leia [docs/3d-medidas.md](docs/3d-medidas.md),
+  onde cada otimização tem previsão, medida e veredito. Medido no CraftOS-PC: cubo 0,26 ms, círculo 15 maciço
+  1,00 ms, esfera oca 15 (3.768 triângulos) 4,70 ms, `canvas:render` 0,48 ms, contra 50 ms de um tique.
+  ~877 mil triângulos por segundo. O relatório sai em `/out/bench.txt` e uma cópia fica em `docs/bench-ultimo.txt`.
+- **O rasterizador é por varredura de linha, e o caminho comum não encosta em tabela.** Passar os vértices por um
+  vetor para dar conta do polígono cortado custou 21 operações de tabela por triângulo e **dobrou** o tempo da cena
+  de 10 mil. Em Lua sem JIT, abstração no caminho quente custa medivelmente caro.
+- **Descarte de face de costas é propriedade da malha** (`m.closed`), não bandeira global: `mesh.voxels` e
+  `mesh.cube` se declaram fechados; `plane` e `grid` não, e com descarte sumiriam vistos por baixo.
+- **`pixel.cell6` recebe os seis sub-pixels soltos.** A versão com vetor custava doze operações de tabela por
+  célula, e são 765 células numa tela. O laço de contagem é desenrolado de propósito.
 - **`w = "fill"` e `w = -3` só viram número quando `Form:layout` roda.** Ler `widget.w` antes disso dá a string,
   e `"fill" - 2` derruba o app. Use `tonumber(w.w) or padrao` em qualquer código que rode antes do primeiro layout.
 - **`x` não é chave de ancoragem.** Só `w`, `h`, `right`, `bottom`, `above` e `fillTo` são. `x = -20` não encosta

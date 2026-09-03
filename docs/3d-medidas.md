@@ -181,3 +181,41 @@ Custo por triangulo agora: `(12,15 − 1,40) / (10.082 − 968) = 1,18 µs`, ou 
 por segundo**, contra 1,69 µs e 590 mil da linha de base.
 
 O quadro do cubo no demo mede **0 ms** — abaixo da resolucao de milissegundo do `os.epoch`.
+
+---
+
+## Onda 2, hipoteses 1 e 4 — descarte de face e quadro guardado
+
+**1. Descarte de face de costas.** Agora quem decide e' a **malha**, pela marca `closed`, e nao
+uma bandeira global: `mesh.voxels` e `mesh.cube` se declaram fechados, `plane` e `grid` nao. Com
+z-buffer o descarte so' economiza tempo — desde que a malha seja mesmo fechada, e quem sabe
+disso e' ela. Plano e grade com descarte sumiriam vistos por baixo, o que e' certo para um
+terreno e errado para uma parede.
+
+Medido na esfera: **6,00 sem, 4,70 com** — 22%. Antes das outras otimizacoes era 25%; conforme
+o rasterizador barateou, a fatia que o descarte economiza encolheu, porque a transformacao dos
+tres vertices continua sendo paga antes do teste.
+
+**4. Guardar canvas e quadro entre desenhos** (`calc.lua` e os demos). Medido: **1,70 criando,
+1,55 reaproveitando**. Sao 0,15 ms, contra os 0,47 da linha de base — o proprio ganho encolheu
+porque tudo em volta ficou mais barato. Vale porque custa oito linhas.
+
+---
+
+## Onde a onda 2 terminou
+
+| Medida | base | agora | ganho |
+|---|---:|---:|---:|
+| `canvas:render` | 1,68 | 0,48 | 3,5x |
+| cubo, 12 tri | 1,22 | 0,26 | **4,7x** |
+| grade 7x7, 98 tri | 0,55 | 0,35 | 1,6x |
+| grade 22x22, 968 tri | 2,05 | 1,30 | 1,6x |
+| grade 71x71, 10.082 tri | 17,45 | 11,70 | 1,5x |
+| circulo 15, 828 tri | 2,20 | 1,00 | 2,2x |
+| esfera oca 15, 3.768 tri | 11,80 | 4,70 | **2,5x** |
+| quadro completo | 4,35 | 1,55 | **2,8x** |
+
+Custo por triangulo: **1,69 → 1,14 µs**, ou de 590 mil para **~877 mil triangulos por segundo**.
+
+O desenho nao mudou: o print do cubo antes e depois e' o mesmo, e o teste do z-buffer continua
+passando nas duas ordens de desenho.

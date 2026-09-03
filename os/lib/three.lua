@@ -218,17 +218,20 @@ three.clipNear = clipNear            -- exposto para o self-check
 -- objetos: { { model = , x = , y = , z = , rx = , ry = , rz = , scale = } , ... }
 -- As transformacoes do objeto sao aplicadas por vertice na hora, sem copiar o modelo.
 --
--- Sobre `cull`: com z-buffer, descartar face de costas so' economiza tempo, nao muda o
--- desenho. Medido: tira 25% do quadro, e nao os 50% que a contagem de faces sugere — a face
--- descartada ja pagou a transformacao dos tres vertices antes do teste de area.
+-- Sobre `cull`: quem decide e' a malha, pela marca `closed`, ou `opts.cull` quando o chamador
+-- quer mandar. Medido: tirava 25% do quadro quando o rasterizador era caro, e 13% depois que
+-- ele ficou barato — a face descartada ja pagou a transformacao dos tres vertices antes do
+-- teste de area, e essa parte nao some.
 function Frame:draw(objetos, opts)
     opts = opts or {}
     local pre = self:begin()
     local canvas, zb = self.canvas, self.zbuf
     local buf, W, H = canvas.buf, canvas.w, canvas.h
     canvas.blitCache = nil        -- o rasterizador escreve direto no buffer
-    local cull = opts.cull
-    if cull == nil then cull = self.cull end
+    -- Descarte de face de costas: `opts.cull` manda, senao a propria malha decide pela marca
+    -- `closed`. Com z-buffer isso so' economiza tempo, nao muda o desenho — desde que a malha
+    -- seja de fato fechada, e por isso quem sabe disso e' ela.
+    local cullOpt = opts.cull
     local near = three.NEAR
     local pcx, pcy, pesc = pre.cx, pre.cy, pre.escala
 
@@ -239,6 +242,8 @@ function Frame:draw(objetos, opts)
     for _, obj in ipairs(objetos) do
         local m = obj.model or obj[1]
         if m then
+            local cull = cullOpt
+            if cull == nil then cull = self.cull or m.closed end
             local ox, oy, oz = obj.x or 0, obj.y or 0, obj.z or 0
             local esc = obj.scale or 1
             local rx, ry, rz = obj.rx or 0, obj.ry or 0, obj.rz or 0

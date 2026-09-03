@@ -175,25 +175,32 @@ do
         frame:draw({ { model = mEsf } })
     end)
 
-    -- Descarte de face de costas: hoje desligado e sem nenhum chamador. E' a medida que
-    -- decide se ligar vale a pena.
-    bench("3D: esfera oca 15, com cull", 10, function()
+    -- A malha de voxel se declara fechada, entao a linha de cima ja mede COM descarte de
+    -- face de costas. Esta aqui desliga, para a comparacao continuar existindo.
+    bench("3D: esfera oca 15, sem cull", 10, function()
         frame:clear(colors.black)
-        frame:draw({ { model = mEsf } }, { cull = true })
+        frame:draw({ { model = mEsf } }, { cull = false })
     end)
 
     bench("3D: montar a malha da esfera", 5, function()
         mesh.voxels(esf.layers, esf.w, esf.h, esf.d, { maxFaces = 100000 })
     end)
 
-    -- O quadro inteiro do jeito que o app faz hoje: canvas e quadro novos toda vez.
-    bench("3D: quadro completo como o calc faz", 20, function()
+    -- Quadro inteiro, dos dois jeitos: criando canvas e quadro toda vez, e reaproveitando.
+    -- A diferenca e' exatamente o que o app ganha ao guardar os dois.
+    bench("3D: quadro criando canvas e frame", 20, function()
         local c = pixel.new(wm.W, wm.H - 4, colors.black)
         local f = three.frame(c)
         f:orbit({ 0, 0, 0 }, 2.2, 0.7, 0.5)
         f:clear(colors.black)
         f:draw({ { model = mCirc } })
         c:render(wm.canvas, 1, 1)
+    end)
+    bench("3D: quadro reaproveitando os dois", 20, function()
+        frame:orbit({ 0, 0, 0 }, 2.2, 0.7, 0.5)
+        frame:clear(colors.black)
+        frame:draw({ { model = mCirc } })
+        canvas:render(wm.canvas, 1, 1)
     end)
 end
 

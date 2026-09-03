@@ -15,8 +15,11 @@ local mesh = {}
 local Model = {}
 Model.__index = Model
 
-function mesh.new(tris)
-    return setmetatable({ tris = tris or {} }, Model)
+-- `closed` diz que a malha e' uma casca fechada, e portanto que descartar face de costas
+-- nao muda o desenho. Plano e grade sao abertos: com descarte eles somem vistos por baixo,
+-- que e' correto para um terreno e errado para uma parede.
+function mesh.new(tris, closed)
+    return setmetatable({ tris = tris or {}, closed = closed or false }, Model)
 end
 
 function mesh.isModel(m) return getmetatable(m) == Model end
@@ -40,7 +43,7 @@ function Model:clone()
     for i, t in ipairs(self.tris) do
         out[i] = { t[1], t[2], t[3], t[4], t[5], t[6], t[7], t[8], t[9], c = t.c }
     end
-    return mesh.new(out)
+    return mesh.new(out, self.closed)
 end
 
 function Model:translate(dx, dy, dz)
@@ -147,6 +150,7 @@ function mesh.cube(opts)
     m:quad(p(1, 0, 1), p(0, 0, 1), p(0, 1, 1), p(1, 1, 1), lado)
     m:quad(p(0, 0, 1), p(0, 0, 0), p(0, 1, 0), p(0, 1, 1), lado)
     m:quad(p(1, 0, 0), p(1, 0, 1), p(1, 1, 1), p(1, 1, 0), lado)
+    m.closed = true
     return m
 end
 
@@ -185,7 +189,7 @@ function mesh.voxels(layers, w, h, d, opts)
     local topo = opts.top or mesh.TOP
     local lado = opts.side or mesh.SIDE
     local base = opts.bottom or mesh.BOTTOM
-    local m = mesh.new()
+    local m = mesh.new(nil, true)     -- casca de voxel e sempre fechada
     local cortadas = 0
 
     local function cheio(x, y, z)
@@ -238,6 +242,10 @@ end
 function mesh.demo()
     local c = mesh.cube()
     assert(c:count() == 12, "um cubo sao 12 triangulos, deu " .. c:count())
+    assert(c.closed, "cubo e casca fechada")
+    assert(not mesh.plane().closed, "plano e aberto: com descarte sumiria visto por baixo")
+    assert(not mesh.grid(2, 2, function() return 0 end).closed, "grade e aberta")
+    assert(mesh.cube():clone().closed, "clone tem de manter a marca de fechada")
     local x0, y0, z0, x1, y1, z1 = c:bounds()
     assert(x0 == 0 and y0 == 0 and z0 == 0 and x1 == 1 and y1 == 1 and z1 == 1,
         "o cubo padrao deveria ir de 0 a 1 nos tres eixos")
