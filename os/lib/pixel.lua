@@ -19,31 +19,59 @@ Canvas.__index = Canvas
 -- e e por isso que a cor de fundo da celula sai dele.
 local BIT = { 1, 2, 4, 8, 16 }
 
--- Reduz os 6 sub-pixels de uma celula a duas cores. Devolve caractere, frente e fundo.
--- px vem na ordem dos BIT acima, com o inferior-direito em px[6].
-function pixel.cell(px)
-    local counts, order = {}, {}
-    for i = 1, 6 do
-        local c = px[i]
-        if counts[c] then counts[c] = counts[c] + 1
-        else counts[c] = 1 order[#order + 1] = c end
-    end
-    -- Duas cores dominantes. Percorre em ordem de aparicao para o empate ser previsivel.
-    local best, second
-    for _, c in ipairs(order) do
-        if not best or counts[c] > counts[best] then second = best best = c
-        elseif not second or counts[c] > counts[second] then second = c end
-    end
-    second = second or best
-    local function near(c) return (c == best or c == second) and c or best end
+-- Caractere pronto para cada combinacao de bits, e a letra de blit de cada cor. As duas
+-- tabelas sao montadas uma vez: string.char e colors.toBlit por celula, numa tela cheia,
+-- eram 765 chamadas por quadro.
+local CHARS = {}
+for code = 0, 31 do CHARS[code] = string.char(128 + code) end
 
-    local bg = near(px[6])
-    local fg = (bg == best) and second or best
-    local code = 0
-    for i = 1, 5 do
-        if near(px[i]) ~= bg then code = code + BIT[i] end
+local TOBLIT = {}
+for i = 0, 15 do TOBLIT[2 ^ i] = string.format("%x", i) end
+
+-- Rascunho reaproveitado. Nada aqui faz yield, entao nao ha reentrancia para atrapalhar.
+local ccount, corder = {}, {}
+
+-- Reduz os 6 sub-pixels de uma celula a duas cores. Devolve caractere, frente e fundo.
+-- A ordem e' superior-esq, superior-dir, meio-esq, meio-dir, inferior-esq, inferior-dir.
+--
+-- Recebe os seis valores soltos, e nao uma tabela: escrever e ler px[1..6] custava doze
+-- operacoes de tabela por celula, e sao 765 celulas numa tela cheia.
+function pixel.cell6(p1, p2, p3, p4, p5, p6)
+    -- Conta quantas vezes cada cor aparece, guardando a ordem de aparicao para o empate ser
+    -- previsivel. Desenrolado de proposito: um laco com `(i == 1 and p1) or ...` para pegar o
+    -- valor certo custaria mais que a tabela que estamos evitando.
+    local n, k = 0, nil
+    k = ccount[p1] if k then ccount[p1] = k + 1 else ccount[p1] = 1 n = n + 1 corder[n] = p1 end
+    k = ccount[p2] if k then ccount[p2] = k + 1 else ccount[p2] = 1 n = n + 1 corder[n] = p2 end
+    k = ccount[p3] if k then ccount[p3] = k + 1 else ccount[p3] = 1 n = n + 1 corder[n] = p3 end
+    k = ccount[p4] if k then ccount[p4] = k + 1 else ccount[p4] = 1 n = n + 1 corder[n] = p4 end
+    k = ccount[p5] if k then ccount[p5] = k + 1 else ccount[p5] = 1 n = n + 1 corder[n] = p5 end
+    k = ccount[p6] if k then ccount[p6] = k + 1 else ccount[p6] = 1 n = n + 1 corder[n] = p6 end
+
+    local melhor, segunda, qm, qs = nil, nil, -1, -1
+    for i = 1, n do
+        local c = corder[i]
+        local k = ccount[c]
+        ccount[c] = nil                     -- limpa aqui: o rascunho e reaproveitado
+        if k > qm then segunda, qs = melhor, qm melhor, qm = c, k
+        elseif k > qs then segunda, qs = c, k end
     end
-    return string.char(128 + code), fg, bg
+    if segunda == nil then segunda = melhor end
+
+    local bg = (p6 == melhor or p6 == segunda) and p6 or melhor
+    local fg = (bg == melhor) and segunda or melhor
+    local code = 0
+    if ((p1 == melhor or p1 == segunda) and p1 or melhor) ~= bg then code = code + 1 end
+    if ((p2 == melhor or p2 == segunda) and p2 or melhor) ~= bg then code = code + 2 end
+    if ((p3 == melhor or p3 == segunda) and p3 or melhor) ~= bg then code = code + 4 end
+    if ((p4 == melhor or p4 == segunda) and p4 or melhor) ~= bg then code = code + 8 end
+    if ((p5 == melhor or p5 == segunda) and p5 or melhor) ~= bg then code = code + 16 end
+    return CHARS[code], fg, bg
+end
+
+-- Forma antiga, com os seis num vetor. Mantida porque e' a que se le melhor.
+function pixel.cell(px)
+    return pixel.cell6(px[1], px[2], px[3], px[4], px[5], px[6])
 end
 
 function pixel.new(cols, rows, fill)
@@ -104,28 +132,33 @@ function Canvas:line(x0, y0, x1, y1, color)
     end
 end
 
+-- Rascunho das linhas: as tres tabelas sao reaproveitadas entre linhas e entre chamadas.
+-- O table.concat leva o limite explicito para sobra de uma linha maior nao entrar.
+local schars, sfgs, sbgs = {}, {}, {}
+
+-- Uma linha de celulas vira as tres strings do blit.
+local function linhaBlit(buf, by, cols)
+    local r1, r2, r3 = buf[by + 1], buf[by + 2], buf[by + 3]
+    for col = 1, cols do
+        local bx = (col - 1) * 2
+        local a, b = bx + 1, bx + 2
+        local ch, fg, bg = pixel.cell6(r1[a], r1[b], r2[a], r2[b], r3[a], r3[b])
+        schars[col] = ch
+        sfgs[col] = TOBLIT[fg] or colors.toBlit(fg)
+        sbgs[col] = TOBLIT[bg] or colors.toBlit(bg)
+    end
+    return table.concat(schars, "", 1, cols), table.concat(sfgs, "", 1, cols),
+        table.concat(sbgs, "", 1, cols)
+end
+
 -- Desenha o canvas num terminal, a partir da celula (ox, oy).
 function Canvas:render(t, ox, oy)
     ox, oy = ox or 1, oy or 1
-    local px = {}
+    local buf, cols = self.buf, self.cols
     for row = 1, self.rows do
-        local chars, fgs, bgs = {}, {}, {}
-        local by = (row - 1) * 3
-        for col = 1, self.cols do
-            local bx = (col - 1) * 2
-            px[1] = self.buf[by + 1][bx + 1]
-            px[2] = self.buf[by + 1][bx + 2]
-            px[3] = self.buf[by + 2][bx + 1]
-            px[4] = self.buf[by + 2][bx + 2]
-            px[5] = self.buf[by + 3][bx + 1]
-            px[6] = self.buf[by + 3][bx + 2]
-            local ch, fg, bg = pixel.cell(px)
-            chars[col] = ch
-            fgs[col] = colors.toBlit(fg)
-            bgs[col] = colors.toBlit(bg)
-        end
+        local ch, fg, bg = linhaBlit(buf, (row - 1) * 3, cols)
         t.setCursorPos(ox, oy + row - 1)
-        t.blit(table.concat(chars), table.concat(fgs), table.concat(bgs))
+        t.blit(ch, fg, bg)
     end
 end
 
@@ -134,24 +167,10 @@ end
 -- O cache morre em qualquer set/clear/rect/line (ver Canvas:touch).
 function Canvas:toBlit()
     if self.blitCache then return self.blitCache end
-    local out, px = {}, {}
+    local out, buf, cols = {}, self.buf, self.cols
     for row = 1, self.rows do
-        local chars, fgs, bgs = {}, {}, {}
-        local by = (row - 1) * 3
-        for col = 1, self.cols do
-            local bx = (col - 1) * 2
-            px[1] = self.buf[by + 1][bx + 1]
-            px[2] = self.buf[by + 1][bx + 2]
-            px[3] = self.buf[by + 2][bx + 1]
-            px[4] = self.buf[by + 2][bx + 2]
-            px[5] = self.buf[by + 3][bx + 1]
-            px[6] = self.buf[by + 3][bx + 2]
-            local ch, fg, bg = pixel.cell(px)
-            chars[col] = ch
-            fgs[col] = colors.toBlit(fg)
-            bgs[col] = colors.toBlit(bg)
-        end
-        out[row] = { table.concat(chars), table.concat(fgs), table.concat(bgs) }
+        local ch, fg, bg = linhaBlit(buf, (row - 1) * 3, cols)
+        out[row] = { ch, fg, bg }
     end
     self.blitCache = out
     return out

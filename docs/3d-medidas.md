@@ -109,3 +109,34 @@ hash em `self.cam` por vertice.
 
 **Licao:** em Lua sem JIT, o custo de uma abstracao no caminho quente e' medivel e grande. O
 caminho comum precisa ser plano.
+
+---
+
+## Onda 2, hipotese 6 — o `canvas:render`
+
+**Previsao:** tirar as alocacoes por celula ajuda. **Medido: 1,68 → 0,49 ms, 3,4 vezes.**
+**Confirmada, e era o maior custo fixo do quadro.**
+
+| Medida | antes | depois |
+|---|---:|---:|
+| `canvas:render` | 1,68 | **0,49** |
+| quadro completo do `calc` | 4,35 | **2,80** |
+
+O que estava caro, por celula, numa tela de 765 celulas:
+
+- `pixel.cell` alocava **duas tabelas** (contagem e ordem) e **uma closure** (`near`);
+- os seis sub-pixels iam e voltavam por um vetor `px[1..6]` — doze operacoes de tabela;
+- `string.char(128 + code)` e **duas** chamadas a `colors.toBlit`;
+- as tres tabelas de linha (`chars`, `fgs`, `bgs`) eram novas a cada linha.
+
+Agora: `pixel.cell6` recebe os seis valores soltos, o rascunho de contagem e' reaproveitado e
+limpo no proprio laco que escolhe as duas cores, e ha duas tabelas montadas uma vez — o
+caractere de cada combinacao de bits e a letra de blit de cada cor.
+
+**Uma tentativa intermediaria nao deu em nada, e vale registrar.** Ao tirar o vetor `px`, escrevi
+o laco de contagem como `for i = 1, 6 do local c = (i == 1 and p1) or (i == 2 and p2) or ... end`.
+Isso troca doze operacoes de tabela por trinta comparacoes: anula o ganho. Desenrolar as seis
+linhas na mao e feio de ler e e' o que faz o numero acontecer.
+
+Este ganho **nao e' so' do 3D**: papel de parede, icone montado do zero, grafico da calculadora
+e pre-visualizacao de blocos passam todos pelo mesmo caminho.

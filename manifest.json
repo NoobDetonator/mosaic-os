@@ -192,7 +192,7 @@
     },
     {
       "path": "os/lib/pixel.lua",
-      "sha1": "de743d4716222588b4c67c2bf897df0ecc8ab987"
+      "sha1": "7367efa8433a15b6b84be2936df3ca6bc6090b7e"
     },
     {
       "path": "os/lib/plot.lua",
