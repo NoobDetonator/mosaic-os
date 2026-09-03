@@ -76,3 +76,36 @@ quadro novos custa por quadro. Vale corrigir porque é barato, mas eu tinha prev
 
 O que eu não tinha percebido ao prever: o `clear` custa 0,13 ms, não os "11.600 escritas de tabela"
 que a contagem estática sugeria. Contar operação no papel não substitui medir.
+
+---
+
+## Onda 1 — corte no plano proximo
+
+| Medida | base | com corte (1a tentativa) | com corte (final) |
+|---|---:|---:|---:|
+| grade 71x71, 10.082 tri | 17,45 | **35,55** | 17,90 |
+| grade 22x22, 968 tri | 2,05 | 3,85 | 2,15 |
+| circulo 15, 828 tri | 2,20 | 4,25 | 2,05 |
+| esfera oca 15, 3.768 tri | 11,80 | 13,60 | **9,70** |
+| quadro completo do `calc` | 4,35 | 4,95 | 4,10 |
+
+### A primeira tentativa dobrou o tempo, e o motivo vale guardar
+
+Para cortar, o triangulo precisa virar um poligono de ate 4 vertices, e o jeito obvio de
+escrever isso e passar os vertices por um vetor: `poly[1..9]`, depois um laco projetando para
+`px[k]`, `py[k]`, `pw[k]`. Sao **21 operacoes de tabela por triangulo** — e eu as pagava em
+**todo** triangulo, mesmo nos 99,9% que nao precisam de corte nenhum.
+
+A cena de 10 mil triangulos foi de 17,45 para 35,55 ms. Exatamente o dobro.
+
+A correcao foi separar os dois caminhos: quando os tres vertices estao na frente da camera — o
+caso comum — os valores vao direto das variaveis locais para os argumentos do rasterizador, sem
+encostar em tabela nenhuma. O vetor so' existe no ramo raro.
+
+**E ai o quadro ficou mais rapido que antes do corte.** A esfera caiu de 11,80 para 9,70 ms, 18%.
+O ganho nao veio do corte: veio de a reestruturacao ter tirado `pcx`, `pcy` e `escala` de dentro
+da tabela `pre` para variaveis locais, e de `camX/camY/camZ` deixarem de ser tres leituras de
+hash em `self.cam` por vertice.
+
+**Licao:** em Lua sem JIT, o custo de uma abstracao no caminho quente e' medivel e grande. O
+caminho comum precisa ser plano.
