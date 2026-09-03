@@ -79,6 +79,14 @@
       "sha1": "e94b70f1e4bffb18bfcf1ac5b455db414d2637cf"
     },
     {
+      "path": "os/demos/cubo.lua",
+      "sha1": "3d8380062cba05c3720c1b16c8a4056c2d5646e0"
+    },
+    {
+      "path": "os/demos/terreno.lua",
+      "sha1": "e1569a16da4a34d3b30768eea097b71f7e446419"
+    },
+    {
       "path": "os/docs/01-primeiros-passos.md",
       "sha1": "deb82d719413c889c86b2e053539cca5a324b31a"
     },

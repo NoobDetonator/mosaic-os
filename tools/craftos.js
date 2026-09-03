@@ -239,6 +239,11 @@ if (cmd === 'shot') {
                 '  sleep(1)',
                 '  os.queueEvent("mouse_click", 1, p.x + 41, p.y + 1) end end',
                 'sleep(3)'],
+    // Demos 3D. Eles nao estao no registry de proposito, entao abrem pelo caminho mesmo.
+    cubo: ['mosaic.launchWith({ title = "Cubo 3D", w = 50, h = 17 }, "/os/demos/cubo.lua")',
+                'sleep(3)'],
+    terreno: ['mosaic.launchWith({ title = "Terreno", w = 50, h = 17 }, "/os/demos/terreno.lua")',
+                'sleep(3)'],
     startctx: ['local _, H = mosaic.screenSize()',
                'os.queueEvent("mouse_click", 1, 3, H)', 'sleep(1)',
                'os.queueEvent("mouse_click", 2, 5, 5)', 'sleep(1.5)'],

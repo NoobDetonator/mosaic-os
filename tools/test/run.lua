@@ -197,6 +197,21 @@ for _, name in ipairs(apps) do
     pump()
 end
 
+-- Demos 3D. Nao estao no registry de proposito (nao aparecem no Iniciar nem em Programas),
+-- entao nao entram no laco de cima: abrem pelo caminho.
+for _, nome in ipairs({ "cubo", "terreno" }) do
+    local dp = proc.launch("/os/demos/" .. nome .. ".lua", {}, { title = nome, x = 2, y = 2,
+        w = wm.W - 4, h = wm.H - 5 })
+    pump()
+    local tela = screen()
+    local ruim = tela:find("attempt to") or tela:find("Pressione qualquer tecla")
+    if dp.dead or ruim then snap() end
+    check(not dp.dead, "demo " .. nome .. " fechou sozinho ao abrir")
+    check(not ruim, "demo " .. nome .. " abriu com erro na tela")
+    proc.kill(dp)
+    pump()
+end
+
 -- 13. Bibliotecas carregam e funcionam
 local strutil = require("lib.strutil")
 check(strutil.bytes(2048) == "2.0 KB", "strutil.bytes errado: " .. strutil.bytes(2048))
