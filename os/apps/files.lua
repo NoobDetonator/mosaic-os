@@ -43,6 +43,49 @@ local bar = ui.row(f, { bottom = 1, items = {
     end },
 } })
 
+-- ---------------------------------------------------------------- barra lateral
+-- Lugares fixos e discos, como no Explorer. Ela entra ANTES do painel: o fillTo do painel
+-- so enxerga widget ja adicionado.
+local SIDE_W = 13
+local sideWanted = true    -- F9 liga e desliga
+
+-- Abaixo de 46 colunas a lateral come metade da tela e o painel fica inutilizavel
+-- (a 51 sobrariam 38, e o tools/debug.js roda a 36). Af ela some sozinha.
+local function sideVisible(W)
+    return sideWanted and W >= 46
+end
+
+local PLACES = {
+    { name = "Inicio", path = "home" },
+    { name = "Area trab.", path = "home/desktop" },
+    { name = "Programas", path = "home/programas" },
+    { name = "Downloads", path = "home/downloads" },
+    { name = "Imagens", path = "home/imagens" },
+    { name = "Documentos", path = "home/documentos" },
+    { name = "Apps", path = "apps" },
+}
+
+local side = f:add(ui.list { x = 1, y = 2, w = SIDE_W, fillTo = bar, activateOnClick = true })
+side.onLayout = function(self, W) self.visible = sideVisible(W) end
+
+local function sideItems()
+    local items = { { header = true, text = " Lugares" } }
+    for _, p in ipairs(PLACES) do
+        items[#items + 1] = { text = " " .. p.name, path = p.path }
+    end
+    items[#items + 1] = { separator = true }
+    items[#items + 1] = { header = true, text = " Discos" }
+    items[#items + 1] = { text = " Disco /", path = "" }
+    -- hal.drives() devolve os drives vazios tambem; so' o que tem disquete montado abre.
+    for _, d in ipairs(mosaic.lib("hal").drives()) do
+        if d.present and d.mount then
+            items[#items + 1] = { text = " " .. strutil.ellipsis(d.label or "Disquete", SIDE_W - 2),
+                                  path = d.mount:gsub("^/", ""), mount = d.mount }
+        end
+    end
+    return items
+end
+
 list = f:add(ui.list {
     x = 1, y = 2, w = "fill", fillTo = bar,
     render = function(item)
@@ -55,7 +98,25 @@ list = f:add(ui.list {
     end,
 })
 
+-- O painel ocupa o que a lateral deixar. Anchor nao resolve isso sozinho porque o x muda
+-- junto: quando a lateral some, ele volta a comecar na coluna 1.
+list.onLayout = function(self, W)
+    self.x = sideVisible(W) and (SIDE_W + 1) or 1
+    self.w = math.max(4, W - self.x + 1)
+end
+
+side.onActivate = function(_, item)
+    if not item or not item.path then return end
+    if not fs.isDir(item.path) and item.path ~= "" then
+        ui.msgbox("Essa pasta nao existe:\n/" .. item.path, "Lugares")
+        return
+    end
+    dir = item.path
+    refresh()
+end
+
 function refresh(keep)
+    side:setItems(sideItems(), true)
     local items = {}
     if dir ~= "" then items[1] = { up = true, name = "..", path = fs.getDir(dir), isDir = true } end
     for _, it in ipairs(fsx.listDetailed(dir)) do items[#items + 1] = it end
@@ -117,6 +178,20 @@ f.onEvent = function(_, ev, code)
     if ev == "key" and code == keys.backspace and dir ~= "" then
         dir = fs.getDir(dir)
         refresh()
+        return true
+    elseif ev == "key" and code == keys.f9 then
+        sideWanted = not sideWanted
+        f:layout()
+        f.dirty = true
+        return true
+    elseif ev == "key" and code == keys.f5 then
+        refresh(true)
+        return true
+    elseif ev == "disk" or ev == "disk_eject" then
+        -- Disquete entrou ou saiu: a lateral muda. Se voce estava DENTRO do que foi
+        -- ejetado, ficar la e' um beco sem saida — volta para casa.
+        if ev == "disk_eject" and dir ~= "" and not fs.isDir(dir) then dir = "home" end
+        refresh(true)
         return true
     elseif ev == "term_resize" then
         refresh(true)   -- o form ja reposicionou tudo; aqui so o texto do rodape muda

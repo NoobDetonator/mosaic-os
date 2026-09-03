@@ -255,15 +255,26 @@ Commit feito no meio da onda 2, para trocar de PC. `node tools/lint.js` limpo (4
 - `os/boot.lua` — cria as cinco pastas de `/home` e chama `registry.seed()`.
 - `registry.reseed()` — novo. Ver a armadilha do `seeded.json` abaixo.
 
+**Ondas 3 e 4 fechadas** (02/09) — 135 checagens, 0 falhas no emulador E no CraftOS-PC.
+- `launcher.lua` com `onContext`: Abrir, Criar atalho, Propriedades. O Iniciar SOBREVIVE ao
+  proprio menu de contexto (era a duvida do plano), e tem teste que falha se deixar de sobreviver.
+  O rotulo e "Criar atalho" e nao "Atalho na area de trabalho": o popup tem 24 colunas.
+- `files.lua` com barra lateral: Lugares (7) + Discos, `hal.drives()`, F9, e ela some sozinha
+  abaixo de 46 colunas. O painel se reposiciona pelo gancho `w.onLayout` do form.
+- `api.screenSize()` novo, e `ui.list` ganhou `header` (cabecalho de secao que nao seleciona).
+
 ## Falta fazer, nesta ordem
 
-1. Onda 3 restante: `os/apps/launcher.lua` com `onContext` (atalho na area de trabalho +
-   propriedades).
-2. Onda 4: barra lateral do `files.lua` (Lugares + Discos, `hal.drives()`, eventos de disquete,
-   `visible = false` com `W < 46`, F9).
-3. Onda 5: menus e teclas do `files.lua` (F2, Del, Ctrl+X/C/V, F5) sobre o `fileops`.
-4. Onda 6: `tools/test/run.lua` (demos de shortcut/clip/props/fileops), doc em `os/docs/`,
+1. Onda 5: menus e teclas do `files.lua` (F2, Del, Ctrl+X/C/V) sobre o `fileops` — hoje o
+   `files.lua` ainda tem o menu de contexto ANTIGO, escrito na mao, em vez do `fileops.itemMenu`.
+   F5 e Backspace ja existem.
+2. Onda 6: `tools/test/run.lua` (demos de shortcut/clip/props/fileops), doc em `os/docs/`,
    `CLAUDE.md`, `node tools/manifest.js`. O smoke test do `folder` ja entrou.
+
+**Nao testado, e nao da para testar aqui:** disquete. O emulador em JS tem `disk.isPresent`
+fixo em `false` e o CraftOS-PC precisaria de uma imagem de disquete montada. O codigo trata
+`disk`/`disk_eject` e volta para `/home` se a pasta aberta sumir, mas isso so' se confirma
+no jogo.
 
 ## Armadilhas encontradas (nao repetir)
 

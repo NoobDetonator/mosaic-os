@@ -20,7 +20,7 @@
     },
     {
       "path": "os/apps/files.lua",
-      "sha1": "744b4c661394478c888d0a0425fa806854a2d457"
+      "sha1": "4a7a1f550d8131175aca1200976ab2f69be99c1e"
     },
     {
       "path": "os/apps/folder.lua",
@@ -116,7 +116,7 @@
     },
     {
       "path": "os/kernel/ui.lua",
-      "sha1": "900aa9d665646704ddeb4caa2c66bab0879d4234"
+      "sha1": "7f5ae76275732a05346ba772a44597912d11ae26"
     },
     {
       "path": "os/kernel/wm.lua",

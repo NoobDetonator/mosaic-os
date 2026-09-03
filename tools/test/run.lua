@@ -452,6 +452,40 @@ pump()
 check(respondeu == false, "Esc devia responder nao")
 check(tiny.dead == true, "o dialogo apertado nao fechou")
 
+-- 16. Arquivos: barra lateral de Lugares e Discos, e o F9 que esconde
+local fl = proc.launch("/os/apps/files.lua", {}, { title = "Arquivos", x = 1, y = 1, w = wm.W, h = wm.H - 2 })
+pump()
+check(not fl.dead, "files morreu ao abrir")
+if screen():find("Lugares", 1, true) == nil then snap() end
+check(screen():find("Lugares", 1, true) ~= nil, "barra lateral sem a secao Lugares")
+check(screen():find("Discos", 1, true) ~= nil, "barra lateral sem a secao Discos")
+os.queueEvent("key", keys.f9, false)
+pump()
+check(screen():find("Lugares", 1, true) == nil, "F9 nao escondeu a barra lateral")
+os.queueEvent("key", keys.f9, false)
+pump()
+check(screen():find("Lugares", 1, true) ~= nil, "F9 nao trouxe a barra lateral de volta")
+proc.kill(fl)
+pump()
+
+-- 17. Lista: a seta nao pode travar em separador nem em cabecalho de secao.
+-- Antes disto select() so recusava o indice, entao apertar para baixo em cima de um
+-- separador nao fazia nada — e o menu Iniciar ja tinha um separador.
+local lw = window.create(wm.canvas, 1, 1, 20, 6, false)
+local lf = ui.form { term = lw }
+local ll = lf:add(ui.list { x = 1, y = 1, w = 20, h = 6, items = {
+    { header = true, text = "Secao" },
+    { text = "um" },
+    { separator = true },
+    { text = "dois" },
+} })
+ll:select(1)
+check(ll.selected == 2, "selecionar cabecalho devia cair no item seguinte: " .. tostring(ll.selected))
+ll:select(3)
+check(ll.selected == 4, "descer no separador devia pular para o proximo: " .. tostring(ll.selected))
+ll:select(1)
+check(ll.selected == 2, "subir ate o topo devia parar no item, nao no cabecalho: " .. tostring(ll.selected))
+
 -- Resultado
 term.redirect(term.native())
 term.setBackgroundColor(colors.black)

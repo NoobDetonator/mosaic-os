@@ -330,6 +330,8 @@ function List:draw(t)
         else
             t.setBackgroundColor(self.bg or theme.inputBg)
             t.setTextColor(self.fg or theme.inputFg)
+            -- Cabecalho de secao no fundo do chrome: destaca sem parecer selecionado.
+            if type(item) == "table" and item.header then t.setBackgroundColor(theme.face) end
             if type(item) == "table" and item.fg then t.setTextColor(item.fg) end
         end
         local s = item ~= nil and self:itemText(item) or ""
@@ -348,11 +350,29 @@ function List:draw(t)
         end
     end
 end
+-- Separador e cabecalho de secao existem para ler, nao para escolher.
+local function selectable(item)
+    return not (type(item) == "table" and (item.separator or item.header))
+end
+
 function List:select(idx, activate)
     if #self.items == 0 then self.selected = nil return end
     idx = math.max(1, math.min(idx, #self.items))
+    if not selectable(self.items[idx]) then
+        -- So' recusar o indice travava a seta em cima do separador: o usuario apertava
+        -- para baixo e nada acontecia. Anda na mesma direcao ate achar item de verdade,
+        -- e se nao houver, volta procurando para o outro lado.
+        local step = (self.selected and idx < self.selected) and -1 or 1
+        local j = idx + step
+        while j >= 1 and j <= #self.items and not selectable(self.items[j]) do j = j + step end
+        if j < 1 or j > #self.items then
+            j = idx - step
+            while j >= 1 and j <= #self.items and not selectable(self.items[j]) do j = j - step end
+        end
+        if j < 1 or j > #self.items then return end
+        idx = j
+    end
     local item = self.items[idx]
-    if type(item) == "table" and item.separator then return end
     local changed = idx ~= self.selected
     self.selected = idx
     self:ensureVisible()
