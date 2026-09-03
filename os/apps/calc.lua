@@ -12,6 +12,8 @@ local pixel = mosaic.lib("pixel")
 local plot = mosaic.lib("plot")
 local hal = mosaic.lib("hal")
 local createlib = mosaic.lib("create")
+local mesh = mosaic.lib("mesh")
+local three = mosaic.lib("three")
 
 local MAX_HIST = 200
 
@@ -25,6 +27,9 @@ local f = ui.form()
 local lista, box, estado, inserts
 local formaDD, ocoCB, espBox, dimBox, estadoBlocos
 local build, camada = nil, 1
+local tresD, malha, cortadas = false, nil, 0
+local giro, altura = 0.7, 0.5
+local tresDCB
 local fnBox, autoCB, estadoGraf
 local view = { x0 = -10, x1 = 10, y0 = -5, y1 = 5 }
 local curvas = {}
@@ -256,10 +261,31 @@ end
 
 local PREVIEW_TOP = 3
 
+-- A malha so' e' montada quando o 3D esta ligado: numa forma grande ela custa mais que o
+-- desenho, e no modo de camadas ninguem olha para ela.
+local function montarMalha()
+    if not build then malha = nil return end
+    local m, faltando = mesh.voxels(build.layers, build.w, build.h, build.d, { maxFaces = 6000 })
+    m:center():normalizeScale()
+    malha, cortadas = m, faltando
+end
+
+local function draw3D(t, cols, rows)
+    if not malha then montarMalha() end
+    if not malha then return end
+    local canvas = pixel.new(cols, rows, colors.black)
+    local frame = three.frame(canvas)
+    frame:orbit({ 0, 0, 0 }, 2.2, giro, altura)
+    frame:clear(colors.black)
+    frame:draw({ { model = malha } })
+    canvas:render(t, 1, PREVIEW_TOP)
+end
+
 local function drawPreview(t)
     local W, H = t.getSize()
     local cols, rows = W, H - PREVIEW_TOP - 1
     if not build or cols < 4 or rows < 2 then return end
+    if tresD then return draw3D(t, cols, rows) end
     local canvas = pixel.new(cols, rows, colors.black)
     local grid = build.layers[camada]
     if grid then
@@ -289,7 +315,11 @@ local function statusBlocos()
         mcmath.describe(build.total, mcmath.STACK, 27, "bau", "baus"),
         build.w .. "x" .. build.h .. "x" .. build.d,
     }
-    if build.h > 1 then
+    if tresD then
+        partes[#partes + 1] = (malha and malha:count() or 0) .. " tri"
+        if cortadas > 0 then partes[#partes + 1] = "CORTOU " .. cortadas .. " faces" end
+        partes[#partes + 1] = "setas giram"
+    elseif build.h > 1 then
         partes[#partes + 1] = "camada " .. camada .. "/" .. build.h .. " (" .. build.perLayer[camada] .. ")"
     end
     estadoBlocos.text = " " .. strutil.ellipsis(table.concat(partes, " | "),
@@ -304,6 +334,7 @@ local function gerar()
     })
     if not r then ui.msgbox(tostring(motivo), "Blocos") return end
     build = r
+    malha = nil
     camada = math.min(camada, r.h)
     -- Os campos voltam com o que a forma realmente usou: circulo ignora profundidade,
     -- esfera iguala os tres. Deixar o digitado na tela seria mentir sobre o desenho.
@@ -326,6 +357,13 @@ do
     f:add(ui.label { x = 29, y = 1, text = "Esp:", tab = "blocos" })
     espBox = f:add(ui.textbox { x = 34, y = 1, w = 5, text = "1", tab = "blocos",
         onEnter = function() gerar() end })
+    tresDCB = f:add(ui.checkbox { x = 40, y = 1, text = "&3D", tab = "blocos",
+        onChange = function(_, v)
+            tresD = v
+            if v and not malha then montarMalha() end
+            statusBlocos()
+            f.dirty = true
+        end })
 
     dimBox = {}
     local x = 1
@@ -701,6 +739,15 @@ f.onEvent = function(_, ev, a)
             elseif a == keys.down then pan(0, -0.2) return true
             elseif a == keys.pageUp then zoom(0.5) return true
             elseif a == keys.pageDown then zoom(2) return true
+            end
+        elseif mode == "blocos" and tresD and build then
+            local passo = 0.25
+            if a == keys.left then giro = giro - passo f.dirty = true return true
+            elseif a == keys.right then giro = giro + passo f.dirty = true return true
+            elseif a == keys.up then
+                altura = math.min(1.4, altura + passo) f.dirty = true return true
+            elseif a == keys.down then
+                altura = math.max(-1.4, altura - passo) f.dirty = true return true
             end
         elseif mode == "blocos" and build and build.h > 1 then
             if a == keys.pageUp then

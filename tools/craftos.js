@@ -215,6 +215,18 @@ if (cmd === 'shot') {
                 'for _, p in ipairs(mosaic.list()) do if p.title == "Calculadora" then',
                 '  os.queueEvent("mouse_click", 1, p.x + 39, p.y + p.h) end end',
                 'sleep(2)'],
+    // Blocos em 3D: abre a aba, gera uma cupula e liga a caixa 3D com Alt+3.
+    calc3d: ['local r = mosaic.require("apps.registry") r.open(r.byId("calc"))', 'sleep(1.5)',
+                'for _, p in ipairs(mosaic.list()) do if p.title == "Calculadora" then',
+                '  os.queueEvent("mouse_click", 1, p.x + 10, p.y + p.h)',
+                '  sleep(1)',
+                // abre a lista de formas e escolhe Esfera (6a linha), que rende mais em 3D
+                '  os.queueEvent("mouse_click", 1, p.x + 10, p.y + 1)',
+                '  sleep(1)',
+                '  os.queueEvent("mouse_click", 1, p.x + 10, p.y + 7)',
+                '  sleep(1)',
+                '  os.queueEvent("mouse_click", 1, p.x + 41, p.y + 1) end end',
+                'sleep(3)'],
     startctx: ['local _, H = mosaic.screenSize()',
                'os.queueEvent("mouse_click", 1, 3, H)', 'sleep(1)',
                'os.queueEvent("mouse_click", 2, 5, 5)', 'sleep(1.5)'],

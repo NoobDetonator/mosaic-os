@@ -12,6 +12,9 @@ local proc = require("kernel.proc")
 local pixel = require("lib.pixel")
 local iconlib = require("lib.icons")
 local vector = require("lib.vector")
+local mesh = require("lib.mesh")
+local three = require("lib.three")
+local mcmath = require("lib.mcmath")
 proc.api.ui = require("kernel.ui")
 proc.parentShell = shell
 wm.init(term.current())
@@ -101,6 +104,45 @@ bench("um passo do kernel (evento vazio)", 200, function()
     os.queueEvent("bench_ping")
     proc.step()
 end)
+
+-- ---------------------------------------------------------------- 3D
+-- A pergunta que decide o formato da pre-visualizacao: quanto custa um quadro. Um circulo
+-- de 15 e' o caso comum; uma esfera oca de 15 e' o caso ruim.
+do
+    local canvas = pixel.new(wm.W, wm.H - 4, colors.black)
+    local frame = three.frame(canvas)
+    frame:orbit({ 0, 0, 0 }, 2.2, 0.7, 0.5)
+
+    local cubo = mesh.cube():center()
+    bench("3D: um cubo (12 triangulos)", 50, function()
+        frame:clear(colors.black)
+        frame:draw({ { model = cubo } })
+    end)
+
+    local circ = mcmath.build("circulo", { w = 15 })
+    local mCirc = mesh.voxels(circ.layers, circ.w, circ.h, circ.d)
+    mCirc:center():normalizeScale()
+    results[#results + 1] = { name = "  (circulo 15: " .. mCirc:count() .. " triangulos)",
+        times = 1, total = 0, each = 0 }
+    bench("3D: circulo 15 macico", 20, function()
+        frame:clear(colors.black)
+        frame:draw({ { model = mCirc } })
+    end)
+
+    local esf = mcmath.build("esfera", { w = 15, hollow = true })
+    local mEsf, cortadas = mesh.voxels(esf.layers, esf.w, esf.h, esf.d, { maxFaces = 100000 })
+    mEsf:center():normalizeScale()
+    results[#results + 1] = { name = "  (esfera oca 15: " .. mEsf:count() .. " tri, " ..
+        esf.total .. " blocos, cortou " .. cortadas .. ")", times = 1, total = 0, each = 0 }
+    bench("3D: esfera oca 15 inteira", 5, function()
+        frame:clear(colors.black)
+        frame:draw({ { model = mEsf } })
+    end)
+
+    bench("3D: montar a malha da esfera", 5, function()
+        mesh.voxels(esf.layers, esf.w, esf.h, esf.d, { maxFaces = 100000 })
+    end)
+end
 
 -- ---------------------------------------------------------------- relatorio
 term.redirect(term.native())

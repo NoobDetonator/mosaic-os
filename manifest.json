@@ -4,7 +4,7 @@
   "files": [
     {
       "path": "os/apps/calc.lua",
-      "sha1": "08fe6dabf455def96137a6160348283d011b6932"
+      "sha1": "506c10eea2fc395e684f147ded6bc2c9687d17eb"
     },
     {
       "path": "os/apps/clock.lua",
@@ -171,6 +171,10 @@
       "sha1": "d043deccd115cbbb78736da8a5b27e8fe9786b2e"
     },
     {
+      "path": "os/lib/mesh.lua",
+      "sha1": "4d0716e8050801dfd5a47761812151df31d03050"
+    },
+    {
       "path": "os/lib/pixel.lua",
       "sha1": "de743d4716222588b4c67c2bf897df0ecc8ab987"
     },
@@ -193,6 +197,10 @@
     {
       "path": "os/lib/strutil.lua",
       "sha1": "db9e91b0458ba969b1ee2baa677957a67d1102fb"
+    },
+    {
+      "path": "os/lib/three.lua",
+      "sha1": "882aa0752db5e836f36831b1609573939a69dfa3"
     },
     {
       "path": "os/lib/vector.lua",
