@@ -7,6 +7,8 @@ local ui = mosaic.ui
 local theme = mosaic.theme
 local expr = mosaic.lib("expr")
 local strutil = mosaic.lib("strutil")
+local mcmath = mosaic.lib("mcmath")
+local pixel = mosaic.lib("pixel")
 
 local MAX_HIST = 200
 
@@ -17,7 +19,9 @@ local mode = "conta"
 local keypadOn = false
 
 local f = ui.form()
-local lista, box, estado, inserts, teclado
+local lista, box, estado, inserts
+local formaDD, ocoCB, espBox, dimBox, estadoBlocos
+local build, camada = nil, 1
 local abas = {}
 
 -- ---------------------------------------------------------------- conta
@@ -31,7 +35,7 @@ local function refreshStatus()
     local s = " " .. table.concat(partes, "  ")
     local marca = ctx.deg and "DEG" or "RAD"
     -- O modo de angulo fica encostado a direita; se o resto nao couber, ele e' o que fica.
-    local largura = estado.w or 20
+    local largura = tonumber(estado.w) or 20
     s = strutil.ellipsis(s, math.max(1, largura - #marca - 2))
     estado.text = strutil.pad(s, largura - #marca - 1) .. marca .. " "
 end
@@ -162,8 +166,9 @@ local function aba(label, m)
     return b
 end
 aba("Conta", "conta")
+aba("Blocos", "blocos")
 
-estado = f:add(ui.label { x = 1, bottom = 1, w = "fill", text = "",
+estado = f:add(ui.label { x = 1, bottom = 1, w = "fill", text = "", tab = "conta",
     bg = theme.taskbarBg, fg = theme.taskbarFg })
 f:add(ui.label { x = 1, bottom = 2, text = ">", tab = "conta" })
 box = f:add(ui.textbox { x = 3, bottom = 2, w = -3, tab = "conta",
@@ -207,7 +212,7 @@ local linhas = {
 lista = f:add(ui.list {
     x = 1, y = 1, w = "fill", tab = "conta",
     render = function(it)
-        local largura = (lista.w or 20) - 1
+        local largura = (tonumber(lista.w) or 20) - 1
         if not it.ok then
             -- Corta no fim, nao no meio: o comeco da mensagem e' o que diz o que houve.
             return " " .. strutil.pad(it.expr .. "  " .. it.texto, largura)
@@ -228,6 +233,105 @@ lista.onLayout = function(self, W, H)
     self.h = math.max(1, base - self.y)
 end
 
+-- ---------------------------------------------------------------- aba Blocos
+
+-- Quantos sub-pixels por bloco. Um bloco de 1 ponto vira ilegivel numa forma pequena, e
+-- 4 pontos numa forma grande nao caberia: o desenho escolhe a maior escala que couber.
+local function escala(canvas, r)
+    return math.max(1, math.min(math.floor(canvas.w / r.w), math.floor(canvas.h / r.d), 4))
+end
+
+local PREVIEW_TOP = 3
+
+local function drawPreview(t)
+    local W, H = t.getSize()
+    local cols, rows = W, H - PREVIEW_TOP - 1
+    if not build or cols < 4 or rows < 2 then return end
+    local canvas = pixel.new(cols, rows, colors.black)
+    local grid = build.layers[camada]
+    if grid then
+        local s = escala(canvas, build)
+        local ox = math.floor((canvas.w - build.w * s) / 2)
+        local oy = math.floor((canvas.h - build.d * s) / 2)
+        for z = 1, build.d do
+            local linha = grid[z]
+            for x = 1, build.w do
+                if linha[x] then
+                    for dy = 0, s - 1 do
+                        for dx = 0, s - 1 do
+                            canvas:set(ox + (x - 1) * s + dx + 1, oy + (z - 1) * s + dy + 1, colors.white)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    canvas:render(t, 1, PREVIEW_TOP)
+end
+
+local function statusBlocos()
+    if not build then estadoBlocos.text = " nada gerado ainda" return end
+    local partes = {
+        build.total .. " blocos",
+        mcmath.describe(build.total, mcmath.STACK, 27, "bau"),
+        build.w .. "x" .. build.h .. "x" .. build.d,
+    }
+    if build.h > 1 then
+        partes[#partes + 1] = "camada " .. camada .. "/" .. build.h .. " (" .. build.perLayer[camada] .. ")"
+    end
+    estadoBlocos.text = " " .. strutil.ellipsis(table.concat(partes, " | "),
+        (tonumber(estadoBlocos.w) or 40) - 2)
+end
+
+local function gerar()
+    local shape = mcmath.shapes[formaDD.selected or 1]
+    local r, motivo = mcmath.build(shape.id, {
+        w = tonumber(dimBox.w.text), h = tonumber(dimBox.h.text), d = tonumber(dimBox.d.text),
+        hollow = ocoCB.checked, thickness = tonumber(espBox.text),
+    })
+    if not r then ui.msgbox(tostring(motivo), "Blocos") return end
+    build = r
+    camada = math.min(camada, r.h)
+    -- Os campos voltam com o que a forma realmente usou: circulo ignora profundidade,
+    -- esfera iguala os tres. Deixar o digitado na tela seria mentir sobre o desenho.
+    dimBox.w:setText(tostring(r.w))
+    dimBox.h:setText(tostring(r.h))
+    dimBox.d:setText(tostring(r.d))
+    statusBlocos()
+    f.dirty = true
+end
+
+do
+    local nomes = {}
+    for _, sh in ipairs(mcmath.shapes) do nomes[#nomes + 1] = sh.name end
+
+    f:add(ui.label { x = 1, y = 1, text = "Forma:", tab = "blocos" })
+    formaDD = f:add(ui.dropdown { x = 8, y = 1, w = 12, items = nomes, selected = 3, tab = "blocos",
+        onChange = function() gerar() end })
+    ocoCB = f:add(ui.checkbox { x = 21, y = 1, text = "&Oco", tab = "blocos",
+        onChange = function() gerar() end })
+    f:add(ui.label { x = 29, y = 1, text = "Esp:", tab = "blocos" })
+    espBox = f:add(ui.textbox { x = 34, y = 1, w = 5, text = "1", tab = "blocos",
+        onEnter = function() gerar() end })
+
+    dimBox = {}
+    local x = 1
+    for _, campo in ipairs({ { "w", "L:" }, { "h", "A:" }, { "d", "P:" } }) do
+        f:add(ui.label { x = x, y = 2, text = campo[2], tab = "blocos" })
+        dimBox[campo[1]] = f:add(ui.textbox { x = x + 3, y = 2, w = 6, text = "15", tab = "blocos",
+            onEnter = function() gerar() end })
+        x = x + 10
+    end
+    f:add(ui.button { x = x + 1, y = 2, text = "&Gerar", tab = "blocos", onClick = gerar })
+
+    estadoBlocos = f:add(ui.label { x = 1, bottom = 1, w = "fill", text = "", tab = "blocos",
+        bg = theme.taskbarBg, fg = theme.taskbarFg })
+end
+
+f.onDraw = function(_, t)
+    if mode == "blocos" then drawPreview(t) end
+end
+
 -- ---------------------------------------------------------------- eventos
 
 f.onEvent = function(_, ev, a)
@@ -241,7 +345,14 @@ f.onEvent = function(_, ev, a)
             refreshStatus()
             f.dirty = true
             return true
-        elseif mode == "conta" and f.focused == box then
+        elseif mode == "blocos" and build and build.h > 1 then
+            if a == keys.pageUp then
+                camada = math.min(build.h, camada + 1) statusBlocos() f.dirty = true return true
+            elseif a == keys.pageDown then
+                camada = math.max(1, camada - 1) statusBlocos() f.dirty = true return true
+            end
+        end
+        if mode == "conta" and f.focused == box then
             if a == keys.up then recallStep(-1) return true
             elseif a == keys.down then recallStep(1) return true end
         end
@@ -251,6 +362,7 @@ end
 applyKeypad()
 setMode("conta")
 f:layout()
+gerar()
 refreshStatus()
 f:setFocus(box)
 f:run()

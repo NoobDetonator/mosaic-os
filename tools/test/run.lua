@@ -187,6 +187,12 @@ for _, name in ipairs(apps) do
     pump()
     if ap.dead then snap() end
     check(not ap.dead, "app " .. name .. " fechou sozinho ao abrir")
+    -- holdOnError deixa o processo vivo mostrando o erro, entao "nao morreu" nao basta:
+    -- foi assim que um erro de layout na calculadora passou batido.
+    local tela = screen()
+    local estourou = tela:find("attempt to") or tela:find("Pressione qualquer tecla")
+    if estourou then snap() end
+    check(not estourou, "app " .. name .. " abriu com erro na tela")
     proc.kill(ap)
     pump()
 end
@@ -222,7 +228,7 @@ local okPowah, errPowah = pcall(require("lib.powah").demo)
 check(okPowah, "powah.demo falhou: " .. tostring(errPowah))
 -- As libs de arquivo: atalho, area de transferencia, propriedades e as operacoes.
 -- Cada uma traz o proprio self-check; aqui so' se cobra que ele passe.
-for _, nome in ipairs({ "shortcut", "clip", "props", "fileops", "expr" }) do
+for _, nome in ipairs({ "shortcut", "clip", "props", "fileops", "expr", "mcmath" }) do
     local okLib, errLib = pcall(require("lib." .. nome).demo)
     check(okLib, nome .. ".demo falhou: " .. tostring(errLib))
 end

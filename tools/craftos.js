@@ -196,6 +196,12 @@ if (cmd === 'shot') {
                 'digita("2(3+4)")', 'digita("raio = 12")', 'digita("2pi raio")',
                 'digita("5!+sqrt(81)")', 'digita("1/0")', 'sleep(0.5)',
                 'os.queueEvent("key", keys.f2, false)', 'sleep(1.2)'],
+    // Aba Blocos. O clique vai na linha das abas da janela da calculadora, achada pelo
+    // mosaic.list() em vez de coordenada cravada: a janela nasce em cascata.
+    calcblocos: ['local r = mosaic.require("apps.registry") r.open(r.byId("calc"))', 'sleep(1.5)',
+                'for _, p in ipairs(mosaic.list()) do if p.title == "Calculadora" then',
+                '  os.queueEvent("mouse_click", 1, p.x + 10, p.y + p.h) end end',
+                'sleep(1.5)'],
     startctx: ['local _, H = mosaic.screenSize()',
                'os.queueEvent("mouse_click", 1, 3, H)', 'sleep(1)',
                'os.queueEvent("mouse_click", 2, 5, 5)', 'sleep(1.5)'],
