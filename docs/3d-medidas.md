@@ -402,3 +402,44 @@ maquina, nao o codigo.
 
 A licao vale mais que o numero: **este bench mede proporcao, nao valor absoluto**. Comparar duas
 medidas tiradas em dias diferentes nao diz nada. Antes e depois na mesma sessao, sim.
+
+
+## O modo grafico do CraftOS-PC, e por que ele nao entra
+
+Vale medir para saber o tamanho da tentacao, e vale registrar para ninguem cair nela.
+
+O CraftOS-PC tem um **modo grafico** que o CC:Tweaked do jogo nao tem: `term.setGraphicsMode`,
+`setPixel`, `drawPixels`, `getPixels`. Medido no CraftOS-PC 2.8.3 grafico, num terminal 51x19:
+
+| | modo grafico (emulador) | nosso sub-pixel (jogo) |
+|---|---:|---:|
+| resolucao | 306x171 | 102x57 |
+| pixels | 52.326 | 5.814 |
+| cores | 256, paletadas | 16 |
+| cores por celula | sem celula | **2** |
+| tela cheia | <1 ms (`drawPixels` com string) | 0,60 ms (`canvas:render`) |
+| tela cheia, um pixel por vez | 5,6 ms (`setPixel`) | — |
+
+Nove vezes mais pixels, dezesseis vezes mais cores, e o desenho sai por `memcpy` em C em vez de
+empacotar seis sub-pixels em um caractere de teletexto. Todo o trabalho do `pixel.lua` — o
+`cell6`, a escolha das duas cores, o `blit` por linha — existe **so'** porque o jogo nao tem isso.
+
+**E o jogo nao tem, em versao nenhuma.** O `term` do CC:Tweaked e' `write`, `blit`, `clear`,
+`setCursorPos`, as cores e a paleta. Nao existe funcao de pixel. Conferido na referencia do
+CC:Tweaked: zero ocorrencia de `setPixel`, `drawPixels` ou `GraphicsMode`.
+
+Duas observacoes que reforcam a decisao:
+
+- **O modo grafico ignora a arquitetura do WM.** Ele e' um plano de pixels global, nao por janela:
+  a propria documentacao diz que entrar nele esconde o terminal de texto e que os buffers da API
+  `window` nao sao limpos. Nao ha z-order, nao ha barra de tarefas, nao ha compositor. Adotar isso
+  seria jogar fora o `wm.lua` naquele modo.
+- **Nem dentro do CraftOS-PC ele e' estavel.** No headless, `term.getSize(1)` devolve 51x19 e nao
+  306x171 — nao ha superficie de pixel ali. Um caminho de desenho que so' funciona no modo grafico
+  do emulador nem pelo `craftos.js test` passaria.
+
+O caminho legitimo para mais area dentro do jogo e' **monitor**, e esse a onda 5 ja fez: um monitor
+102x38 na escala 0,5 da 204x114 pontos, 3,5 vezes a tela do computador, com as mesmas 16 cores.
+
+Para nao depender de ninguem lembrar disso, as dez funcoes entraram na lista de proibidos do
+`tools/lint.js`.

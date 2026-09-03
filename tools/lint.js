@@ -23,6 +23,16 @@ const FORBIDDEN = [
   [/\bexpect\.range\b/, 'cc.expect.range (CC:T 1.96)'],
   [/\bfs\.combine\s*\([^()]*,[^()]*,[^()]*\)/, 'fs.combine com >2 args (CC:T 1.95)'],
   [/\b(ws|socket|websocket)\.getResponseHeaders\s*\(/, 'Websocket.getResponseHeaders (CC:T 1.117)'],
+
+  // Extensoes SO' do CraftOS-PC: nao existem no CC:Tweaked dentro do Minecraft, em versao
+  // nenhuma. Como o desenvolvimento roda no CraftOS-PC elas funcionam aqui e somem no jogo,
+  // que e' o pior tipo de bug para descobrir. O modo grafico e' o mais tentador de todos:
+  // 306x171 pixels com 256 cores, contra os 102x57 de sub-pixel com 16 que o jogo da.
+  [/\bterm\.(setGraphicsMode|getGraphicsMode|setPixel|getPixel|drawPixels|getPixels)\b/,
+    'modo grafico: extensao do CraftOS-PC, nao existe no CC:T do jogo'],
+  [/\bterm\.(setFrozen|getFrozen|screenshot|showMouse|relativeMouse)\b/,
+    'extensao do CraftOS-PC, nao existe no CC:T do jogo'],
+  [/\bperiphemu\b|\bmounter\b/, 'periphemu/mounter: extensao do CraftOS-PC'],
 ];
 
 function walk(dir, out) {

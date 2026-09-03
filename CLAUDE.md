@@ -121,6 +121,15 @@ Fatos do kernel que não são óbvios:
   escrever um ângulo de luz solto foi o que deixou a casa cinza duas vezes. E a componente vertical da luz é 0,5 e
   não 0,8: o vetor é normalizado, então luz muito de cima não sobra para os lados e as duas paredes visíveis caem
   as duas em cima do corte do `applyTinted`.
+- **O modo gráfico do CraftOS-PC NÃO existe no jogo, e é a armadilha mais cara que este projeto tem.**
+  `term.setGraphicsMode`, `setPixel`, `drawPixels`, `getPixels`, `setFrozen`, `screenshot`, `showMouse`,
+  `relativeMouse`, `periphemu` e `mounter` são extensões do emulador. O `term` do CC:Tweaked **não tem
+  nenhuma função de pixel**, em versão nenhuma — a API inteira é `write`, `blit`, `clear`, `setCursorPos`,
+  as cores e a paleta. Como o desenvolvimento roda no CraftOS-PC, isso funcionaria aqui e sumiria no
+  servidor. O `tools/lint.js` barra todas.
+  Números, medidos: modo gráfico dá **306x171 = 52.326 pixels com 256 cores** (6x9 por célula de texto);
+  o nosso sub-pixel dá **102x57 = 5.814 com 16 cores, e só 2 por célula**. São 9x mais pixels e 16x mais
+  cores que o jogo não tem. O caminho legítimo para mais área in-game é **monitor**, não pixel.
 - **`Canvas:line` corta no retângulo ANTES do Bresenham** (Liang-Barsky). Sem isso o laço anda ponto a
   ponto fora da tela e o `Canvas:set` descarta em silêncio: uma aresta com vértice logo atrás da câmera
   projeta a milhões de pontos e **trava o computador nos 7 segundos**. É pré-requisito do modo arame,
