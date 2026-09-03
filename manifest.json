@@ -216,7 +216,7 @@
     },
     {
       "path": "os/lib/three.lua",
-      "sha1": "2877cb90b446b731c55bbaff3b605353d825efca"
+      "sha1": "d3d84431f45731f630e9571821ffb034bd8f1d15"
     },
     {
       "path": "os/lib/vector.lua",

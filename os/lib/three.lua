@@ -114,40 +114,66 @@ function Frame:clear(cor)
     return self
 end
 
--- Triangulo com z-buffer. A profundidade interpolada e' 1/z, que e' o que varia linearmente
--- na tela; interpolar z direto entortaria a comparacao nas faces inclinadas.
-local function raster(canvas, zb, x1, y1, w1, x2, y2, w2, x3, y3, w3, cor, cull)
+-- Triangulo com z-buffer, por varredura de linha.
+--
+-- A profundidade interpolada e' 1/z, que e' o que varia linearmente na tela; interpolar z
+-- direto entortaria a comparacao nas faces inclinadas. Como 1/z e' afim em x e y, os dois
+-- gradientes sao constantes do triangulo inteiro e o laco interno so' soma.
+--
+-- A versao anterior percorria a caixa envolvente testando as tres coordenadas baricentricas
+-- em cada ponto: 21 operacoes por ponto candidato, e a caixa de um triangulo tem cerca do
+-- dobro dos pontos que ele cobre. Aqui a varredura ja da o intervalo coberto.
+local floor, ceil, min, max = math.floor, math.ceil, math.min, math.max
+
+local function raster(buf, zb, W, H, x1, y1, w1, x2, y2, w2, x3, y3, w3, cor, cull)
     local area = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1)
     if area == 0 then return 0 end
     if cull and area > 0 then return 0 end
 
-    local W, H = canvas.w, canvas.h
-    local minx = math.max(1, math.floor(math.min(x1, x2, x3)))
-    local maxx = math.min(W, math.ceil(math.max(x1, x2, x3)))
-    local miny = math.max(1, math.floor(math.min(y1, y2, y3)))
-    local maxy = math.min(H, math.ceil(math.max(y1, y2, y3)))
-    if minx > maxx or miny > maxy then return 0 end
-
+    -- Plano de 1/z: w(x, y) = w1 + A*(x - x1) + B*(y - y1)
     local inv = 1 / area
-    local pintados = 0
-    for py = miny, maxy do
-        local rowbase = (py - 1) * W
-        for px = minx, maxx do
-            local b1 = ((x2 - px) * (y3 - py) - (y2 - py) * (x3 - px)) * inv
-            local b2 = ((x3 - px) * (y1 - py) - (y3 - py) * (x1 - px)) * inv
-            local b3 = 1 - b1 - b2
-            if b1 >= 0 and b2 >= 0 and b3 >= 0 then
-                local w = b1 * w1 + b2 * w2 + b3 * w3
-                local i = rowbase + px
+    local A = ((w2 - w1) * (y3 - y1) - (w3 - w1) * (y2 - y1)) * inv
+    local B = ((w3 - w1) * (x2 - x1) - (w2 - w1) * (x3 - x1)) * inv
+
+    -- Ordena os vertices por y: a em cima, c embaixo.
+    local ax, ay, bx, by, cx, cy = x1, y1, x2, y2, x3, y3
+    if ay > by then ax, ay, bx, by = bx, by, ax, ay end
+    if by > cy then bx, by, cx, cy = cx, cy, bx, by end
+    if ay > by then ax, ay, bx, by = bx, by, ax, ay end
+
+    local ytop = max(1, ceil(ay))
+    local ybot = min(H, floor(cy))
+    if ytop > ybot then return 0 end
+
+    -- Inclinacao das arestas: a longa (a-c) e as duas curtas (a-b e b-c).
+    local dAC = (cy ~= ay) and (cx - ax) / (cy - ay) or 0
+    local dAB = (by ~= ay) and (bx - ax) / (by - ay) or 0
+    local dBC = (cy ~= by) and (cx - bx) / (cy - by) or 0
+
+    local pintou = 0
+    for py = ytop, ybot do
+        local xl = ax + dAC * (py - ay)
+        local xr
+        if py < by then xr = ax + dAB * (py - ay) else xr = bx + dBC * (py - by) end
+        if xl > xr then xl, xr = xr, xl end
+        local pxi = max(1, ceil(xl))
+        local pxf = min(W, floor(xr))
+        if pxi <= pxf then
+            local row = buf[py]
+            local base = (py - 1) * W
+            local w = w1 + A * (pxi - x1) + B * (py - y1)
+            for px = pxi, pxf do
+                local i = base + px
                 if w > zb[i] then
                     zb[i] = w
-                    canvas:set(px, py, cor)
-                    pintados = pintados + 1
+                    row[px] = cor
                 end
+                w = w + A
             end
+            pintou = 1
         end
     end
-    return pintados
+    return pintou
 end
 
 -- ---------------------------------------------------------------- corte no plano proximo
@@ -199,6 +225,8 @@ function Frame:draw(objetos, opts)
     opts = opts or {}
     local pre = self:begin()
     local canvas, zb = self.canvas, self.zbuf
+    local buf, W, H = canvas.buf, canvas.w, canvas.h
+    canvas.blitCache = nil        -- o rasterizador escreve direto no buffer
     local cull = opts.cull
     if cull == nil then cull = self.cull end
     local near = three.NEAR
@@ -243,7 +271,7 @@ function Frame:draw(objetos, opts)
                     -- vertices por um vetor intermediario custou 21 operacoes de tabela por
                     -- triangulo e DOBROU o tempo da cena de 10 mil triangulos. Medido.
                     local ia, ib, ic = 1 / az, 1 / bz, 1 / cz
-                    raster(canvas, zb,
+                    raster(buf, zb, W, H,
                         pcx + ax * ia * pesc, pcy - ay * ia * pesc, ia,
                         pcx + bx * ib * pesc, pcy - by * ib * pesc, ib,
                         pcx + cx * ic * pesc, pcy - cy * ic * pesc, ic, cor, cull)
@@ -258,10 +286,10 @@ function Frame:draw(objetos, opts)
                             py[k] = pcy - poly[k * 3 - 1] * iz * pesc
                             pw[k] = iz
                         end
-                        raster(canvas, zb, px[1], py[1], pw[1], px[2], py[2], pw[2],
+                        raster(buf, zb, W, H, px[1], py[1], pw[1], px[2], py[2], pw[2],
                             px[3], py[3], pw[3], cor, cull)
                         if nv == 4 then
-                            raster(canvas, zb, px[1], py[1], pw[1], px[3], py[3], pw[3],
+                            raster(buf, zb, W, H, px[1], py[1], pw[1], px[3], py[3], pw[3],
                                 px[4], py[4], pw[4], cor, cull)
                         end
                         enviados = enviados + 1

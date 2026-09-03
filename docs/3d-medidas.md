@@ -140,3 +140,44 @@ linhas na mao e feio de ler e e' o que faz o numero acontecer.
 
 Este ganho **nao e' so' do 3D**: papel de parede, icone montado do zero, grafico da calculadora
 e pre-visualizacao de blocos passam todos pelo mesmo caminho.
+
+---
+
+## Onda 2, hipoteses 2 e 3 — o rasterizador
+
+**2. Escrever direto no buffer** em vez de passar por `canvas:set`. **Confirmada.**
+**3. Varredura de linha com passo de aresta** em vez de caixa envolvente com teste por ponto.
+**Confirmada, e foi a maior das duas.**
+
+| Medida | base | +render | +escrita direta | +varredura | ganho total |
+|---|---:|---:|---:|---:|---:|
+| cubo, 12 tri | 1,22 | 1,25 | 0,80 | **0,36** | **3,4x** |
+| grade 7x7, 98 tri | 0,55 | 0,60 | 0,60 | **0,35** | 1,6x |
+| grade 22x22, 968 tri | 2,05 | 2,30 | 2,30 | **1,40** | 1,5x |
+| grade 71x71, 10.082 tri | 17,45 | 17,75 | 17,55 | **12,15** | 1,4x |
+| circulo 15, 828 tri | 2,20 | 2,20 | 2,00 | **1,35** | 1,6x |
+| esfera oca 15, 3.768 tri | 11,80 | 9,50 | 9,00 | **6,10** | **1,9x** |
+| esfera oca 15 com cull | 8,90 | 8,50 | 6,10 | **5,30** | 1,7x |
+| quadro completo do `calc` | 4,35 | 2,80 | 2,70 | **2,10** | **2,1x** |
+
+### O que cada uma fez
+
+**Escrita direta** ajuda onde o preenchimento manda e quase nada onde manda o triangulo: o cubo
+caiu 36%, a grade de 10 mil triangulos caiu 1%. Faz sentido — `canvas:set` custava dois
+`math.floor`, quatro testes de limite e um `blitCache = nil` **por ponto**, para um trabalho que
+e' uma vez por quadro.
+
+**Varredura de linha** ajuda em tudo, porque tira duas coisas ao mesmo tempo: as 21 operacoes de
+teste de cobertura por ponto candidato, e os pontos da caixa envolvente que o triangulo nao
+cobre (perto da metade, num triangulo qualquer). O laco interno virou `if w > zb[i] then ... end;
+w = w + A`.
+
+Tambem sumiu um contador de pontos pintados que era incrementado **por ponto** e cujo valor de
+retorno ninguem lia.
+
+### Onde chegamos
+
+Custo por triangulo agora: `(12,15 − 1,40) / (10.082 − 968) = 1,18 µs`, ou **~847 mil triangulos
+por segundo**, contra 1,69 µs e 590 mil da linha de base.
+
+O quadro do cubo no demo mede **0 ms** — abaixo da resolucao de milissegundo do `os.epoch`.
