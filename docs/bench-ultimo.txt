@@ -1,0 +1,30 @@
+Mosaic bench - tela 51x19 (102 x 57 sub-pixels)
+
+abrir a area de trabalho             91.00 ms
+abrir o app Arquivos                  7.00 ms
+quadro do compositor (2 janelas)      0.14 ms  (0.14 a 0.14)
+quadro sem mudanca (so o diff)        0.14 ms  (0.14 a 0.15)
+icone ja no cache                     0.01 ms  (0.01 a 0.01)
+icone montado do zero                 0.20 ms  (0.20 a 0.25)
+canvas de tela cheia (fromImage)      1.40 ms
+vetor rasterizado (6x4 celulas)       0.10 ms
+um passo do kernel (evento vazio)     0.25 ms  (0.23 a 0.32)
+  (canvas 51x15 celulas = 4590 pontos)
+3D: clear (canvas + zbuf)             0.13 ms  (0.13 a 0.15)
+3D: canvas:render (a saida)           1.68 ms  (1.66 a 1.72)
+3D: cubo 12 tri, clear+draw           1.22 ms  (1.19 a 1.67)
+  (grade 7x7: 98 triangulos)
+3D: grade 7x7, clear+draw             0.55 ms  (0.55 a 0.60)
+  (grade 22x22: 968 triangulos)
+3D: grade 22x22, clear+draw           2.05 ms  (2.00 a 2.15)
+  (grade 71x71: 10082 triangulos)
+3D: grade 71x71, clear+draw          17.45 ms  (17.15 a 24.10)
+  (circulo 15: 828 triangulos)
+3D: circulo 15 macico                 2.20 ms  (2.05 a 2.55)
+  (esfera oca 15: 3768 tri, 530 blocos, cortou 0)
+3D: esfera oca 15                    11.80 ms  (11.40 a 12.70)
+3D: esfera oca 15, com cull           8.90 ms  (6.60 a 10.40)
+3D: montar a malha da esfera          5.60 ms  (4.20 a 6.20)
+3D: quadro completo como o calc fa    4.35 ms  (3.95 a 6.80)
+
+Referencia: um tique do Minecraft e 50 ms.

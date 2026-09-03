@@ -105,12 +105,24 @@ function writeSize() {
 
 if (cmd === 'bench') {
   resetComputer();
-  const { out } = run([...mounts(true), '--script', path.join(ROOT, 'tools', 'test', 'bench.lua')]);
-  // O headless repete a tela a cada mudanca; o relatorio final e o que interessa.
-  const lines = out.replace(/\r/g, '').split('\n').map((l) => l.replace(/\s+$/, ''));
-  const marks = lines.filter((l) => /^Mosaic bench/.test(l));
-  const start = marks.length ? lines.lastIndexOf(marks[marks.length - 1]) : 0;
-  console.log(lines.slice(start, start + 16).join('\n'));
+  // O relatorio sai por arquivo e nao pela tela: ele passou das 19 linhas do terminal e as
+  // medidas do fim rolavam para fora sem ninguem notar que faltavam.
+  const OUT = path.join(DATA, 'out');
+  fs.rmSync(OUT, { recursive: true, force: true });
+  fs.mkdirSync(OUT, { recursive: true });
+  run([...mounts(true), '--mount-rw', `/out=${OUT}`,
+    '--script', path.join(ROOT, 'tools', 'test', 'bench.lua')]);
+  const rel = path.join(OUT, 'bench.txt');
+  if (!fs.existsSync(rel)) {
+    console.error('O bench nao gerou /out/bench.txt - provavelmente quebrou antes do relatorio.');
+    process.exit(1);
+  }
+  const texto = fs.readFileSync(rel, 'utf8');
+  console.log(texto);
+  // Guarda a ultima medida, para dar diff entre uma otimizacao e outra.
+  const dest = positional[1] || path.join(ROOT, 'docs', 'bench-ultimo.txt');
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.writeFileSync(dest, texto);
   process.exit(0);
 }
 
