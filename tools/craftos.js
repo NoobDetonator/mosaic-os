@@ -180,6 +180,11 @@ if (cmd === 'shot') {
             'os.queueEvent("key", keys.enter, false)', 'sleep(2)'],
     // Menu Iniciar aberto e o clique direito num programa dele. A altura vem do proprio
     // terminal para o cenario valer em 51x19 e em 80x30 sem duas coordenadas cravadas.
+    // Abre a pasta Programas com clique duplo, para conferir todos os icones de uma vez.
+    // Programas e' o 4o icone (a pasta e listada em ordem alfabetica) e a grade comeca em
+    // x = 2 com 12 colunas por icone, entao ele cai em 38..48 tanto em 51x19 quanto em 80x30.
+    programas: ['os.queueEvent("mouse_click", 1, 42, 4)', 'sleep(0.2)',
+                'os.queueEvent("mouse_click", 1, 42, 4)', 'sleep(2)'],
     startctx: ['local _, H = mosaic.screenSize()',
                'os.queueEvent("mouse_click", 1, 3, H)', 'sleep(1)',
                'os.queueEvent("mouse_click", 2, 5, 5)', 'sleep(1.5)'],

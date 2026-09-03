@@ -79,7 +79,15 @@ end
 function registry.openFolder(path)
     local clean = "/" .. fs.combine(path, "")
     local name = fs.getName(clean)
-    return mosaic.launchWith({ title = name ~= "" and name or "Disco" }, registry.FOLDER_APP, clean)
+    -- A janela padrao e 70% da tela, e a grade e 12x5 por icone: a pasta Programas abria
+    -- mostrando 4 dos 12 programas. Este tamanho da 4 colunas por 3 linhas, os mesmos 12
+    -- lugares em 51x19 e em 80x30.
+    local W, H = mosaic.screenSize()
+    return mosaic.launchWith({
+        title = name ~= "" and name or "Disco",
+        w = math.max(26, math.min(W - 2, 50)),
+        h = math.max(11, math.min(H - 3, 16)),
+    }, registry.FOLDER_APP, clean)
 end
 
 function registry.openEditor(path)

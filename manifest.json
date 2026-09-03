@@ -60,7 +60,7 @@
     },
     {
       "path": "os/apps/registry.lua",
-      "sha1": "a239d3c8fcbe678f3fdbf7ba7f27e1e828615b9a"
+      "sha1": "08b27ce66ef0e6cf93b33ca2848df27531b4d0fe"
     },
     {
       "path": "os/apps/remote.lua",
@@ -220,7 +220,7 @@
     },
     {
       "path": "os/share/icons/files.nfp",
-      "sha1": "b03b434103346312f602a4c0ec36be587bcb76c5"
+      "sha1": "83f9ed83ded8967f1bf425dc96df5e4a39cc6e28"
     },
     {
       "path": "os/share/icons/folder.nfp",
