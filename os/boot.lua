@@ -45,9 +45,16 @@ proc.api.ui = require("kernel.ui")
 proc.parentShell = shell
 proc.init()
 
-for _, d in ipairs({ "/os/var", "/os/var/log", "/apps", "/home" }) do
+-- Sem acento em nome de pasta: a fonte do CC mapeia byte a byte e UTF-8 vira lixo na tela.
+for _, d in ipairs({ "/os/var", "/os/var/log", "/apps", "/home",
+                     "/home/desktop", "/home/programas", "/home/downloads",
+                     "/home/imagens", "/home/documentos" }) do
     if not fs.exists(d) then fs.makeDir(d) end
 end
+
+-- Semeia os atalhos das pastas recem-criadas. E' idempotente e tem memoria: atalho que
+-- voce apagou nao volta no proximo update (registry.SEED_FILE guarda o que ja foi semeado).
+require("apps.registry").seed()
 
 -- Area de trabalho: janela sem titulo, sempre ao fundo, nao fecha.
 proc.launch("/os/apps/desktop.lua", {}, {

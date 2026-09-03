@@ -246,25 +246,24 @@ Commit feito no meio da onda 2, para trocar de PC. `node tools/lint.js` limpo (4
   renomear, excluir, atalho na area de trabalho, colar) e os dois menus de contexto
   (`itemMenu`, `emptyMenu`). Ninguem chama ainda.
 
+**Onda 2 fechada** (02/09, no PC de casa) — 123 checagens, 0 falhas no emulador E no CraftOS-PC.
+- `os/apps/desktop.lua` — reescrito sobre o `ui.iconview` lendo `/home/desktop`. Cinco icones,
+  um deles a pasta Programas. Papel de parede, nome do computador e o "nao morre com terminate"
+  continuam. `disk`/`disk_eject` viram `mosaic.notify`.
+- `os/apps/folder.lua` — janela de pasta com rodape de contagem, Backspace sobe um nivel na
+  mesma janela e F5 atualiza.
+- `os/boot.lua` — cria as cinco pastas de `/home` e chama `registry.seed()`.
+- `registry.reseed()` — novo. Ver a armadilha do `seeded.json` abaixo.
+
 ## Falta fazer, nesta ordem
 
-1. **`os/apps/desktop.lua`** — reescrever em cima do `ui.iconview` lendo `/home/desktop`
-   (`fileops.entries`), ligando `onContext` em `fileops.itemMenu` e `onEmpty` em
-   `fileops.emptyMenu` com os extras da area de trabalho (Novo programa, Terminal,
-   Configuracoes, Sobre). Manter papel de parede, nome do computador e engolir `terminate`.
-   Tratar `disk`/`disk_eject` com `mosaic.notify`. Chamar `registry.seed()` em `apps_changed`.
-2. **`os/apps/folder.lua`** (novo) — `ui.iconview` + rodape de contagem, recebe o caminho por
-   argumento. **`registry.openFolder` ja aponta para ele**, entao hoje abrir uma pasta pelo
-   atalho quebra.
-3. **`os/boot.lua`** — criar `/home/{desktop,programas,downloads,imagens,documentos}` na lista
-   da linha 48 e chamar `registry.seed()` logo depois.
-4. Onda 3 restante: `os/apps/launcher.lua` com `onContext` (atalho na area de trabalho +
+1. Onda 3 restante: `os/apps/launcher.lua` com `onContext` (atalho na area de trabalho +
    propriedades).
-5. Onda 4: barra lateral do `files.lua` (Lugares + Discos, `hal.drives()`, eventos de disquete,
+2. Onda 4: barra lateral do `files.lua` (Lugares + Discos, `hal.drives()`, eventos de disquete,
    `visible = false` com `W < 46`, F9).
-6. Onda 5: menus e teclas do `files.lua` (F2, Del, Ctrl+X/C/V, F5) sobre o `fileops`.
-7. Onda 6: `tools/test/run.lua` (demos de shortcut/clip/props/fileops, smoke test do `folder`),
-   doc em `os/docs/`, `CLAUDE.md`, `node tools/manifest.js`.
+3. Onda 5: menus e teclas do `files.lua` (F2, Del, Ctrl+X/C/V, F5) sobre o `fileops`.
+4. Onda 6: `tools/test/run.lua` (demos de shortcut/clip/props/fileops), doc em `os/docs/`,
+   `CLAUDE.md`, `node tools/manifest.js`. O smoke test do `folder` ja entrou.
 
 ## Armadilhas encontradas (nao repetir)
 
@@ -279,5 +278,22 @@ Commit feito no meio da onda 2, para trocar de PC. `node tools/lint.js` limpo (4
   Reator. Enquanto o `desktop.lua` nao for reescrito, a area de trabalho mostra so' 4 icones e
   a pasta Programas nao existe. Nao e' bug, e' obra no meio.
 - **O `ui.iconview` abre com clique duplo**, e antes a area de trabalho abria com clique simples.
-  Foi de proposito (sem isso nao da para selecionar um icone para renomear sem abrir o programa),
-  mas e' uma mudanca de habito a confirmar com o usuario.
+  Foi de proposito (sem isso nao da para selecionar um icone para renomear sem abrir o programa).
+  **Confirmado com o usuario em 02/09: fica duplo mesmo.**
+
+- **O `craftos.js` monta `/os` da propria pasta do repositorio** (`--mount-rw /os=<repo>/os`),
+  entao tudo que o OS grava em `/os/var` cai no REPO e sobrevive ao `resetComputer()`. O
+  emulador em JS mapeia `os/var` para o sandbox dele, que e' apagado — por isso os dois
+  discordavam: no emulador a area de trabalho aparecia semeada e no CraftOS-PC vinha vazia,
+  porque o `seeded.json` do repo dizia "ja semeei" e o `/home` tinha acabado de ser apagado.
+  O `resetComputer()` agora limpa `os/var` tambem.
+
+- **Isso expos um problema de verdade, nao so' de teste:** perder `/home` com o `seeded.json`
+  intacto deixava a area de trabalho vazia PARA SEMPRE. Dai o `registry.reseed()`, que esquece
+  a memoria e semeia de novo. Ele so' e' chamado quando a pasta inteira sumiu; apagar UM atalho
+  continua sendo definitivo, como combinado.
+
+- **O relogio do emulador so' anda quando um timer dispara** (`clock = bestAt`). Dois cliques
+  separados por `proc.step()` ficam a um segundo um do outro e nunca passam pela janela de
+  0,5 s do clique duplo. No `tools/debug.js` use `40,4d`: ele enfileira os quatro eventos antes
+  de rodar o kernel, que e' o que acontece de verdade quando alguem clica rapido.

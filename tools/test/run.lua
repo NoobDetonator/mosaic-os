@@ -163,7 +163,7 @@ check(answer == true, "confirm nao devolveu true (" .. tostring(answer) .. ")")
 check(d.dead == true, "processo do dialogo nao terminou")
 
 -- 12. Todos os apps abrem sem quebrar
-local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman", "reactor" }
+local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman", "reactor", "folder" }
 for _, name in ipairs(apps) do
     local path = "/os/apps/" .. name .. ".lua"
     local ap = proc.launch(path, {}, { title = name, x = 2, y = 2, w = wm.W - 4, h = wm.H - 5 })

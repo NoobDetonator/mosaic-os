@@ -184,4 +184,13 @@ function registry.seed()
     return changed
 end
 
+-- Recomeco do zero: esquece o que ja foi semeado e semeia de novo.
+-- So serve para quando a PASTA INTEIRA da area de trabalho sumiu; apagar um atalho
+-- continua sendo definitivo, de proposito. Sem isso, quem perdesse /home ficaria com uma
+-- area de trabalho vazia para sempre, porque o seeded.json diria que ja foi semeada.
+function registry.reseed()
+    if fs.exists(registry.SEED_FILE) then fs.delete(registry.SEED_FILE) end
+    return registry.seed()
+end
+
 return registry

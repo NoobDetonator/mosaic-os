@@ -49,6 +49,11 @@ const COMPUTER = path.join(DATA, 'computer', '0');
 function resetComputer() {
   fs.rmSync(COMPUTER, { recursive: true, force: true });
   fs.mkdirSync(COMPUTER, { recursive: true });
+  // /os vem montado da propria pasta do repositorio, entao o que o OS grava em /os/var
+  // (seeded.json, logs) cai no repo e NAO morre com o computador. Sem limpar aqui, a
+  // execucao seguinte comeca com estado velho — foi assim que a area de trabalho apareceu
+  // vazia: o seeded.json dizia "ja semeei" e o /home tinha acabado de ser apagado.
+  fs.rmSync(path.join(ROOT, 'os', 'var'), { recursive: true, force: true });
   writeSize();
 }
 

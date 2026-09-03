@@ -12,7 +12,7 @@
     },
     {
       "path": "os/apps/desktop.lua",
-      "sha1": "e3586b776cc0f8df6fb07a9d5e03860aefe064cd"
+      "sha1": "ae6bc16dc4d5b93febc9c13c50639b83c045fdf9"
     },
     {
       "path": "os/apps/editor.lua",
@@ -21,6 +21,10 @@
     {
       "path": "os/apps/files.lua",
       "sha1": "744b4c661394478c888d0a0425fa806854a2d457"
+    },
+    {
+      "path": "os/apps/folder.lua",
+      "sha1": "1cba5ff3bd889a4b8d90886c6c8d7c0cad7117b5"
     },
     {
       "path": "os/apps/help.lua",
@@ -56,7 +60,7 @@
     },
     {
       "path": "os/apps/registry.lua",
-      "sha1": "eccada7f38e4b2f2355da298f63973eb2ee6ac72"
+      "sha1": "a239d3c8fcbe678f3fdbf7ba7f27e1e828615b9a"
     },
     {
       "path": "os/apps/remote.lua",
@@ -72,7 +76,7 @@
     },
     {
       "path": "os/boot.lua",
-      "sha1": "abf4cf64dcb9d67e81159cd6b3a463bf97b0f039"
+      "sha1": "e94b70f1e4bffb18bfcf1ac5b455db414d2637cf"
     },
     {
       "path": "os/docs/01-primeiros-passos.md",
@@ -276,19 +280,19 @@
     },
     {
       "path": "os/var/log/crash.log",
-      "sha1": "c438e211c4ca3d8719c61cad06165f11306aac76"
+      "sha1": "c015d30b0615c57e343caee4cf89cc031f633b5b"
     },
     {
       "path": "os/var/log/kernel.log",
-      "sha1": "b13414bedcd52a38e970e969509f92dec30b346d"
-    },
-    {
-      "path": "os/var/log/netd.log",
-      "sha1": "df7b67f424ff1bf952a277126b885600889d5f35"
+      "sha1": "8d77ec59a6c382152f9a645da515436538d7d761"
     },
     {
       "path": "os/var/log/teste.log",
-      "sha1": "9d7466f386047e5c7e55f012eccafaf58bfab543"
+      "sha1": "a5e712d26c6e273618883b7633620c115f7eec4d"
+    },
+    {
+      "path": "os/var/seeded.json",
+      "sha1": "4adb1725bb87cad4b41eb7067b991b759708a522"
     },
     {
       "path": "os/version.lua",

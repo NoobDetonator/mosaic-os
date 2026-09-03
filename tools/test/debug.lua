@@ -36,13 +36,21 @@ local ok, err = pcall(function()
     say("=== " .. target .. " (dead=" .. tostring(p.dead) .. ") ===")
     say(wm.screenshotText())
 
-    -- Cliques na tela, na ordem: "12,18" vira um clique em x=12 y=18.
+    -- Cliques na tela: "12,18" e um clique, "12,18d" e um clique DUPLO.
+    --
+    -- O duplo enfileira os quatro eventos antes de rodar o kernel de proposito. O relogio
+    -- do emulador so anda quando um timer dispara, entao dois cliques separados por
+    -- proc.step() ficam a um segundo um do outro e nunca passariam pela janela de 0,5 s
+    -- do iconview. Enfileirados juntos, a fila nao esvazia e o relogio fica parado --
+    -- que e o que acontece de verdade quando alguem clica rapido.
     for i = 2, #args do
-        local x, y = args[i]:match("^(%d+),(%d+)$")
+        local x, y, dbl = args[i]:match("^(%d+),(%d+)(d?)$")
         if x then
-            os.queueEvent("mouse_click", 1, tonumber(x), tonumber(y))
-            os.queueEvent("mouse_up", 1, tonumber(x), tonumber(y))
-            for _ = 1, 4 do proc.step() end
+            for _ = 1, (dbl == "d" and 2 or 1) do
+                os.queueEvent("mouse_click", 1, tonumber(x), tonumber(y))
+                os.queueEvent("mouse_up", 1, tonumber(x), tonumber(y))
+            end
+            for _ = 1, 6 do proc.step() end
             say("=== apos clicar em " .. args[i] .. " ===")
             say(wm.screenshotText())
         end
@@ -51,6 +59,14 @@ local ok, err = pcall(function()
     for _ = 1, 20 do os.queueEvent("mouse_scroll", 1, 10, 10) proc.step() end
     say("=== apos rolar ate o fim ===")
     say(wm.screenshotText())
+
+    -- Quem esta rodando no fim: revela janela que abriu (ou morreu) sem aparecer na foto.
+    local vivos = {}
+    for _, q in ipairs(proc.list()) do
+        vivos[#vivos + 1] = string.format("#%d %s%s%s", q.id, tostring(q.title),
+            q.dead and " MORTO" or "", q.hidden and " (oculto)" or "")
+    end
+    say("=== processos: " .. table.concat(vivos, " | ") .. " ===")
 end)
 if not ok then say("PCALL ERRO: " .. tostring(err)) end
 out.close()
