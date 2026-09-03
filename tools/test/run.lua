@@ -131,6 +131,23 @@ os.queueEvent("mouse_click", 1, wm.W - 2, 3)   -- clique no desktop
 pump()
 check(proc.startMenu.dead == true, "menu iniciar nao fechou ao perder foco")
 
+-- 8b. Clique direito no menu Iniciar abre o contexto SEM fechar o Iniciar.
+-- O kernel mata o popup quando o processo perde o foco; o menu de contexto e' uma
+-- janela filha do mesmo processo, e a duvida era justamente se isso bastava.
+os.queueEvent("mouse_click", 1, 3, wm.H)
+pump()
+check(proc.startMenu and not proc.startMenu.dead, "menu iniciar nao reabriu")
+os.queueEvent("mouse_click", 2, 5, 3)   -- botao 2 no primeiro item da lista
+pump()
+if screen():find("Criar atalho", 1, true) == nil then snap() end
+check(screen():find("Criar atalho", 1, true) ~= nil, "menu de contexto do Iniciar nao apareceu")
+check(not proc.startMenu.dead, "o Iniciar morreu ao abrir o proprio menu de contexto")
+os.queueEvent("key", keys.escape, false)
+pump()
+check(screen():find("Criar atalho", 1, true) == nil, "menu de contexto nao fechou com Esc")
+os.queueEvent("key", keys.escape, false)
+pump()
+
 -- 9. Shell interativo: digita um comando
 local sh = proc.launchShell { x = 2, y = 2, w = 40, h = 8 }
 pump()

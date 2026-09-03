@@ -32,7 +32,7 @@
     },
     {
       "path": "os/apps/launcher.lua",
-      "sha1": "b687654b64bce05d50af72565fd27bab86b883ea"
+      "sha1": "68730cd901ec8cae380d4e2fdb4ab76d8c7a36d1"
     },
     {
       "path": "os/apps/mirror.lua",
@@ -104,7 +104,7 @@
     },
     {
       "path": "os/kernel/proc.lua",
-      "sha1": "086cea0721c536fc257851be9ad0e34b63c20bef"
+      "sha1": "442dfec0a074e3f967488a4efe72845ba9e420bd"
     },
     {
       "path": "os/kernel/runner.lua",
@@ -277,22 +277,6 @@
     {
       "path": "os/share/vectors/logo.lua",
       "sha1": "99a3bdfec12a882d7bcbe0adaf87d7525b32ef72"
-    },
-    {
-      "path": "os/var/log/crash.log",
-      "sha1": "1001dfa39984c94cfb2203b7acc8f4fa7b36978b"
-    },
-    {
-      "path": "os/var/log/kernel.log",
-      "sha1": "01f17a88c91db1daf7fe16297ff33f9c9617da0d"
-    },
-    {
-      "path": "os/var/log/teste.log",
-      "sha1": "a990002d6c303df145ebfa6736ce0e2bd232b96c"
-    },
-    {
-      "path": "os/var/seeded.json",
-      "sha1": "ccfc0e735221e9f45b8d5a41af418dda969aa092"
     },
     {
       "path": "os/version.lua",

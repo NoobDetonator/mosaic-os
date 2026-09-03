@@ -176,6 +176,11 @@ if (cmd === 'shot') {
     about: ['os.queueEvent("mouse_click", 2, 30, 8)', 'sleep(1)',
             'os.queueEvent("key", keys["end"], false)', 'sleep(0.5)',
             'os.queueEvent("key", keys.enter, false)', 'sleep(2)'],
+    // Menu Iniciar aberto e o clique direito num programa dele. A altura vem do proprio
+    // terminal para o cenario valer em 51x19 e em 80x30 sem duas coordenadas cravadas.
+    startctx: ['local _, H = mosaic.screenSize()',
+               'os.queueEvent("mouse_click", 1, 3, H)', 'sleep(1)',
+               'os.queueEvent("mouse_click", 2, 5, 5)', 'sleep(1.5)'],
   };
   const actions = special[arg] || (arg ? [`mosaic.launch("/os/apps/${arg}.lua")`, 'sleep(2)'] : []);
   if (arg && !special[arg] && !fs.existsSync(path.join(ROOT, 'os', 'apps', `${arg}.lua`))) {

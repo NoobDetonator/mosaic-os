@@ -459,6 +459,10 @@ function api.holdOnError() return proc.current and proc.current.holdOnError or f
 function api.notify(text, secs) wm.toast(text, secs) dirty = true end
 function api.screenshot() return wm.screenshot() end
 function api.screenshotText() return wm.screenshotText() end
+-- Tamanho da TELA, nao da janela. term.getSize() dentro de um app devolve a janela dele,
+-- entao quem precisa se situar na tela inteira (a taskbar esta na ultima linha, por exemplo)
+-- nao tinha como saber.
+function api.screenSize() return wm.W, wm.H end
 function api.redraw() dirty = true end
 function api.daemon(name, path, ...) return proc.daemon(name, path, pack(...)).id end
 function api.exitToShell() exiting = true end
