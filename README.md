@@ -6,7 +6,7 @@ sem Basalt, sem Pine3D, sem nenhuma dependência externa. Alvo: **Minecraft 1.16
 
 ![versão](https://img.shields.io/badge/versão-0.2.0%20"Tessera"-blue)
 ![lua](https://img.shields.io/badge/Lua-5.1-000080)
-![testes](https://img.shields.io/badge/self--check-161%20checagens-008080)
+![testes](https://img.shields.io/badge/self--check-168%20checagens-008080)
 
 ![Área de trabalho](docs/img/desktop.png)
 
@@ -130,9 +130,26 @@ dependência externa, e o nosso instalador é travado por sha1.
 ~877 mil triângulos por segundo no CraftOS-PC. Cada otimização tem previsão, medida e veredito em
 [docs/3d-medidas.md](docs/3d-medidas.md) — inclusive as previsões minhas que a medida refutou.
 
-Dois demos em [`os/demos/`](os/demos): cubo girando e um terreno com câmera livre. Eles não
-aparecem no menu Iniciar nem na pasta Programas: abra o Arquivos, vá em `/os/demos` e mande
-Executar.
+**Modelo feito no Blender.** `node tools/obj.js modelo.obj` lê o `.obj` com o `.mtl` ao lado, casa
+a cor difusa de cada material com a paleta do Mosaic e grava a malha em `os/share/models/`. O
+arquivo é indexado, e não uma lista de triângulos prontos: a Suzanne tem 507 vértices para 968
+triângulos, e repetir cada vértice seis vezes custava 105 KB num computador que tem 1 MB de disco
+inteiro — indexada ela ocupa 33 KB e desenha em 3 ms.
+
+![Visualizador de modelos](docs/img/modelo.png)
+
+**Modo arame**, com a linha cortada no retângulo antes do Bresenham — sem esse corte uma aresta com
+um vértice logo atrás da câmera projeta a milhões de pontos e trava o computador nos 7 segundos.
+Arame só se lê com pouco polígono: com 968 triângulos as arestas se encostam e vira uma mancha.
+
+![Modo arame](docs/img/arame.png)
+
+**E sai da janelinha:** o visualizador joga o mesmo modelo num monitor. Medido no CraftOS-PC, um
+monitor 102x38 na escala 0,5 dá 204x114 pontos e custa 7 ms, contra 3 ms da janela.
+
+Três demos em [`os/demos/`](os/demos): cubo girando, terreno com câmera livre e o visualizador de
+modelos. Eles não aparecem no menu Iniciar nem na pasta Programas: abra o Arquivos, vá em
+`/os/demos` e mande Executar.
 
 ### Rede
 
@@ -187,7 +204,7 @@ os/lib/              bibliotecas (ver a tabela acima)
 os/net/              relay (websocket), netd (rednet)
 os/apps/             aplicativos
 os/docs/             manual lido pelo app Ajuda dentro do sistema
-os/share/            ícones .nfp e desenhos vetoriais
+os/share/            ícones .nfp, desenhos vetoriais e modelos 3D
 relay/               servidor Node + dashboard + MCP
 tools/               lint, emulador, testes, bench, gerador de manifest
 docs/img/            prints usados neste README
@@ -204,6 +221,7 @@ O manual completo está em [`os/docs/`](os/docs) e é lido pelo app **Ajuda** de
 5. [Arquivos e atalhos](os/docs/05-arquivos-e-atalhos.md)
 6. [Calculadora](os/docs/06-calculadora.md)
 7. [Estado e limites](os/docs/07-estado-e-limites.md)
+8. [Três dimensões](os/docs/08-3d.md)
 
 ## Licença
 

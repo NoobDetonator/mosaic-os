@@ -219,7 +219,7 @@ O caderno de medidas com previsao, medida e veredito de cada hipotese esta em
 [docs/3d-medidas.md](docs/3d-medidas.md). A ultima medida fica em `docs/bench-ultimo.txt`,
 e `docs/bench-base.txt` guarda a linha de base para dar diff.
 
-## Ondas 0 a 5: prontas
+## Ondas 0 a 6: prontas — o plano fechou
 
 **Onda 0 — a balanca.** `tools/test/bench.lua` reescrito: mediana de 5 rodadas com
 `collectgarbage()` antes de cada uma, min e max no relatorio, `clear` e `render` medidos
@@ -300,16 +300,38 @@ Junto veio um conserto que so' o arame revelou: a camera ficava a uma distancia 
 `normalizeScale` poe a MAIOR dimensao em 1, o que nao e' o mesmo que caber. Agora a distancia sai
 da esfera que envolve o modelo, contra a **menor** metade do canvas.
 
-**Demos prontos:** `os/demos/cubo.lua` (cubo girando, 20 fps, com luz que gira; C liga o descarte, R troca a rampa, P a paleta) e
-`os/demos/terreno.lua` (ruido de valor, 1.152 triangulos, camera WASD, iluminado com applyTinted) e `os/demos/modelo.lua`
-(visualizador: lista `/os/share/models`, N troca de modelo, A liga o arame, M joga no monitor,
-setas giram, espaco para). Nao aparecem
-no Iniciar nem em Programas de proposito: abrem pelo Arquivos em `/os/demos`. Os tres entram no
-teste de fumaca, num laco proprio.
+**Demos prontos**, tres:
 
-## Falta fazer, nesta ordem
+- `os/demos/cubo.lua` — cubo girando a 20 fps com a luz mudando de direcao. C liga o descarte de
+  face, R troca a rampa, P a paleta de oito degraus.
+- `os/demos/terreno.lua` — ruido de valor, 1.152 triangulos, camera WASD, iluminado com
+  `applyTinted`. E' o demo que prova o corte no plano proximo.
+- `os/demos/modelo.lua` — visualizador: lista `/os/share/models`, N troca de modelo, A liga o
+  arame, M joga no monitor, setas giram, espaco para.
 
-1. **Onda 6 — fechamento.** Doc em `os/docs/`, `CLAUDE.md`, manifest, push.
+Nenhum aparece no Iniciar nem em Programas, de proposito: abrem pelo Arquivos em `/os/demos`. Os
+tres entram no teste de fumaca, num laco proprio.
+
+**Onda 6 — fechamento.** Os tres demos entram no teste de fumaca e o `three.demo()` cobre corte
+e arame. O capitulo do usuario e' [os/docs/08-3d.md](os/docs/08-3d.md): os demos, as teclas, o
+caminho do Blender para ca, e o que o motor nao faz. O `CLAUDE.md` ganhou as convencoes (mao
+esquerda, +z para dentro, ordem dos cantos, `closed` medido) e as armadilhas. O caderno de
+medidas fechou com as ondas 4 e 5, inclusive os resultados negativos.
+
+## O que ficou de fora, e por que
+
+Nada disso e' pendencia: sao decisoes.
+
+- **Textura com UV** — decidido com voce na largada: nessa densidade vira chuvisco.
+- **Sombra projetada e transparencia** — a segunda nem existe no CC (nao ha alfa).
+- **Nivel de detalhe automatico** — o motor aguenta 10 mil triangulos; o problema seria disco,
+  nao quadro.
+- **Remocao de linha escondida no arame** — outro assunto, e o arame ja serve para o que serve.
+- **Pontilhado ciente da grade 2x3** — o caminho certo para gradiente de verdade. Anotado desde a
+  onda 3, e continua sendo a coisa mais interessante que sobrou.
+- **`os/demos/bancada.lua`** — a bancada de teste da onda 2 nao foi feita: o `bench` por arquivo
+  resolveu o mesmo problema sem interface.
+- **Fisica.**
 
 ## Armadilhas ja encontradas (nao repetir)
 

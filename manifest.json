@@ -119,6 +119,10 @@
       "sha1": "228c1881d4bc001bc8ebc9baff673906afa9c644"
     },
     {
+      "path": "os/docs/08-3d.md",
+      "sha1": "727d2ab3e4c65c59ddeac647eaa3c5ed7778e6f0"
+    },
+    {
       "path": "os/kernel/draw.lua",
       "sha1": "08578b66029c47eaeb57818153e258843d51bc8b"
     },

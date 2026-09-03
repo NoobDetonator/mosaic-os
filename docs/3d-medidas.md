@@ -271,3 +271,134 @@ lados ficam no mesmo tom, entao nao ha assimetria entre esquerda e direita e a t
 salta. Para forma escalonada, isso e' melhor que Lambert.
 
 Revertido na calculadora, mantido nos demos de cubo e terreno, onde ajuda.
+
+
+## Onda 4 — modelo do Blender
+
+Sem hipotese de velocidade nesta onda: o gargalo aqui e' **disco**, nao quadro.
+
+### Formato do arquivo: 105 KB -> 33 KB
+
+A Suzanne exportada da 5.2 tem **507 vertices e 968 triangulos**. Gravar cada triangulo com os
+nove numeros repete cada vertice em media seis vezes:
+
+| Formato | Tamanho | Suzanne |
+|---|---:|---|
+| triangulos com os nove numeros | 105 KB | o primeiro que escrevi |
+| indexado (`v` + `t`) | 33 KB | 3,2x menor |
+
+Nao e' detalhe: o computador do CC:T tem **1 MB de disco no total** e o OS inteiro ocupa ~610 KB.
+No formato antigo, um modelo comia 10% do disco da maquina.
+
+O desdobramento acontece uma vez, no `mesh.load`, e nao aparece na medida de quadro: o custo esta
+no carregamento e o rasterizador continua recebendo triangulos planos, do jeito que ele quer.
+
+### Desenho: 3 ms para 968 triangulos
+
+Bate com a varredura da onda 0 (o circulo de 828 triangulos dava 1,00 ms; a Suzanne tem mais
+cobertura de tela por triangulo). Dentro dos 50 ms de um tique com folga larga.
+
+### O que NAO funcionou: `applyTinted` sozinho num modelo colorido
+
+A casa de teste tem quatro materiais e apareceu **monocromatica**. O `applyTinted` mandava toda
+face fora da luz direta para cinza claro e cinza, entao vermelho, marrom e cinza viravam a mesma
+coisa assim que saiam do degrau mais claro.
+
+A saida foi `shade.darker`: o parente mais escuro de cada cor **dentro das 16** (vermelho ->
+marrom, lima -> verde, rosa -> magenta, azul claro -> ciano). O piso continua sendo o cinza e
+nunca o preto — cor ja escura demais para o fundo (azul, roxo, marrom) cai nele mesmo sendo mais
+clara, porque sumir no fundo e' pior que clarear.
+
+### O que NAO funcionou: luz parada num visualizador
+
+Tentei duas vezes deixar a luz girando por conta propria enquanto o modelo gira. Nas duas a casa
+apareceu **inteira cinza** no print — a segunda porque o sinal do angulo poe a luz exatamente
+atras do modelo. Num visualizador quem gira e' o modelo: a luz tem de sair da **mesma formula da
+camera** (`-sin`, `-cos`) mais um ombro.
+
+Junto: a componente vertical da luz precisou cair de 0,8 para 0,5. O vetor e' normalizado, entao
+luz muito de cima nao sobra para os lados, e as duas paredes visiveis (90 graus uma da outra, 45
+para a luz) caiam **as duas em 0,55** — exatamente em cima do corte do `applyTinted`.
+
+### Falso positivo na conferencia de normal
+
+O conversor confere a ordem dos cantos de cada face contra o `vn` do arquivo. Na Suzanne ele
+acusou duas faces invertidas; conferindo, sao duas lascas de **area 0,0006** cujo produto vetorial
+fica a 4 graus da normal declarada — ruido de arredondamento, nao erro de exportador.
+
+Corrigido com um corte: so' inverte com desacordo acima de uns 6 graus. Sem ele o aviso de "faces
+corrigidas" vira barulho e perde a serventia de apontar exportador estranho. A casa, que tem uma
+parede invertida de proposito, continua acusando as duas faces dela.
+
+## Onda 5 — arame e monitor
+
+### O corte de linha, medido pelo que ele evita
+
+O `Canvas:line` andava ponto a ponto mesmo fora da tela, com o `Canvas:set` descartando em
+silencio. Uma unica chamada `line(-100000, 3, 100000, 3)` faz **200 mil passos** de Bresenham num
+canvas de 8 pontos de largura: os 7 segundos do CC acabam antes. Com Liang-Barsky na frente, sao
+8 passos.
+
+Nao ha "antes e depois" em milissegundos aqui porque o antes **nao termina**. Esse e' o numero.
+
+### Arame e mais lento que preenchido: 6 ms contra 3
+
+Contrariou a intuicao, e o motivo e' simples depois de visto:
+
+- cada aresta entre duas faces e' desenhada **duas vezes**, uma por triangulo;
+- nao ha z-buffer para pular pixel ja coberto — no preenchido, metade dos pixels da Suzanne sai
+  no teste de profundidade;
+- e o descarte de face nao ajuda tanto: ele tira a face, mas as arestas dela costumam ser
+  compartilhadas com uma face visivel.
+
+Arame serve para ver a topologia de uma malha pequena, nao para ganhar velocidade.
+
+### Monitor: 204x114 pontos por 7 ms
+
+| Alvo | Pontos | Suzanne |
+|---|---:|---:|
+| janela 50x17 | 100x48 | 3 ms |
+| monitor 102x38 na escala 0,5 | 204x114 | 7 ms |
+
+Area 4,8x maior por 2,3x o tempo — o custo por ponto **cai**, porque o custo fixo por triangulo
+(transformar tres vertices, projetar, testar area) e' o mesmo nos dois. Ainda assim, 7 ms a cada
+quadro de 50 ms e' caro para um demo que tambem desenha na janela: o `modelo.lua` desenha no
+monitor a cada quarto quadro.
+
+### Enquadramento: `normalizeScale` nao e' o que parece
+
+Ele poe a **maior dimensao** em 1. Isso nao quer dizer que o modelo cabe: um cubo visto de canto
+ocupa a diagonal, 1,73. E a escala do `three` sai de `w/2` nos **dois** eixos (o sub-pixel do CC e'
+quadrado), entao numa janela mais larga que alta quem aperta e' a altura.
+
+Com distancia fixa de 1,7 a casa em arame saiu com os quatro cantos para fora da tela. A conta
+certa e' pela esfera que envolve o modelo, contra a **menor** metade do canvas:
+
+    dist = raio * begin().escala / (min(w, h) / 2) * 1,08
+
+Esfera e nao caixa: a caixa daria um enquadramento mais justo, mas mudaria a cada angulo, e
+enquadramento que respira e' pior que enquadramento folgado.
+
+
+## O preco do modo arame no caminho quente, e um aviso sobre a maquina
+
+O `wire` entrou como um `if` por triangulo dentro do laco mais quente do motor. Medido:
+
+| Cena | sem o `if` | com o `if` |
+|---|---:|---:|
+| grade 71x71, 10.082 triangulos | 15,25 ms | 15,95 ms |
+| circulo 15, 828 triangulos | 1,35 ms | 1,40 ms |
+
+**4,5% no pior caso**, 0,07 us por triangulo. Da' para zerar duplicando o laco inteiro em duas
+versoes, e nao vale: sao 60 linhas do codigo mais delicado do motor para ganhar 4,5% num cenario
+que ninguem desenha. Passar a decisao por uma funcao seria pior — a onda 2 ja mostrou que chamada
+por triangulo custa mais que ramo por triangulo.
+
+**Aviso para quem der diff no `bench-ultimo.txt`:** as medidas de hoje estao ~30% acima das da onda
+2 **no mesmo codigo**. Rodei o `three.lua` de antes do arame para conferir: a grade de 10 mil deu
+15,25 ms hoje contra 11,70 ms registrados na onda 2. O que subiu junto foi coisa que ninguem
+tocou — `um passo do kernel` (0,23 -> 0,28) e `icone montado do zero` (0,25 -> 0,35) —, entao e' a
+maquina, nao o codigo.
+
+A licao vale mais que o numero: **este bench mede proporcao, nao valor absoluto**. Comparar duas
+medidas tiradas em dias diferentes nao diz nada. Antes e depois na mesma sessao, sim.
