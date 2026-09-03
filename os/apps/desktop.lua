@@ -65,7 +65,7 @@ local function showAbout()
     }
     if not shape then ui.msgbox(table.concat(lines, "\n"), "Sobre") return end
     ui.dialog {
-        title = "Sobre", w = 40, h = 9,
+        title = "Sobre", w = 40, h = 10,
         build = function(form, dlg)
             form.onDraw = function(_, t)
                 t.setBackgroundColor(theme.dialogTitleBg)
@@ -74,11 +74,11 @@ local function showAbout()
                 t.write(ui.pad(" Sobre", dlg.w))
                 vector.draw(t, shape, 2, 3, 6, 4, theme.dialogBg)
             end
-            local y = dlg.contentY + 1
-            for _, line in ipairs(lines) do
-                form:add(ui.label { x = 10, y = y, w = dlg.w - 11, text = line })
-                y = y + 1
-            end
+            -- ui.text e nao label: o _HOST tem 40 caracteres ("ComputerCraft 1.101.3
+            -- (Minecraft 1.16.5)") e nao cabe na largura que sobra ao lado do logo.
+            -- Com label ele saia cortado no meio da palavra.
+            form:add(ui.text { x = 10, y = dlg.contentY + 1, w = dlg.w - 11, h = dlg.h - 4,
+                text = table.concat(lines, "\n"), focusable = false })
             form:add(ui.button { x = dlg.w - 6, y = dlg.h - 1, text = "&OK",
                 onClick = function() dlg.close(true) end })
             form.defaultButton = form.widgets[#form.widgets]

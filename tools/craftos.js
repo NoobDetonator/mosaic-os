@@ -77,7 +77,16 @@ const mounts = (rw) => [
 ];
 
 const cmd = process.argv[2] || 'test';
-const arg = process.argv[3] && !process.argv[3].startsWith('--') ? process.argv[3] : null;
+// Argumentos posicionais, pulando as opcoes e o valor delas. Sem isso o valor de
+// --size virava o nome do arquivo de saida do `shot`, e o print saia num arquivo
+// chamado "80x30".
+const positional = [];
+for (let i = 3; i < process.argv.length; i++) {
+  if (process.argv[i] === '--size' || process.argv[i] === '--rom') { i++; continue; }
+  if (process.argv[i].startsWith('--')) continue;
+  positional.push(process.argv[i]);
+}
+const arg = positional[0] || null;
 
 // Tamanho do terminal: o CraftOS-PC le de config/global.json na pasta de dados.
 const sizeArg = process.argv.indexOf('--size');
@@ -161,16 +170,19 @@ if (cmd === 'shot') {
   const special = {
     pointer: ['mosaic.togglePointer()', 'local p = mosaic.pointer()', 'p.x, p.y = 20, 8', 'sleep(1)'],
     // Clique direito na area de trabalho e depois "Sobre", para fotografar o dialogo com o logo.
-    // menu de 5 itens abre em (30,8); "Sobre" e o ultimo, na linha 12
+    // Escolhe pelo teclado (End vai para o ultimo item, que e' o Sobre) em vez de clicar numa
+    // linha fixa: o menu mudou de 5 para 9 itens quando a area de trabalho virou pasta, e a
+    // coordenada cravada passou a acertar "Atualizar".
     about: ['os.queueEvent("mouse_click", 2, 30, 8)', 'sleep(1)',
-            'os.queueEvent("mouse_click", 1, 32, 12)', 'sleep(2)'],
+            'os.queueEvent("key", keys["end"], false)', 'sleep(0.5)',
+            'os.queueEvent("key", keys.enter, false)', 'sleep(2)'],
   };
   const actions = special[arg] || (arg ? [`mosaic.launch("/os/apps/${arg}.lua")`, 'sleep(2)'] : []);
   if (arg && !special[arg] && !fs.existsSync(path.join(ROOT, 'os', 'apps', `${arg}.lua`))) {
     console.error(`nao existe os/apps/${arg}.lua`);
     process.exit(2);
   }
-  const file = bootAndShoot(actions, arg ? 2 : 3, process.argv[4]);
+  const file = bootAndShoot(actions, arg ? 2 : 3, positional[1]);
   if (!file) {
     console.error('O CraftOS-PC nao gerou o print. Ele precisa do modo grafico (nao roda headless).');
     process.exit(1);

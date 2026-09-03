@@ -12,7 +12,7 @@
     },
     {
       "path": "os/apps/desktop.lua",
-      "sha1": "ae6bc16dc4d5b93febc9c13c50639b83c045fdf9"
+      "sha1": "6306d14c10420cd7dd4bc83680c9d86018f5dac7"
     },
     {
       "path": "os/apps/editor.lua",
@@ -24,7 +24,7 @@
     },
     {
       "path": "os/apps/folder.lua",
-      "sha1": "1cba5ff3bd889a4b8d90886c6c8d7c0cad7117b5"
+      "sha1": "d71c1c8cba56639e2bbe2159ca162ae096e0388f"
     },
     {
       "path": "os/apps/help.lua",
@@ -280,19 +280,19 @@
     },
     {
       "path": "os/var/log/crash.log",
-      "sha1": "c015d30b0615c57e343caee4cf89cc031f633b5b"
+      "sha1": "1001dfa39984c94cfb2203b7acc8f4fa7b36978b"
     },
     {
       "path": "os/var/log/kernel.log",
-      "sha1": "8d77ec59a6c382152f9a645da515436538d7d761"
+      "sha1": "01f17a88c91db1daf7fe16297ff33f9c9617da0d"
     },
     {
       "path": "os/var/log/teste.log",
-      "sha1": "a5e712d26c6e273618883b7633620c115f7eec4d"
+      "sha1": "a990002d6c303df145ebfa6736ce0e2bd232b96c"
     },
     {
       "path": "os/var/seeded.json",
-      "sha1": "4adb1725bb87cad4b41eb7067b991b759708a522"
+      "sha1": "ccfc0e735221e9f45b8d5a41af418dda969aa092"
     },
     {
       "path": "os/version.lua",

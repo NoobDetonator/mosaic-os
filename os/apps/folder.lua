@@ -9,6 +9,15 @@ local strutil = mosaic.lib("strutil")
 local args = { ... }
 local dir = "/" .. fs.combine(args[1] or "/home", "")
 
+local function titleFor(path)
+    local n = fs.getName(path)
+    return n ~= "" and n or "Disco"
+end
+
+-- Quem abre pelo registry.openFolder ja manda o titulo, mas quem chama direto (o
+-- tools/craftos.js shot, ou um atalho para o app) nao — ai a janela ficava "folder".
+mosaic.setTitle(nil, titleFor(dir))
+
 local f = ui.form()
 
 -- Ordem importa: cada ancora so enxerga widget ja adicionado, entao o rodape entra
@@ -40,7 +49,7 @@ f.onEvent = function(_, ev, a)
             if pai ~= dir then
                 dir = pai
                 ctx.dir = dir
-                mosaic.setTitle(nil, fs.getName(dir) ~= "" and fs.getName(dir) or "Disco")
+                mosaic.setTitle(nil, titleFor(dir))
                 view.selected = 1
                 view.scroll = 0
                 refresh()
