@@ -475,6 +475,9 @@ function api.lib(name) return require("lib." .. name) end
 function api.emit(name, ...) os.queueEvent("mosaic:" .. name, ...) end
 function api.isTiny() return wm.tiny end
 function api.altHeld() return (held[keys.leftAlt] or held[keys.rightAlt]) and true or false end
+-- O CC manda `key` com o codigo da tecla, sem dizer quais modificadores estao segurados:
+-- quem quer Ctrl+C precisa perguntar. (Ctrl+T, Ctrl+R e Ctrl+S sao do proprio CC.)
+function api.ctrlHeld() return (held[keys.leftCtrl] or held[keys.rightCtrl]) and true or false end
 function api.pointer() return wm.pointer end
 function api.togglePointer() proc.togglePointer() end
 

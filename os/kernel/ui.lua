@@ -386,7 +386,13 @@ function List:onMouse(ev, btn, lx, ly, dir)
         self:invalidate()
     elseif ev == "mouse_click" then
         local idx = (self.scroll or 0) + ly
-        if idx > #(self.items or {}) then return end
+        if idx > #(self.items or {}) then
+            -- Espaco vazio depois do ultimo item: e' onde vai o menu "colar / nova pasta".
+            -- Sem isto o clique morria aqui e o app nem ficava sabendo. (Mesmo papel do
+            -- onEmpty do iconview.)
+            if self.onEmpty then self.onEmpty(self, btn, lx, ly) end
+            return
+        end
         local now = os.clock()
         local dbl = self.lastClick and self.lastClickIdx == idx and now - self.lastClick < 0.5
         self.lastClick, self.lastClickIdx = now, idx

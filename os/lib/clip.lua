@@ -39,7 +39,13 @@ function clip.paste(destDir, progress)
     if not clip.has() then return false, "Nao ha nada na area de transferencia." end
     local dest = norm(destDir)
     if not fs.isDir(dest) and dest ~= "" then return false, "Destino nao e uma pasta." end
-    if fs.isReadOnly(dest) then return false, "Essa pasta e somente leitura." end
+    -- fs.isReadOnly NAO serve de guarda: medido no CraftOS-PC, ele responde true para
+    -- qualquer subpasta e so' false na raiz. Entao checa o caso garantido em toda
+    -- implementacao do CC -- /rom -- e deixa o resto falhar no proprio fs, cuja mensagem
+    -- vem no pcall la embaixo. Pedir perdao em vez de permissao, ja que a permissao mente.
+    if dest == "rom" or dest:sub(1, 4) == "rom/" then
+        return false, "Essa pasta e somente leitura."
+    end
 
     local moving = clip.mode == "cut"
     local total = #clip.paths
@@ -74,7 +80,12 @@ function clip.paste(destDir, progress)
 end
 
 function clip.demo()
-    local root = "/os/var/clipdemo"
+    -- Fora de /os DE PROPOSITO: nos dois bancos de teste o /os e' uma pasta MONTADA, e o
+    -- CraftOS-PC responde isReadOnly = true para dentro de mount mesmo com --mount-rw
+    -- (o fs.move la funciona; so' a resposta do isReadOnly mente). Como o clip.paste se
+    -- recusa a colar em pasta somente-leitura, o teste falharia por causa do ambiente e
+    -- nao do codigo. No jogo /os e' disco normal do computador.
+    local root = "/clipdemo"
     if fs.exists(root) then fs.delete(root) end
     fs.makeDir(root .. "/a")
     fs.makeDir(root .. "/b")
@@ -102,6 +113,13 @@ function clip.demo()
     local ok2, err2 = clip.paste(root .. "/b/dentro")
     assert(not ok2 and err2, "colar uma pasta dentro dela mesma tem de ser recusado")
     assert(fs.exists(root .. "/b"), "a recusa nao pode ter mexido em nada")
+
+    -- /rom e' somente leitura em toda implementacao do CC: e' o unico destino que da
+    -- para recusar por antecipacao com confianca.
+    clip.copy(root .. "/b/nota.txt")
+    local ok3, err3 = clip.paste("/rom")
+    assert(not ok3 and err3, "colar em /rom tinha de ser recusado")
+    assert(not fs.exists("/rom/nota.txt"), "a recusa nao pode ter escrito na ROM")
 
     clip.clear()
     fs.delete(root)

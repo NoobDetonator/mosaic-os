@@ -44,11 +44,12 @@ local ok, err = pcall(function()
     -- do iconview. Enfileirados juntos, a fila nao esvazia e o relogio fica parado --
     -- que e o que acontece de verdade quando alguem clica rapido.
     for i = 2, #args do
-        local x, y, dbl = args[i]:match("^(%d+),(%d+)(d?)$")
+        local x, y, suf = args[i]:match("^(%d+),(%d+)([dr]?)$")
         if x then
-            for _ = 1, (dbl == "d" and 2 or 1) do
-                os.queueEvent("mouse_click", 1, tonumber(x), tonumber(y))
-                os.queueEvent("mouse_up", 1, tonumber(x), tonumber(y))
+            local btn = suf == "r" and 2 or 1     -- "r" = clique direito (menu de contexto)
+            for _ = 1, (suf == "d" and 2 or 1) do
+                os.queueEvent("mouse_click", btn, tonumber(x), tonumber(y))
+                os.queueEvent("mouse_up", btn, tonumber(x), tonumber(y))
             end
             for _ = 1, 6 do proc.step() end
             say("=== apos clicar em " .. args[i] .. " ===")

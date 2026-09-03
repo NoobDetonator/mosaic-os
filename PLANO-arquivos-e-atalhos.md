@@ -263,13 +263,20 @@ Commit feito no meio da onda 2, para trocar de PC. `node tools/lint.js` limpo (4
   abaixo de 46 colunas. O painel se reposiciona pelo gancho `w.onLayout` do form.
 - `api.screenSize()` novo, e `ui.list` ganhou `header` (cabecalho de secao que nao seleciona).
 
-## Falta fazer, nesta ordem
+**Onda 5 fechada** (02/09) — 141 checagens, 0 falhas nos dois runtimes.
+- `files.lua` usa o `fileops`: a copia propria do menu de contexto saiu, e a listagem passou
+  a vir de `fileops.entries` (que resolve o nome amigavel do `.lnk`).
+- Teclas: F2, Del, Ctrl+X/C/V, F5. `api.ctrlHeld()` novo — o evento `key` do CC nao diz
+  quais modificadores estao segurados.
+- `ui.list` ganhou `onEmpty`, igual ao do iconview: sem ele o clique no espaco depois do
+  ultimo item morria e o app nem ficava sabendo.
+- Os `demo()` de shortcut, clip, props e fileops entraram no `run.lua`.
 
-1. Onda 5: menus e teclas do `files.lua` (F2, Del, Ctrl+X/C/V) sobre o `fileops` — hoje o
-   `files.lua` ainda tem o menu de contexto ANTIGO, escrito na mao, em vez do `fileops.itemMenu`.
-   F5 e Backspace ja existem.
-2. Onda 6: `tools/test/run.lua` (demos de shortcut/clip/props/fileops), doc em `os/docs/`,
-   `CLAUDE.md`, `node tools/manifest.js`. O smoke test do `folder` ja entrou.
+## Falta fazer
+
+Onda 6, o que sobrou: guia "Arquivos e atalhos" em `os/docs/` para o app Ajuda, e a secao do
+`CLAUDE.md` sobre formato do `.lnk`, tabela de associacao e `ui.iconview`.
+(O aviso do `fs.isReadOnly` ja entrou no `CLAUDE.md`.)
 
 **Nao testado, e nao da para testar aqui:** disquete. O emulador em JS tem `disk.isPresent`
 fixo em `false` e o CraftOS-PC precisaria de uma imagem de disquete montada. O codigo trata

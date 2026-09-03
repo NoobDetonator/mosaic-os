@@ -20,7 +20,7 @@
     },
     {
       "path": "os/apps/files.lua",
-      "sha1": "4a7a1f550d8131175aca1200976ab2f69be99c1e"
+      "sha1": "1106891160da8d3d38abebfbc86a9480dcb4d1e5"
     },
     {
       "path": "os/apps/folder.lua",
@@ -104,7 +104,7 @@
     },
     {
       "path": "os/kernel/proc.lua",
-      "sha1": "442dfec0a074e3f967488a4efe72845ba9e420bd"
+      "sha1": "14db3b5b17774d9063a63c1c88ae3229f7a839ce"
     },
     {
       "path": "os/kernel/runner.lua",
@@ -116,7 +116,7 @@
     },
     {
       "path": "os/kernel/ui.lua",
-      "sha1": "7f5ae76275732a05346ba772a44597912d11ae26"
+      "sha1": "4f35d64db83820a273e6d3f16f7d5a91889fa459"
     },
     {
       "path": "os/kernel/wm.lua",
@@ -128,7 +128,7 @@
     },
     {
       "path": "os/lib/clip.lua",
-      "sha1": "7475ac92a1d40a0e4cb564cc4a5962527b294fe3"
+      "sha1": "c69862fa1502b00fd9c78ee80157426e94e67caa"
     },
     {
       "path": "os/lib/fileops.lua",

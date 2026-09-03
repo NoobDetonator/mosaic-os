@@ -220,6 +220,12 @@ local okPixel, errPixel = pcall(require("lib.pixel").demo)
 check(okPixel, "pixel.demo falhou: " .. tostring(errPixel))
 local okPowah, errPowah = pcall(require("lib.powah").demo)
 check(okPowah, "powah.demo falhou: " .. tostring(errPowah))
+-- As libs de arquivo: atalho, area de transferencia, propriedades e as operacoes.
+-- Cada uma traz o proprio self-check; aqui so' se cobra que ele passe.
+for _, nome in ipairs({ "shortcut", "clip", "props", "fileops" }) do
+    local okLib, errLib = pcall(require("lib." .. nome).demo)
+    check(okLib, nome .. ".demo falhou: " .. tostring(errLib))
+end
 local okChart, errChart = pcall(require("lib.chart").demo)
 check(okChart, "chart.demo falhou: " .. tostring(errChart))
 -- O app Ajuda le /os/docs; sem isso ele abre vazio mandando "rode o Atualizar OS".
@@ -485,6 +491,16 @@ ll:select(3)
 check(ll.selected == 4, "descer no separador devia pular para o proximo: " .. tostring(ll.selected))
 ll:select(1)
 check(ll.selected == 2, "subir ate o topo devia parar no item, nao no cabecalho: " .. tostring(ll.selected))
+
+-- 18. ctrlHeld: o evento `key` do CC nao diz quais modificadores estao segurados, entao
+-- quem quer Ctrl+C precisa perguntar ao kernel. Se ficar preso em true, o app passa a
+-- tratar tecla solta como atalho.
+os.queueEvent("key", keys.leftCtrl, false)
+pump()
+check(proc.api.ctrlHeld() == true, "ctrlHeld nao viu o Ctrl segurado")
+os.queueEvent("key_up", keys.leftCtrl)
+pump()
+check(proc.api.ctrlHeld() == false, "ctrlHeld ficou preso depois do key_up")
 
 -- Resultado
 term.redirect(term.native())

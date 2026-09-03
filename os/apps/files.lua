@@ -4,6 +4,7 @@ local theme = mosaic.theme
 local fsx = mosaic.lib("fsx")
 local strutil = mosaic.lib("strutil")
 local registry = mosaic.require("apps.registry")
+local fileops = mosaic.lib("fileops")
 
 local dir = ""   -- convencao do fs.combine: raiz e "", nunca "/"
 local f = ui.form()
@@ -50,7 +51,7 @@ local SIDE_W = 13
 local sideWanted = true    -- F9 liga e desliga
 
 -- Abaixo de 46 colunas a lateral come metade da tela e o painel fica inutilizavel
--- (a 51 sobrariam 38, e o tools/debug.js roda a 36). Af ela some sozinha.
+-- (a 51 sobrariam 38, e o tools/debug.js roda a 36). Ai ela some sozinha.
 local function sideVisible(W)
     return sideWanted and W >= 46
 end
@@ -115,11 +116,19 @@ side.onActivate = function(_, item)
     refresh()
 end
 
-function refresh(keep)
+-- ctx do fileops: e' por ele que a area de trabalho, a janela de pasta e este app
+-- compartilham os mesmos menus e as mesmas acoes.
+local ctx = { dir = dir, refresh = function(onlyDraw) refresh(true, onlyDraw) end }
+
+function refresh(keep, onlyDraw)
+    ctx.dir = dir
+    if onlyDraw then f.dirty = true return end
     side:setItems(sideItems(), true)
     local items = {}
     if dir ~= "" then items[1] = { up = true, name = "..", path = fs.getDir(dir), isDir = true } end
-    for _, it in ipairs(fsx.listDetailed(dir)) do items[#items + 1] = it end
+    -- fileops.entries e nao fsx.listDetailed: ele resolve o nome amigavel do .lnk e
+    -- entrega o `spec`, que o menu de contexto usa para saber que e' atalho.
+    for _, it in ipairs(fileops.entries(dir)) do items[#items + 1] = it end
     list:setItems(items, keep)
     pathLabel.text = " /" .. dir
     status.text = string.format(" %d itens | %s livres", #items - (items[1] and items[1].up and 1 or 0),
@@ -139,43 +148,42 @@ end
 
 list.onActivate = function(_, item) open(item) end
 
+-- Os menus sao os do fileops, os mesmos da area de trabalho e das janelas de pasta.
+-- Antes daqui este app tinha a propria copia, com nomes parecidos mas nao iguais, e ela
+-- ja tinha comecado a divergir (nao sabia de atalho, nem de recortar e colar).
 list.onContext = function(_, item, _, lx, ly)
     if not item or item.up then return end
-    local actions = {
-        { text = "Abrir", run = function() open(item, lx + 2, ly + 2) end },
-        { text = "Renomear", run = function()
-            local novo = ui.prompt("Novo nome:", item.name, "Renomear")
-            if novo and #novo > 0 then
-                local ok, err = pcall(fs.move, item.path, fs.combine(dir, novo))
-                if not ok then ui.msgbox(tostring(err), "Erro") end
-                refresh()
-            end
-        end },
-        { text = "Copiar", run = function()
-            local ok, err = pcall(fs.copy, item.path, fsx.uniqueName(item.path))
-            if not ok then ui.msgbox(tostring(err), "Erro") end
-            refresh()
-        end },
-        { text = "Excluir", run = function()
-            if ui.confirm("Excluir " .. item.name .. "?", "Confirmar") then
-                local ok, err = pcall(fs.delete, item.path)
-                if not ok then ui.msgbox(tostring(err), "Erro") end
-                refresh()
-            end
-        end },
-        { text = "Detalhes", run = function()
-            local size = item.isDir and fsx.treeSize(item.path) or item.size
-            ui.msgbox(string.format("%s\nCaminho: /%s\nTamanho: %s\nSomente leitura: %s",
-                item.name, item.path, strutil.bytes(size), item.readOnly and "sim" or "nao"), "Detalhes")
-        end },
-    }
-    local idx = ui.menu(actions, lx + 2, ly + 2, 14)
-    f.dirty = true
-    if idx then actions[idx].run() end
+    fileops.itemMenu(ctx, item, list.x + lx - 1, list.y + ly - 1)
+end
+
+list.onEmpty = function(_, btn, lx, ly)
+    if btn == 2 then fileops.emptyMenu(ctx, list.x + lx - 1, list.y + ly - 1) end
+end
+
+-- Teclas de arquivo. Ctrl+X/C/V sao livres; os que o CC rouba sao Ctrl+T, Ctrl+R e Ctrl+S.
+local function selected()
+    local it = list:getSelected()
+    if it and not it.up then return it end
 end
 
 f.onEvent = function(_, ev, code)
-    if ev == "key" and code == keys.backspace and dir ~= "" then
+    if ev == "key" and mosaic.ctrlHeld() then
+        local it = selected()
+        if code == keys.x and it then mosaic.lib("clip").cut(it.path) return true
+        elseif code == keys.c and it then mosaic.lib("clip").copy(it.path) return true
+        elseif code == keys.v then
+            if fileops.paste(dir) then refresh(true) end
+            return true
+        end
+    elseif ev == "key" and code == keys.f2 then
+        local it = selected()
+        if it and fileops.rename(it) then refresh(true) end
+        return true
+    elseif ev == "key" and code == keys.delete then
+        local it = selected()
+        if it and fileops.remove(it) then refresh(true) end
+        return true
+    elseif ev == "key" and code == keys.backspace and dir ~= "" then
         dir = fs.getDir(dir)
         refresh()
         return true

@@ -82,6 +82,9 @@ Fatos do kernel que não são óbvios:
   - `boot` liga o OS e devolve a tela composta; `app <nome>` abre um app de `os/apps` e fotografa.
   - Como o relógio redesenha a cada segundo, a foto vem de dentro do OS (`mosaic.screenshotText`
     gravado em `/out`, via um app de autostart) e não do despejo do headless.
+- **`fs.isReadOnly` não serve de guarda.** Medido no CraftOS-PC 2.8.3: ele responde `true` para **qualquer subpasta**
+  e `false` só na raiz, mesmo onde `fs.move` funciona. Quem quiser recusar escrita antes de tentar, cheque `/rom`
+  (garantido em toda implementação) e deixe o resto falhar no próprio `fs`, dentro de `pcall`.
 - **Cuidado com a versão do CraftOS-PC**: da 2.8 em diante ele traz uma ROM mais nova que a do alvo
   (Lua 5.2, CC:T 1.109+). Ele pega bugs de integração, mas **não** acusa API nova demais nem sintaxe
   de 5.2 — isso é papel do `tools/lint.js`, que continua sendo a autoridade. Para testar na ROM exata
