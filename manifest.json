@@ -95,6 +95,10 @@
       "sha1": "f03e879e2e0013ba750e326d9c5bc3a9f9fed4f6"
     },
     {
+      "path": "os/docs/05-arquivos-e-atalhos.md",
+      "sha1": "abb39a18e5b79b0683dcba364005d6778fafd15a"
+    },
+    {
       "path": "os/kernel/draw.lua",
       "sha1": "08578b66029c47eaeb57818153e258843d51bc8b"
     },

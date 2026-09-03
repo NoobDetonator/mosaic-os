@@ -32,10 +32,12 @@ os/kernel/proc.lua -> scheduler: spawn/launch/resume/kill/terminate/setFocus/rai
 os/kernel/wm.lua   -> canvas offscreen (window.create(root,1,1,W,H,false)), z-order, hitTest, drag/resize, taskbar, screenshot
 os/kernel/ui.lua   -> widgets (form/label/button/textbox/list/checkbox/dropdown/progress) + msgbox/confirm/prompt modais
 os/kernel/theme.lua-> cores nomeadas
-os/lib/*           -> chart, fsx, hal (periféricos), httpx, icons (.nfp 12x12), log, pixel (teletext 2x3), powah, strutil, vector (rasterizador)
+os/lib/*           -> chart, clip (recortar/colar), fileops (acoes + menus), fsx, hal (periféricos), httpx, icons (.nfp 12x12),
+                      log, pixel (teletext 2x3), powah, props, shortcut (.lnk), strutil, vector (rasterizador)
 os/net/*           -> relay.lua (websocket p/ relay Node), netd.lua (rednet entre computadores Mosaic)
 os/docs/*          -> guias em markdown simples lidos pelo app Ajuda (entram no manifest)
-os/apps/*          -> desktop, launcher, registry, files, editor, netcenter, periph, taskman, settings, help, notes, calc, clock, remote, reactor, pkg, mirror
+os/apps/*          -> desktop, folder, launcher, registry, files, editor, netcenter, periph, taskman, settings, help, notes, calc,
+                      clock, remote, reactor, pkg, mirror
 relay/             -> relay.js (WS + HTTP API + dashboard), mcp.js (tools p/ Claude Code)
 ```
 
@@ -57,6 +59,23 @@ Fatos do kernel que não são óbvios:
 - `ui.form` rola sozinho: `Form:draw` desloca `w.y` durante o desenho e devolve, e `Form:handle` soma `self.scroll` ao y do mouse.
   Nenhum widget sabe que existe scroll. Só `list` e `text` (com `scrollable = true`) consomem `mouse_scroll`; o resto deixa o form rolar.
 - Widget com `pinned = true` não rola nem conta na altura rolável: é como se faz barra de abas/rodapé fixo (ver `apps/reactor.lua`).
+- **A área de trabalho é a pasta `/home/desktop`**, não uma grade vinda do `registry`. Quem desenha é o
+  widget `ui.iconview` (grade, seleção, teclado, rolagem por linha, `onActivate`/`onContext`/`onEmpty`), o
+  mesmo das janelas de pasta (`apps/folder.lua`). As ações e os dois menus de contexto vivem em `lib/fileops`:
+  app nenhum deve ter a própria cópia — o `files.lua` tinha, e ela divergiu antes de ser removida.
+- **Ícone abre com clique DUPLO**, simples só seleciona. Sem isso não dá para escolher um ícone para renomear
+  ou apagar sem abrir o programa junto.
+- **Atalho é `.lnk`**: uma tabela Lua serializada (`fsx.readTable`/`writeTable`) com `app` (id do registry),
+  ou `path` (+ `args` opcional), mais `name` e `icon`. Quem resolve é `lib/shortcut`; quem decide o que abre
+  o quê é `registry.assoc` + `registry.openFile` — nunca um `if/elseif` dentro de um app.
+- **`registry.seed()` tem memória** (`/os/var/seeded.json`): atalho que o usuário apagou não volta no próximo
+  update. `registry.reseed()` esquece essa memória e só deve ser chamado quando a pasta inteira sumiu.
+- **`fs.isReadOnly` não serve de guarda.** Medido no CraftOS-PC 2.8.3: responde `true` para **qualquer subpasta**
+  e `false` só na raiz, mesmo onde `fs.move` funciona. Cheque `/rom` (garantido em toda implementação) e deixe
+  o resto falhar dentro de `pcall`.
+- **O relógio do emulador em JS só anda quando um timer dispara.** Dois cliques separados por `proc.step()`
+  ficam a um segundo um do outro e nunca contam como duplo — use `40,4d` no `tools/debug.js`, que enfileira
+  os eventos juntos.
 - **Tela: 51x19 é o padrão, 80x30 é o alvo.** O tamanho vem do `computercraft-server.toml` do servidor, não do Lua.
   Nada no OS pode assumir 51x19: tudo lê `term.getSize()` e trata `term_resize`. `--size` no craftos.js só
   funciona no modo gráfico (`shot`); o headless sempre roda 51x19.
@@ -82,9 +101,6 @@ Fatos do kernel que não são óbvios:
   - `boot` liga o OS e devolve a tela composta; `app <nome>` abre um app de `os/apps` e fotografa.
   - Como o relógio redesenha a cada segundo, a foto vem de dentro do OS (`mosaic.screenshotText`
     gravado em `/out`, via um app de autostart) e não do despejo do headless.
-- **`fs.isReadOnly` não serve de guarda.** Medido no CraftOS-PC 2.8.3: ele responde `true` para **qualquer subpasta**
-  e `false` só na raiz, mesmo onde `fs.move` funciona. Quem quiser recusar escrita antes de tentar, cheque `/rom`
-  (garantido em toda implementação) e deixe o resto falhar no próprio `fs`, dentro de `pcall`.
 - **Cuidado com a versão do CraftOS-PC**: da 2.8 em diante ele traz uma ROM mais nova que a do alvo
   (Lua 5.2, CC:T 1.109+). Ele pega bugs de integração, mas **não** acusa API nova demais nem sintaxe
   de 5.2 — isso é papel do `tools/lint.js`, que continua sendo a autoridade. Para testar na ROM exata
