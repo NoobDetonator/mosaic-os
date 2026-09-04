@@ -23,6 +23,9 @@ registry.builtin = {
     -- Janela mais larga que o padrao: o titulo de uma musica do YouTube e' longo, e cortado
     -- ao meio nao da para saber o que esta na fila.
     { id = "music", name = "Musica", icon = "Mu", color = colors.magenta, path = "/os/apps/music.lua", w = 46, h = 14 },
+    -- Janela grande: pagina de texto com 30 colunas nao se le, e a quebra de linha e' feita
+    -- pela largura da janela.
+    { id = "browser", name = "Navegador", icon = "Wb", color = colors.lightBlue, path = "/os/apps/browser.lua", w = 48, h = 16 },
     { id = "remote", name = "Controle remoto", icon = "Rm", color = colors.magenta, path = "/os/apps/remote.lua" },
     { id = "reactor", name = "Reator", icon = "Re", color = colors.red, path = "/os/apps/reactor.lua" },
     { id = "pkg", name = "Atualizar OS", icon = "Up", color = colors.brown, path = "/os/apps/pkg.lua" },

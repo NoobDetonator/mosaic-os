@@ -317,6 +317,17 @@ Música (`os/net/musicd.lua`, `os/apps/music.lua`, `relay/musica.js`):
 - **A música anda por HTTP, não pelo websocket.** O `mosaic.relay.url` só serve para deduzir o endereço
   HTTP. Logo o botão **Testar** das Configurações exercita exatamente o caminho da música.
 
+Navegador (`os/apps/browser.lua`):
+- **A quebra de linha é do app, não do relay.** Só o app sabe a largura da janela, e a janela pode
+  ser redimensionada ou mandada para um monitor.
+- **Um número sozinho na barra de endereço abre aquele link.** Links inline viram `[7]` no texto, e
+  sem isso não haveria como segui-los — só os blocos que *são* um link ganham `n` e dão Enter.
+- **Sem relay ele degrada, não morre**: abre texto puro e JSON por `http.get` e diz que está nesse
+  modo. Janela que não abre nada e não explica por que é pior que meia funcionalidade.
+- **Contar passos de `proc.step()` não serve nos dois mundos.** No emulador o relógio é virtual e um
+  passo custa nada; no CraftOS ele espera evento de verdade. Um laço de 80 passava num e estourava o
+  tempo no outro — espere pela **condição**.
+
 ## Como testar
 
 - `node tools/lint.js` — sintaxe Lua 5.1 (luaparse) + grep de APIs proibidas. Rode antes de dizer que terminou.

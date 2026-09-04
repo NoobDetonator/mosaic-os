@@ -93,7 +93,11 @@ local function atualiza()
     elseif not s.relay then
         recado.text = "Relay nao configurado (Configuracoes > Relay)"
     elseif not s.temSom then
-        recado.text = "Nenhum alto-falante ao lado do computador"
+        -- Diz o que fazer, nao so' o que falta: e' o recado que mais aparece para quem esta
+        -- comecando, e "sem alto-falante" sozinho nao ensina nada.
+        recado.text = #(s.fila or {}) > 0
+            and "Falta o alto-falante. Encoste um e ele toca."
+            or "Encoste um alto-falante no computador."
     elseif s.preparando then
         recado.text = "Preparando no relay: " .. tostring(s.preparando) .. "..."
     elseif s.tocando then

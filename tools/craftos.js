@@ -267,7 +267,9 @@ if (cmd === 'bench') {
 
 if (cmd === 'test') {
   resetComputer();
-  const { out, status } = run([...mounts(true), '--script', path.join(ROOT, 'tools', 'test', 'run.lua')]);
+  // Tempo folgado: aqui o relogio e' real, e os testes que esperam a batida de um servico
+  // (a musica) custam segundos de verdade, nao passos virtuais como no emulador.
+  const { out, status } = run([...mounts(true), '--script', path.join(ROOT, 'tools', 'test', 'run.lua')], 300000);
   const result = out.replace(/\r/g, '').split('\n')
     .map((l) => l.replace(/\s+$/, ''))
     .filter((l) => /self-check:|^\s+- /.test(l));
@@ -286,8 +288,12 @@ if (cmd === 'test') {
 
 // Liga o OS e tira um print PNG de verdade (pixels, fonte e cores do CraftOS-PC).
 // Precisa do modo grafico: uma janela abre por alguns segundos e fecha sozinha.
-function bootAndShoot(actions, secs, outFile) {
+// `configExtra` existe para o cenario que precisa alcancar o relay: por padrao o CraftOS-PC
+// bloqueia IP local, como o CC:T do jogo. O padrao continua estrito de proposito - so' quem
+// declara que precisa e' que afrouxa.
+function bootAndShoot(actions, secs, outFile, configExtra) {
   resetComputer();
+  if (configExtra) writeSize(configExtra);
   fs.copyFileSync(path.join(ROOT, 'startup.lua'), path.join(COMPUTER, 'startup.lua'));
   const SHOTS = path.join(DATA, 'screenshots');
   fs.rmSync(SHOTS, { recursive: true, force: true });
@@ -430,6 +436,27 @@ if (cmd === 'shot') {
                 'for _, s in ipairs(mosaic.wm.slots) do',
                 '  if s.p.title == "Relogio" then os.queueEvent("mouse_click", 2, s.x1 + 1, H) end end',
                 'sleep(2)'],
+    // O navegador com uma pagina DE VERDADE, pelo relay. Aqui nao ha mentira nenhuma: se o
+    // relay nao estiver no ar, o print sai com a mensagem de erro - e isso e' informacao.
+    web: ['settings.set("mosaic.relay.url", "ws://127.0.0.1:8765/ws/computer")',
+                `settings.set("mosaic.relay.token", ${JSON.stringify(
+                  fs.existsSync(path.join(ROOT, 'relay', '.token'))
+                    ? fs.readFileSync(path.join(ROOT, 'relay', '.token'), 'utf8').trim() : '')})`,
+                'local r = mosaic.require("apps.registry") r.open(r.byId("browser"))',
+                'sleep(1.5)',
+                'for ch in ("tweaked.cc/peripheral/speaker.html"):gmatch(".") do os.queueEvent("char", ch) end',
+                'os.queueEvent("key", keys.enter, false)',
+                'sleep(5)'],
+    // A busca, que e' o outro caminho do navegador.
+    webbusca: ['settings.set("mosaic.relay.url", "ws://127.0.0.1:8765/ws/computer")',
+                `settings.set("mosaic.relay.token", ${JSON.stringify(
+                  fs.existsSync(path.join(ROOT, 'relay', '.token'))
+                    ? fs.readFileSync(path.join(ROOT, 'relay', '.token'), 'utf8').trim() : '')})`,
+                'local r = mosaic.require("apps.registry") r.open(r.byId("browser"))',
+                'sleep(1.5)',
+                'for ch in ("alto falante minecraft computercraft"):gmatch(".") do os.queueEvent("char", ch) end',
+                'os.queueEvent("key", keys.enter, false)',
+                'sleep(5)'],
     // O tocador com uma fila de mentira. Sem isto o print seria uma janela vazia dizendo
     // "cole um link": o relay de verdade levaria 30 s e dependeria da internet.
     musica: ['local fp = dofile("/test/fake-periph.lua")',
@@ -489,7 +516,10 @@ if (cmd === 'shot') {
     console.error(`nao existe os/apps/${arg}.lua`);
     process.exit(2);
   }
-  const file = bootAndShoot(actions, arg ? 2 : 3, positional[1]);
+  // `web` fala com o relay de verdade, entao precisa do IP local liberado e do relay no ar.
+  const precisaRelay = arg === 'web' || arg === 'webbusca';
+  const file = bootAndShoot(actions, arg ? 2 : 3, positional[1], precisaRelay
+    ? { http_blacklist: [], http_whitelist: ['*'], http_enable: true } : null);
   if (!file) {
     console.error('O CraftOS-PC nao gerou o print. Ele precisa do modo grafico (nao roda headless).');
     process.exit(1);

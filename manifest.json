@@ -3,6 +3,10 @@
   "version": "0.2.0",
   "files": [
     {
+      "path": "os/apps/browser.lua",
+      "sha1": "877f09d8d74bc6744e6c106151642321c13a95f4"
+    },
+    {
       "path": "os/apps/calc.lua",
       "sha1": "f28711270beed3105a05b7586889672de7bd4581"
     },
@@ -40,7 +44,7 @@
     },
     {
       "path": "os/apps/music.lua",
-      "sha1": "ebe3324f54ad34c8c8fee42896cd9af0efdc1e09"
+      "sha1": "89908c0fef0f77b8e6d3a242568ed49a65f7b9b2"
     },
     {
       "path": "os/apps/netcenter.lua",
@@ -64,7 +68,7 @@
     },
     {
       "path": "os/apps/registry.lua",
-      "sha1": "a1a50b4ff66f72c80ffa03fb22e27f52f189d434"
+      "sha1": "cc7147f89c5653881acdd25175fad58007c3c24a"
     },
     {
       "path": "os/apps/remote.lua",
@@ -129,6 +133,18 @@
     {
       "path": "os/docs/09-reator.md",
       "sha1": "a018ee6a5e0239dd091d96335a334452769065b6"
+    },
+    {
+      "path": "os/docs/10-som-e-musica.md",
+      "sha1": "b8489073afe1def02834211dfeda1d9e41575b4f"
+    },
+    {
+      "path": "os/docs/11-telas-e-monitores.md",
+      "sha1": "6646814cf3f098feaa5f23b63eefb214a1b20e8a"
+    },
+    {
+      "path": "os/docs/12-navegador.md",
+      "sha1": "c2e28b0251e65c4aa60fc1356192c83a35779206"
     },
     {
       "path": "os/kernel/draw.lua",
@@ -248,7 +264,7 @@
     },
     {
       "path": "os/net/musicd.lua",
-      "sha1": "9b4a0e6b603e631bb60863b96ac0687cd9692a69"
+      "sha1": "d9022cd4dfad35700a7b4390d7914f5e24f3995a"
     },
     {
       "path": "os/net/netd.lua",

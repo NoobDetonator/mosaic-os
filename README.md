@@ -162,6 +162,39 @@ computador in-game direto.
 
 ![Sobre](docs/img/sobre.png)
 
+### Som e música
+
+Sons de sistema (abrir, fechar, erro, boot) e um tocador de músicas com fila, que aceita link do
+YouTube **ou o nome da música**. A fila mora num serviço, não na janela: fechar o tocador não para
+a música.
+
+Precisa de um alto-falante encostado no computador, e do relay ligado no seu PC com `yt-dlp` e
+`ffmpeg` — o computador do jogo não baixa vídeo, ele recebe pedaços de áudio já convertidos.
+
+![Música](docs/img/musica.png)
+
+### Telas de parede
+
+Qualquer app pode ir para um monitor e ocupar a parede inteira: botão direito no botão dele na
+barra de tarefas. Um computador passa a servir várias paredes, em vez de um computador por parede.
+
+O app se re-ajusta sozinho ao tamanho novo, o toque no monitor vira clique, e se alguém quebrar o
+bloco ele volta para a área de trabalho em vez de travar.
+
+![Enviar para monitor](docs/img/monitor.png)
+
+### Navegador
+
+Abre páginas da internet dentro do jogo. Sem imagem e sem JavaScript, mas lê texto, segue link e
+busca. Links viram números, como nos navegadores de texto: digite `7` e Enter.
+
+O relay é quem lê o HTML e devolve blocos prontos (e tira os acentos, senão o terminal do CC
+desenha lixo). Sem relay, ainda abre arquivo de texto puro.
+
+![Navegador](docs/img/navegador.png)
+
+![Busca](docs/img/busca.png)
+
 ## Desenvolvimento
 
 ```bash

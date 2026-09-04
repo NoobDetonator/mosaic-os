@@ -445,6 +445,63 @@ No emulador ele e' pulado - sem gancho falso, porque um teste que sempre passa n
 Sobrescrever `onKey` numa instancia de widget **mata a navegacao inteira**: o `onKey` vem da
 classe (setas, Enter, PageUp). Guardar o original e chamar no fim.
 
+## Onda 5 — browser: pronta
+
+`os/apps/browser.lua`. A barra de endereco aceita as tres coisas que a pessoa digita
+naturalmente e adivinha qual e': endereco abre, texto busca, e **um numero sozinho abre o
+link daquele numero** - o jeito do lynx, que numa tela de 51 colunas ganha de qualquer
+alternativa.
+
+A quebra de linha e' feita no APP, nao no relay: so' o app sabe a largura da janela, e a
+janela pode ser redimensionada ou mandada para um monitor.
+
+Sem relay ele ainda abre texto puro e JSON por `http.get` direto, e diz que esta nesse modo -
+melhor que uma janela que nao abre nada e nao explica por que.
+
+Provado contra paginas de verdade, pelo relay, de dentro do CraftOS: `tweaked.cc` com 133
+links, e uma busca com 10 resultados do DuckDuckGo.
+
+## Onda 6 — fechamento: pronta
+
+Tres capitulos novos em `os/docs` (som e musica, telas e monitores, navegador), README com os
+quatro prints novos, `CLAUDE.md` com os fatos medidos, e o modo `live`.
+
+---
+
+# O bug que so' o uso encontrou
+
+Depois da onda 4 pronta e testada, a musica **nao tocou** no primeiro uso de verdade. A fila
+enchia e nada acontecia.
+
+Nao era o daemon nem o relay: **faltava o alto-falante**. Mas dois defeitos meus faziam disso
+um misterio em vez de um recado:
+
+1. **Falta de hardware virava erro guardado.** O `ultimoErro` ficava com "sem alto-falante" e
+   tapava a frase do app que ensina o que fazer. Erro velho na tela e' pior que nenhum: a
+   pessoa conserta a coisa errada.
+2. **Nada tentava de novo.** Grudar o alto-falante depois nao adiantava - era preciso
+   descobrir sozinho que tinha que apertar Tocar. No jogo isso e' o caso NORMAL: gruda-se
+   periferico com o computador ligado.
+
+Agora falta de alto-falante nao e' erro, e a batida do servico religa a musica sozinha quando
+ele aparece. Reproduzido e virou teste: tirar o alto-falante, conferir que nao virou erro,
+grudar de volta, e cobrar que a musica comece sem ninguem mandar.
+
+## Mais duas licoes de teste
+
+**Contar passos nao serve nos dois mundos.** No emulador o relogio e' virtual e um
+`proc.step()` custa nada; no CraftOS ele espera evento de verdade. Um laco de 80 passos
+passava num e estourava o tempo no outro. Agora se espera pela CONDICAO.
+
+**O `.settings` do CC e' tabela Lua, nao JSON** - e a falha e' silenciosa: o OS abre sem
+relay e ninguem sabe por que.
+
 ## Falta
 
-Ondas 5 e 6: browser e o fechamento. O plano acima esta inteiro.
+Nada do plano. O que ficou anotado de proposito, para depois:
+
+- **Imagem no navegador.** O `lib/pixel` ja faz sub-pixel 2x3, entao o dificil esta pronto;
+  falta um decodificador de imagem no relay, que e' dependencia nova.
+- **Video.** A conta fecha na janela (~29 KB/s a 10 quadros), mas no monitor grande da
+  ~310 KB/s e eu nao sei se aguenta. So' entra com numero medido.
+- **Area de trabalho inteira no monitor**, sobre a mesma base da onda 2.

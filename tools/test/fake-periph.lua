@@ -21,6 +21,24 @@ function M.add(name, tipos, obj)
     return obj
 end
 
+-- Tira um periferico, como quem quebra o bloco no jogo. Devolve o que foi tirado, para o
+-- teste poder grudar de volta e conferir que o sistema se recupera.
+function M.remove(name)
+    for i, it in ipairs(M.itens) do
+        if it.name == name then
+            table.remove(M.itens, i)
+            os.queueEvent("peripheral_detach", name)
+            return it
+        end
+    end
+end
+
+function M.readd(it)
+    M.itens[#M.itens + 1] = it
+    os.queueEvent("peripheral", it.name)
+    return it.obj
+end
+
 -- Alto-falante que anota o que tocou, em vez de fazer barulho.
 --   spk.notas    lista de { instrumento, volume, tom }
 --   spk.amostras total de amostras aceitas por playAudio

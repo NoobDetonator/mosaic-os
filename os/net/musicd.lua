@@ -29,6 +29,7 @@ local termoPendente             -- o que o usuario pediu e ainda esta sendo prep
 local preparando                -- texto do estado ("buscando", "convertendo"...)
 local tentativas = 0
 local ultimoErro
+local esperandoSom              -- fila pronta, faltando so' o alto-falante aparecer
 
 local estado = {}
 local function publica()
@@ -75,11 +76,27 @@ local function comecaFaixa(i)
     -- musicas sai com o som errado (a documentacao do cc.audio.dfpwm avisa isso em caixa).
     st = audio.stream()
     if not st:ok() then
-        ultimoErro = st.err or "sem alto-falante"
+        -- Falta de alto-falante NAO e' erro: e' hardware que ainda nao esta la'. Nao vai para
+        -- `ultimoErro` porque o app tem uma frase melhor para isso ("Nenhum alto-falante ao
+        -- lado do computador"), e um erro guardado taparia essa frase.
+        --
+        -- Fica marcado para a batida tentar de novo: no jogo se gruda alto-falante com o
+        -- computador ligado, e a musica tem que comecar sozinha quando ele aparecer.
+        if not audio.has() then
+            esperandoSom = true
+            -- Limpa o erro anterior: a situacao mudou, e um erro velho na tela e' pior que
+            -- nenhum - a pessoa conserta a coisa errada.
+            ultimoErro = nil
+        else
+            -- Aqui e' erro de verdade: tem alto-falante e mesmo assim nao deu. Na pratica so'
+            -- acontece em servidor com CC:T anterior a 1.100, que nao tem cc.audio.dfpwm.
+            ultimoErro = st.err
+        end
         tocando = false
         publica()
         return
     end
+    esperandoSom = false
     tocando = true
     ultimoErro = nil
     publica()
@@ -262,6 +279,11 @@ while true do
 
     elseif nome == "timer" and ev[2] == batida then
         batida = os.startTimer(BATIDA)
+        -- Alguem grudou o alto-falante depois: comeca a tocar sozinho, sem a pessoa ter que
+        -- descobrir que precisa apertar Tocar de novo.
+        if esperandoSom and audio.has() and fila[atual] then
+            comecaFaixa(atual)
+        end
         -- A batida existe porque `speaker_audio_empty` nao e' garantia de progresso: se um
         -- evento se perder na fila de 256 do CC, a musica pararia calada e para sempre.
         if tocando then

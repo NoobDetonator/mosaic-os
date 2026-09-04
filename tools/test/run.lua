@@ -187,7 +187,7 @@ check(answer == true, "confirm nao devolveu true (" .. tostring(answer) .. ")")
 check(d.dead == true, "processo do dialogo nao terminou")
 
 -- 12. Todos os apps abrem sem quebrar
-local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman", "reactor", "folder", "music" }
+local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman", "reactor", "folder", "music", "browser" }
 for _, name in ipairs(apps) do
     local path = "/os/apps/" .. name .. ".lua"
     local ap = proc.launch(path, {}, { title = name, x = 2, y = 2, w = wm.W - 4, h = wm.H - 5 })
@@ -764,6 +764,44 @@ if audioLib.decoder() then
     local pediuAudio = false
     for _, u in ipairs(fh.pedidos) do if u:find("/api/audio/abc0000000000001/1", 1, true) then pediuAudio = true end end
     check(pediuAudio, "o servico nao pediu o primeiro pedaco de audio")
+end
+
+-- Alto-falante que so' aparece DEPOIS. E' o caso normal no jogo (gruda-se periferico com o
+-- computador ligado) e foi o que fez a musica parecer quebrada na primeira vez que foi usada
+-- de verdade: a fila enchia e nada tocava.
+local guardado = fake.remove("speaker_0")
+check(guardado ~= nil, "nao consegui tirar o alto-falante falso")
+os.queueEvent("mosaic:music_cmd", "play_index", 1)
+-- Poucos passos de proposito: no emulador o relogio e' virtual e um passo custa nada, mas no
+-- CraftOS o proc.step() espera evento DE VERDADE, entao cada passo pode valer meio segundo.
+-- Um laco de 80 aqui fazia o teste da ROM estourar o tempo e nao chegar ao resultado.
+for _ = 1, 25 do proc.step() end
+local semSom = mosaic.musicStatus()
+check(semSom.temSom == false, "o servico ainda acha que tem alto-falante")
+-- Falta de hardware NAO pode virar erro guardado: o erro taparia a frase do app que ensina
+-- o que fazer, e ficaria na tela mesmo depois de resolvido.
+check(semSom.erro == nil, "falta de alto-falante virou erro: " .. tostring(semSom.erro))
+check(semSom.tocando == false, "diz que esta tocando sem alto-falante")
+
+fake.readd(guardado)
+-- Espera pela CONDICAO, nao por um numero de passos. No emulador o relogio e' virtual e 30
+-- passos passam num piscar; no CraftOS cada passo espera um evento de verdade, e quantos
+-- passos cabem num segundo depende do que mais esta acontecendo. Contar passos deixava o
+-- teste passar num e falhar no outro sem nada estar quebrado.
+local function aguarda(cond, passos)
+    for _ = 1, passos or 300 do
+        if cond() then return true end
+        proc.step()
+    end
+    return cond()
+end
+
+-- So' onde ha codec: no emulador voltar o alto-falante nao basta, e' o cc.audio.dfpwm que
+-- falta. No CraftOS-PC este e' o caso que importa e ele roda.
+if audioLib.decoder() then
+    local voltou = aguarda(function() return mosaic.musicStatus().tocando == true end)
+    check(voltou, "grudar o alto-falante nao fez a musica comecar sozinha; estado: "
+        .. tostring(mosaic.musicStatus().erro))
 end
 
 -- Tirar da fila e limpar.
