@@ -71,6 +71,9 @@ end
 if settings.get("mosaic.net.enabled") then
     proc.daemon("netd", "/os/net/netd.lua")
 end
+-- Musica sempre: e' ele que segura a fila, e sem ele a musica pararia ao fechar a janela.
+-- Sem relay e sem alto-falante ele so' fica esperando evento, e o app diz o que falta.
+proc.daemon("musicd", "/os/net/musicd.lua")
 
 -- Autostart do usuario
 for _, path in ipairs(settings.get("mosaic.autostart") or {}) do

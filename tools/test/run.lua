@@ -187,7 +187,7 @@ check(answer == true, "confirm nao devolveu true (" .. tostring(answer) .. ")")
 check(d.dead == true, "processo do dialogo nao terminou")
 
 -- 12. Todos os apps abrem sem quebrar
-local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman", "reactor", "folder" }
+local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman", "reactor", "folder", "music" }
 for _, name in ipairs(apps) do
     local path = "/os/apps/" .. name .. ".lua"
     local ap = proc.launch(path, {}, { title = name, x = 2, y = 2, w = wm.W - 4, h = wm.H - 5 })
@@ -709,6 +709,75 @@ if slot then
 end
 
 proc.kill(parede) proc.kill(outro) pump()
+
+-- 22. Musica: fila, preparo no relay e audio chegando no alto-falante.
+-- Com http falso: o emulador nao tem rede e o CraftOS tem rede de VERDADE, e nenhum dos dois
+-- serve para cobrar resposta conhecida.
+local fh = fake.http()
+settings.set("mosaic.relay.url", "ws://1.2.3.4:8765/ws/computer")
+settings.set("mosaic.relay.token", "tk")
+
+local md = proc.daemon("musicd", "/os/net/musicd.lua")
+pump()
+check(not md.dead, "o servico de musica morreu ao iniciar")
+check(type(mosaic.musicStatus) == "function", "o servico nao publicou musicStatus")
+check(mosaic.musicStatus().relay == true, "o servico nao viu o relay configurado")
+
+-- O relay responde "espere" enquanto converte: a musica nao pode entrar na fila ainda, e o
+-- app tem que ter o que mostrar. Foi medido: preparar leva de 20 a 60 s.
+fh.responde("/api/musica", '{"id":"abc0000000000001","estado":"baixando","titulo":"Sweden","espere":true}')
+os.queueEvent("mosaic:music_cmd", "add", "sweden")
+pump() pump()
+local sMus = mosaic.musicStatus()
+check(#sMus.fila == 0, "musica entrou na fila antes de ficar pronta")
+check(sMus.preparando == "baixando", "o estado de preparo nao chegou: " .. tostring(sMus.preparando))
+check(sMus.termo == "Sweden", "o titulo em preparo nao chegou: " .. tostring(sMus.termo))
+
+-- Ficou pronta: entra na fila. Dois blocos, para dar para ver o fim chegar.
+fh.responde("/api/musica",
+    '{"id":"abc0000000000001","titulo":"Sweden","autor":"C418","duracao":5,"blocos":2}')
+-- Sem mandar "add" de novo: o servico continua perguntando sozinho enquanto o relay prepara,
+-- e e' isso que se quer cobrar aqui. Mandar de novo punha a mesma musica duas vezes na fila,
+-- que e' o comportamento certo para quem pede duas vezes - so' nao e' o que este teste quer.
+--
+-- proc.step() cru em vez de pump(): a batida do servico e' um os.startTimer, e o relogio do
+-- emulador so' anda quando um timer dispara.
+for _ = 1, 80 do proc.step() end
+sMus = mosaic.musicStatus()
+check(#sMus.fila == 1, "a musica pronta nao entrou na fila: " .. #sMus.fila)
+check(sMus.fila[1] and sMus.fila[1].titulo == "Sweden", "titulo errado na fila")
+check(sMus.fila[1] and sMus.fila[1].blocos == 2, "contagem de blocos errada")
+
+-- O audio so' corre se houver decodificador. O emulador nao tem a ROM com cc.audio.dfpwm;
+-- o CraftOS tem, e e' la' que esta parte roda de verdade. Sem gancho falso: um teste que
+-- sempre passa nao e' teste.
+local audioLib = require("lib.audio")
+if audioLib.decoder() then
+    local antes = spk.amostras
+    fh.responde("/api/audio/", string.rep("\170", 16 * 1024))
+    os.queueEvent("mosaic:music_cmd", "play")
+    for _ = 1, 60 do proc.step() end
+    os.queueEvent("speaker_audio_empty", "speaker_0")
+    for _ = 1, 60 do proc.step() end
+    check(spk.amostras > antes,
+        "nenhuma amostra chegou ao alto-falante (" .. spk.amostras .. " vs " .. antes .. ")")
+    local pediuAudio = false
+    for _, u in ipairs(fh.pedidos) do if u:find("/api/audio/abc0000000000001/1", 1, true) then pediuAudio = true end end
+    check(pediuAudio, "o servico nao pediu o primeiro pedaco de audio")
+end
+
+-- Tirar da fila e limpar.
+os.queueEvent("mosaic:music_cmd", "remove", 1)
+pump() pump()
+check(#mosaic.musicStatus().fila == 0, "remover da fila nao funcionou")
+
+-- Sem relay configurado o servico tem que dizer isso, e nao ficar mudo.
+settings.set("mosaic.relay.url", "")
+os.queueEvent("mosaic:music_cmd", "add", "qualquer")
+pump() pump()
+check(mosaic.musicStatus().erro ~= nil, "sem relay, o servico deveria reclamar")
+
+proc.kill(md) pump()
 
 -- Resultado
 term.redirect(term.native())

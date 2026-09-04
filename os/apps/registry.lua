@@ -20,6 +20,9 @@ registry.builtin = {
     { id = "notes", name = "Notas", icon = "No", color = colors.lime, path = "/os/apps/notes.lua" },
     { id = "calc", name = "Calculadora", icon = "+-", color = colors.cyan, path = "/os/apps/calc.lua", w = 50, h = 17 },
     { id = "clock", name = "Relogio", icon = "()", color = colors.blue, path = "/os/apps/clock.lua" },
+    -- Janela mais larga que o padrao: o titulo de uma musica do YouTube e' longo, e cortado
+    -- ao meio nao da para saber o que esta na fila.
+    { id = "music", name = "Musica", icon = "Mu", color = colors.magenta, path = "/os/apps/music.lua", w = 46, h = 14 },
     { id = "remote", name = "Controle remoto", icon = "Rm", color = colors.magenta, path = "/os/apps/remote.lua" },
     { id = "reactor", name = "Reator", icon = "Re", color = colors.red, path = "/os/apps/reactor.lua" },
     { id = "pkg", name = "Atualizar OS", icon = "Up", color = colors.brown, path = "/os/apps/pkg.lua" },

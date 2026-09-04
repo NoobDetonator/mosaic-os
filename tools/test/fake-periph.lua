@@ -95,6 +95,71 @@ function M.monitor(name, cols, rows)
     return m
 end
 
+-- HTTP falso, por evento. O emulador nao tem rede (o `http` do bios.lua sempre falha) e o
+-- CraftOS tem rede DE VERDADE - nenhum dos dois serve para testar o servico de musica, que
+-- precisa de respostas conhecidas e sem internet.
+--
+-- Substitui o `http` global, entao vale para o processo todo, como o resto deste arquivo.
+--
+--   local h = fake.http()
+--   h.responde("/api/musica", '{"id":"abc",...}')      -- casa por pedaco da URL
+--   h.responde("/api/audio/", function(url) return ... end)
+function M.http()
+    local h = { pedidos = {}, respostas = {} }
+
+    function h.responde(padrao, corpo)
+        h.respostas[#h.respostas + 1] = { padrao = padrao, corpo = corpo }
+    end
+
+    local function acha(url)
+        -- De tras para frente: uma resposta nova ganha da antiga para o mesmo padrao, que e'
+        -- como o teste troca o que o relay "responde" no meio do caminho.
+        for i = #h.respostas, 1, -1 do
+            local r = h.respostas[i]
+            if url:find(r.padrao, 1, true) then
+                local c = r.corpo
+                if type(c) == "function" then c = c(url) end
+                return c
+            end
+        end
+    end
+
+    local function handle(corpo)
+        return {
+            readAll = function() return corpo end,
+            readLine = function() return (corpo:gmatch("[^\n]*")()) end,
+            read = function(n) return corpo:sub(1, n or 1) end,
+            close = function() end,
+            getResponseCode = function() return 200 end,
+            getResponseHeaders = function() return {} end,
+        }
+    end
+
+    http = {
+        checkURL = function() return true end,
+        checkURLAsync = function() return true end,
+        get = function(url)
+            h.pedidos[#h.pedidos + 1] = url
+            local c = acha(url)
+            if c then return handle(c) end
+            return nil, "sem resposta falsa para " .. url
+        end,
+        post = function(url) return nil, "post nao previsto no teste: " .. url end,
+        request = function(url)
+            h.pedidos[#h.pedidos + 1] = url
+            local c = acha(url)
+            if c then
+                os.queueEvent("http_success", url, handle(c))
+            else
+                os.queueEvent("http_failure", url, "sem resposta falsa")
+            end
+        end,
+        websocket = function() return false, "sem websocket no teste" end,
+        websocketAsync = function(url) os.queueEvent("websocket_failure", url, "sem websocket no teste") end,
+    }
+    return h
+end
+
 function M.instalar()
     local function achar(name)
         for _, it in ipairs(M.itens) do if it.name == name then return it end end

@@ -295,6 +295,28 @@ if (cmd === 'shot') {
                 'for _, s in ipairs(mosaic.wm.slots) do',
                 '  if s.p.title == "Relogio" then os.queueEvent("mouse_click", 2, s.x1 + 1, H) end end',
                 'sleep(2)'],
+    // O tocador com uma fila de mentira. Sem isto o print seria uma janela vazia dizendo
+    // "cole um link": o relay de verdade levaria 30 s e dependeria da internet.
+    musica: ['local fp = dofile("/test/fake-periph.lua")',
+                'fp.speaker("speaker_0")',
+                'local h = fp.http()',
+                'local n = 0',
+                'h.responde("/api/musica", function()',
+                '  n = n + 1',
+                '  local nomes = { "C418 - Sweden", "C418 - Wet Hands", "Lena Raine - Pigstep" }',
+                '  local durs = { 216, 90, 148 }',
+                '  return string.format(',
+                '    [[{"id":"abc000000000000%d","titulo":"%s","autor":"C418","duracao":%d,"blocos":%d}]],',
+                '    n, nomes[n] or "Faixa", durs[n] or 100, math.ceil((durs[n] or 100) / 2.73))',
+                'end)',
+                'h.responde("/api/audio/", string.rep("\\170", 16 * 1024))',
+                'fp.instalar()',
+                'settings.set("mosaic.relay.url", "ws://127.0.0.1:8765/ws/computer")',
+                'settings.set("mosaic.relay.token", "x")',
+                'local r = mosaic.require("apps.registry") r.open(r.byId("music"))',
+                'sleep(1)',
+                'for _ = 1, 3 do os.queueEvent("mosaic:music_cmd", "add", "faixa") sleep(1.2) end',
+                'sleep(1.5)'],
     // O painel do reator com um reator de mentira: o de verdade so' existe no jogo.
     // `janela` e' o tamanho, para conferir o mesmo painel em tela de monitor.
     reator: ['dofile("/out/fake-reactor.lua").instalar()',

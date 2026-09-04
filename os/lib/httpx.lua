@@ -64,9 +64,11 @@ end
 
 -- Versao assincrona: dispara e devolve um "handle" que voce consulta nos eventos
 -- http_success / http_failure. Util dentro de apps que nao podem travar.
-function httpx.requestAsync(url, body, headers)
+-- `binary` importa: no CC:T do nosso alvo o modo texto passa o corpo por UTF-8, e byte de
+-- audio nao sobrevive a isso. Quem baixa DFPWM tem que pedir binario.
+function httpx.requestAsync(url, body, headers, binary)
     if not http then return nil, "API http desativada no servidor" end
-    http.request(url, body, headers)
+    http.request(url, body, headers, binary and true or false)
     return url
 end
 

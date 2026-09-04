@@ -285,6 +285,29 @@ Internet (`relay/gateway.js`, `relay/webdoc.js`, `relay/musica.js`, `os/lib/http
 - **`httpx.gateway()` deduz o endereço HTTP do relay do websocket já configurado.** Duas configurações
   dariam duas chances de discordar.
 
+Música (`os/net/musicd.lua`, `os/apps/music.lua`, `relay/musica.js`):
+- **A fila mora no serviço, não no app.** Música que para quando você fecha a janela não é um
+  tocador, é um script.
+- **O relay não espera pela conversão.** Medido: 31 s do termo de busca ao DFPWM pronto (20 s só o
+  yt-dlp achar). Uma requisição HTTP do CC:T morre em 30 s, então `/api/musica` dispara o trabalho,
+  responde `{estado, espere=true}` na hora, e o serviço pergunta de novo até ficar pronto.
+- **Um cliente do YouTube por tentativa, não uma lista separada por vírgula.** Medido em 04/09/2026:
+  o padrão, `tv` e `ios` deram HTTP 403; `web_safari` e `mweb` baixaram. A lista `a,b,c` também
+  falhou — o yt-dlp escolhe o formato com um cliente e baixa com outro. Se parar de novo, o conserto
+  é a variável `MOSAIC_YT_CLIENTS`, não o código.
+- **A consulta de metadados usa o cliente padrão.** Fixar um cliente ali quebra com "Requested format
+  is not available": nem todo cliente enxerga todos os formatos. Só o download varia.
+- **`yt-dlp -o -` canalizado para o ffmpeg não funciona**: o formato sai fragmentado e o ffmpeg não lê
+  isso de um cano sem busca ("Invalid data found when processing input"). Arquivo intermediário.
+- **Corpo vazio / 404 no pedaço é como a música acaba**, não erro. A duração anunciada não é confiável;
+  o arquivo é.
+- **`speaker_audio_empty` não é garantia de progresso.** A fila de eventos do CC tem 256 lugares: se um
+  se perder, a música pararia calada e para sempre. Por isso o serviço tem uma batida de 1 s.
+- **Sobrescrever `onKey` numa instância de widget mata a navegação.** O `onKey` vem da classe (setas,
+  Enter, PageUp); guarde o original e chame-o no fim.
+- Exige **CC:T 1.100+** no servidor (é de lá que vêm `playAudio` e `cc.audio.dfpwm`), `http` ligado, e
+  o relay num endereço que o CC aceite — faixa privada é recusada com "Domain not permitted".
+
 ## Como testar
 
 - `node tools/lint.js` — sintaxe Lua 5.1 (luaparse) + grep de APIs proibidas. Rode antes de dizer que terminou.

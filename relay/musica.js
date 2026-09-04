@@ -51,6 +51,18 @@ function erroDeps(d) {
   };
 }
 
+// O YouTube recusa o download conforme o "cliente" que o yt-dlp finge ser, e qual funciona
+// muda com o tempo. Medido nesta maquina em 04/09/2026: o padrao e o `tv` e `ios` deram
+// HTTP 403; `web_safari` e `mweb` baixaram. Passar a lista faz o yt-dlp tentar em ordem.
+//
+// Se um dia parar tudo de novo, o conserto e' esta variavel - nao o codigo:
+//   MOSAIC_YT_CLIENTS=default,web_safari,mweb,tv node relay.js
+// Um cliente POR TENTATIVA, e nao os tres numa lista separada por virgula: a lista deixa o
+// yt-dlp escolher o formato com um cliente e baixar com outro, e ai o 403 volta. Medido: a
+// lista falhou onde `web_safari` sozinho funcionou.
+const YT_CLIENTS = (process.env.MOSAIC_YT_CLIENTS || 'web_safari,mweb,default').split(',');
+const argsCliente = (cli) => ['--extractor-args', 'youtube:player_client=' + cli];
+
 function idDe(q) { return crypto.createHash('sha1').update(q).digest('hex').slice(0, 16); }
 function arquivoDe(id) { return path.join(CACHE_DIR, id + '.dfpwm'); }
 function metaDe(id) { return path.join(CACHE_DIR, id + '.json'); }
@@ -74,80 +86,140 @@ function alvoDe(q) {
   return /^https?:\/\//i.test(t) ? t : 'ytsearch1:' + t;
 }
 
-async function resolve(q) {
-  const d = await dependencias();
-  if (!d.ok) return erroDeps(d);
+// Trabalhos em andamento: id -> { estado, titulo, erro }.
+//
+// Preparar uma musica leva de 20 a 60 segundos (medido: 21 s so' para o yt-dlp achar), e uma
+// requisicao HTTP do CC:T morre em 30. Entao o pedido NAO espera: dispara, responde
+// "preparando" na hora, e o app pergunta de novo. Quando fica pronto, a mesma pergunta
+// devolve a musica.
+const trabalhos = new Map();
 
-  const alvo = alvoDe(q);
-  if (!alvo) return { erro: 'pedido vazio' };
+function metaPronta(id) {
+  if (!fs.existsSync(arquivoDe(id)) || !fs.existsSync(metaDe(id))) return null;
+  try {
+    const meta = JSON.parse(fs.readFileSync(metaDe(id), 'utf8'));
+    meta.blocos = Math.ceil(fs.statSync(arquivoDe(id)).size / BLOCO);
+    meta.estado = 'pronto';
+    return meta;
+  } catch (_) { return null; }
+}
 
-  const id = idDe(alvo);
-  // Ja convertido antes: nao paga download nem conversao de novo.
-  if (fs.existsSync(arquivoDe(id)) && fs.existsSync(metaDe(id))) {
-    try {
-      const meta = JSON.parse(fs.readFileSync(metaDe(id), 'utf8'));
-      meta.blocos = Math.ceil(fs.statSync(arquivoDe(id)).size / BLOCO);
-      return meta;
-    } catch (_) { /* cache estragado: refaz */ }
+// Acha o arquivo que o yt-dlp acabou de gravar. O nome traz a extensao do formato que ele
+// escolheu (webm, m4a, opus...), que so' se sabe depois.
+function achaBaixado(id) {
+  for (const nome of fs.readdirSync(CACHE_DIR)) {
+    if (nome.startsWith(id + '.dl.')) return path.join(CACHE_DIR, nome);
   }
+  return null;
+}
+
+async function prepara(id, alvo) {
+  const job = trabalhos.get(id);
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
 
   let info;
   try {
-    const bruto = await corre('yt-dlp', ['--dump-single-json', '--no-playlist', '--no-warnings', alvo]);
+    // A consulta vai com o cliente PADRAO. Fixar um cliente aqui quebrou com "Requested
+    // format is not available": nem todo cliente enxerga todos os formatos, e para achar o
+    // video e ler titulo e duracao o padrao e' o que ve mais. Quem varia e' o download.
+    const bruto = await corre('yt-dlp',
+      ['--dump-single-json', '--no-playlist', '--no-warnings', alvo]);
     info = JSON.parse(bruto);
     if (info.entries && info.entries.length) info = info.entries[0];
   } catch (e) {
-    return { erro: 'yt-dlp nao achou: ' + e.message };
+    job.estado = 'erro'; job.erro = 'yt-dlp nao achou: ' + e.message;
+    return;
   }
 
+  job.titulo = String(info.title || '').slice(0, 120);
   const duracao = Math.round(Number(info.duration) || 0);
   if (duracao > MAX_SEGUNDOS) {
-    return { erro: 'longo demais (' + Math.round(duracao / 60) + ' min); o teto e ' + Math.round(MAX_SEGUNDOS / 60) };
+    job.estado = 'erro';
+    job.erro = 'longo demais (' + Math.round(duracao / 60) + ' min); o teto e ' + Math.round(MAX_SEGUNDOS / 60);
+    return;
   }
 
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
+  // Baixar pelo endereco concreto, e nao pelo `ytsearch1:` de novo: buscar duas vezes gasta
+  // mais 20 segundos e pode cair num video diferente do que foi anunciado.
+  const concreto = info.webpage_url || info.original_url || alvo;
   const destino = arquivoDe(id);
   const parcial = destino + '.parcial';
+  let baixado = null;
   try {
-    // O audio sai do yt-dlp pela saida padrao e entra direto no ffmpeg: sem arquivo
-    // intermediario de dezenas de MB no disco de quem joga.
-    //
-    // DFPWM e' 1 bit por amostra, mono, 48 kHz - e' o que o alto-falante do CC toca.
-    // O ffmpeg ganhou o formato na 5.1; versao mais velha falha aqui, e a mensagem dele
-    // sobe inteira para o app.
-    const yt = spawn('yt-dlp', ['-f', 'bestaudio', '-o', '-', '--no-playlist', '--no-warnings', '--quiet', alvo],
-      { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
-    const ff = spawn('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-i', 'pipe:0',
-      '-ac', '1', '-ar', String(TAXA), '-f', 'dfpwm', '-y', parcial],
-      { windowsHide: true, stdio: ['pipe', 'ignore', 'pipe'] });
-    yt.stdout.pipe(ff.stdin);
-    let erroFf = '';
-    ff.stderr.on('data', (b) => { if (erroFf.length < 4000) erroFf += b; });
-    let erroYt = '';
-    yt.stderr.on('data', (b) => { if (erroYt.length < 4000) erroYt += b; });
+    job.estado = 'baixando';
+    // Arquivo intermediario em vez de cano: o `-o -` do yt-dlp entrega formato fragmentado,
+    // e o ffmpeg nao le isso de um cano sem busca ("Invalid data found when processing
+    // input"). Medido, nao suposto - foi assim que a primeira versao falhou.
+    // Cada cliente e' uma tentativa inteira. Qual funciona muda com o tempo, e o YouTube
+    // devolve 403 no download (nao na consulta), entao so' da para saber tentando.
+    let ultimo;
+    for (const cli of YT_CLIENTS) {
+      try {
+        await corre('yt-dlp', ['-f', 'bestaudio/best', '--no-playlist', '--no-warnings', '--quiet',
+          '-o', path.join(CACHE_DIR, id + '.dl.%(ext)s'), ...argsCliente(cli), concreto]);
+        baixado = achaBaixado(id);
+        if (baixado) break;
+        ultimo = new Error('o yt-dlp nao deixou arquivo (cliente ' + cli + ')');
+      } catch (e) {
+        ultimo = e;
+        // Limpa a sobra parcial antes da proxima tentativa, senao o achaBaixado acha lixo.
+        const meio = achaBaixado(id);
+        if (meio) { try { fs.unlinkSync(meio); } catch (_) { /* ja foi */ } }
+      }
+    }
+    if (!baixado) throw ultimo || new Error('nenhum cliente do YouTube funcionou');
 
-    await new Promise((ok, falhou) => {
-      ff.on('error', falhou);
-      yt.on('error', falhou);
-      ff.on('close', (c) => (c === 0 ? ok() : falhou(new Error(erroFf.trim().split('\n').pop() || erroYt.trim().split('\n').pop() || ('ffmpeg saiu ' + c)))));
-    });
+    job.estado = 'convertendo';
+    // DFPWM e' 1 bit por amostra, mono, 48 kHz - o que o alto-falante do CC toca. O ffmpeg
+    // ganhou o formato na 5.1; versao mais velha falha aqui e a mensagem sobe para o app.
+    await corre('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-i', baixado,
+      '-ac', '1', '-ar', String(TAXA), '-f', 'dfpwm', '-y', parcial]);
     fs.renameSync(parcial, destino);
   } catch (e) {
     try { fs.unlinkSync(parcial); } catch (_) { /* nao existia */ }
-    return { erro: 'conversao falhou: ' + e.message };
+    job.estado = 'erro'; job.erro = 'conversao falhou: ' + e.message;
+    return;
+  } finally {
+    if (baixado) { try { fs.unlinkSync(baixado); } catch (_) { /* ja foi */ } }
   }
 
   const tamanho = fs.statSync(destino).size;
   const meta = {
     id,
-    titulo: String(info.title || 'sem titulo').slice(0, 120),
+    titulo: job.titulo || 'sem titulo',
     autor: String(info.uploader || info.channel || '').slice(0, 80),
     duracao: duracao || Math.round((tamanho * 8) / TAXA),
     bytes: tamanho,
     blocos: Math.ceil(tamanho / BLOCO),
   };
   fs.writeFileSync(metaDe(id), JSON.stringify(meta));
-  return meta;
+  job.estado = 'pronto';
+}
+
+async function resolve(q) {
+  const d = await dependencias();
+  if (!d.ok) return erroDeps(d);
+
+  const alvo = alvoDe(q);
+  if (!alvo) return { erro: 'pedido vazio' };
+  const id = idDe(alvo);
+
+  // Ja convertido antes: nao paga download nem conversao de novo.
+  const pronta = metaPronta(id);
+  if (pronta) { trabalhos.delete(id); return pronta; }
+
+  const job = trabalhos.get(id);
+  if (job) {
+    if (job.estado === 'erro') { trabalhos.delete(id); return { erro: job.erro }; }
+    return { id, estado: job.estado, titulo: job.titulo || '', espere: true };
+  }
+
+  const novo = { estado: 'buscando', titulo: '', erro: null, quando: Date.now() };
+  trabalhos.set(id, novo);
+  // Solta o trabalho e responde na hora. O `catch` existe porque um erro nao capturado aqui
+  // derrubaria o relay inteiro, e nao so' esta musica.
+  prepara(id, alvo).catch((e) => { novo.estado = 'erro'; novo.erro = String((e && e.message) || e); });
+  return { id, estado: 'buscando', titulo: '', espere: true };
 }
 
 // O enesimo pedaco, contando de 1. Devolve null quando acabou - e' assim que o app sabe que

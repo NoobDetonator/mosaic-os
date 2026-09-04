@@ -39,6 +39,10 @@
       "sha1": "d6d1e4b329028a651104ec7bafee1640c48e76cd"
     },
     {
+      "path": "os/apps/music.lua",
+      "sha1": "ebe3324f54ad34c8c8fee42896cd9af0efdc1e09"
+    },
+    {
       "path": "os/apps/netcenter.lua",
       "sha1": "1f179dfd7caaa0043e98d7ca61b33c922b3ed4e2"
     },
@@ -60,7 +64,7 @@
     },
     {
       "path": "os/apps/registry.lua",
-      "sha1": "b8ea2cc5719cafc9fdfc025a269bd43dafb9c51e"
+      "sha1": "a1a50b4ff66f72c80ffa03fb22e27f52f189d434"
     },
     {
       "path": "os/apps/remote.lua",
@@ -76,7 +80,7 @@
     },
     {
       "path": "os/boot.lua",
-      "sha1": "fb82301727d49b2d931609e9eb249341fcc401b0"
+      "sha1": "04d2319dfffda982e385fe779ee948b0b77bf4c4"
     },
     {
       "path": "os/demos/cubo.lua",
@@ -188,7 +192,7 @@
     },
     {
       "path": "os/lib/httpx.lua",
-      "sha1": "8e0a8456c572d64654984be5ba73b39b85f24f27"
+      "sha1": "5abccb66b4853beeebb1312c0e05069eaf3d190c"
     },
     {
       "path": "os/lib/icons.lua",
@@ -241,6 +245,10 @@
     {
       "path": "os/lib/vector.lua",
       "sha1": "9062a8c02a63cfeea0d208aacc5cfe1c5c36bffc"
+    },
+    {
+      "path": "os/net/musicd.lua",
+      "sha1": "759d17a34e46cad7c341dbed7c09ac4673b0700c"
     },
     {
       "path": "os/net/netd.lua",

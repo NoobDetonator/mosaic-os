@@ -399,6 +399,52 @@ escrita mas nao foi exercitada de ponta a ponta. O que **foi** testado: a divisa
 recado de dependencia faltando. O relay nao morre sem eles - `/api/deps` diz o que falta e as
 outras rotas continuam de pe'.
 
+## Onda 4 — musica: pronta, e provada de ponta a ponta
+
+`os/net/musicd.lua` (a fila e o som) e `os/apps/music.lua` (a cara). A fila mora no servico:
+fechar a janela nao para a musica, so' o botao Parar para.
+
+**Medido de verdade, com yt-dlp e ffmpeg instalados:** 31 segundos do termo "c418 sweden
+minecraft" ate' DFPWM tocavel. 216 s anunciados contra 215,6 s pelo tamanho do arquivo - a
+conta fecha em 0,2%. 79 pedacos, o ultimo com a sobra (15.632 bytes), e o seguinte devolvendo
+nada, que e' como o app sabe que acabou.
+
+### Quatro coisas que so' apareceram tentando
+
+1. **`yt-dlp -o -` para o ffmpeg nao funciona.** O formato sai fragmentado e o ffmpeg nao le
+   isso de um cano sem busca: "Invalid data found when processing input". Arquivo
+   intermediario, apagado depois.
+2. **O YouTube devolveu HTTP 403** no download. Nao era o nosso codigo: o `yt-dlp` puro na
+   linha de comando falhava igual. Medido: padrao, `tv` e `ios` deram 403; `web_safari` e
+   `mweb` baixaram.
+3. **Lista de clientes separada por virgula tambem falha.** O yt-dlp escolhe o formato com um
+   cliente e baixa com outro. E' um cliente por tentativa, cada uma completa.
+4. **A consulta de metadados tem que usar o cliente padrao.** Fixar um cliente ali quebrou com
+   "Requested format is not available": nem todo cliente enxerga todos os formatos.
+
+Se o YouTube mudar de novo, o conserto e' a variavel `MOSAIC_YT_CLIENTS`, nao o codigo.
+
+### O desenho que a medida mudou
+
+Preparar leva de 20 a 60 s e uma requisicao do CC morre em 30. Entao `/api/musica` **nao
+espera**: dispara o trabalho, responde `{estado, espere=true}` na hora, e o servico pergunta
+de novo ate' ficar pronto. O app mostra "Preparando: baixando..." enquanto isso.
+
+### Teste
+
+`tools/test/fake-periph.lua` ganhou um `http` falso por evento - o emulador nao tem rede e o
+CraftOS tem rede **de verdade**, e nenhum dos dois serve para cobrar resposta conhecida. Com
+ele o teste cobre: o "espere" que nao entra na fila, a musica pronta que entra sozinha pela
+batida, tirar da fila, e o recado de relay ausente.
+
+O trecho que toca audio de verdade **so' roda no CraftOS-PC**, onde existe `cc.audio.dfpwm`.
+No emulador ele e' pulado - sem gancho falso, porque um teste que sempre passa nao e' teste.
+
+### Um bug meu que valeu a licao
+
+Sobrescrever `onKey` numa instancia de widget **mata a navegacao inteira**: o `onKey` vem da
+classe (setas, Enter, PageUp). Guardar o original e chamar no fim.
+
 ## Falta
 
-Ondas 4 a 6: musica, browser e o fechamento. O plano acima esta inteiro.
+Ondas 5 e 6: browser e o fechamento. O plano acima esta inteiro.
