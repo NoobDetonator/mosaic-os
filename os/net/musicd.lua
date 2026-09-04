@@ -36,16 +36,24 @@ local function publica()
     estado.atual = atual
     estado.faixa = fila[atual]
     estado.fila = fila
-    estado.segundos = st and st:seconds() or 0
     estado.preparando = preparando
     estado.termo = termoPendente
     estado.erro = ultimoErro
-    estado.temSom = audio.has()
-    estado.relay = httpx.gateway() ~= nil
     os.queueEvent("mosaic:music_state")
 end
 
-mosaic.musicStatus = function() return estado end
+-- Alto-falante, relay e tempo tocado sao perguntas sobre o MUNDO, nao sobre o servico, e por
+-- isso sao respondidas na hora em vez de ficarem guardadas no publica().
+--
+-- Guardadas, davam resposta velha: no boot ainda nao ha alto-falante (o periferico aparece
+-- depois), o publica() so' roda em evento, e o app dizia "nenhum alto-falante" para sempre.
+-- No jogo e' pior: as pessoas grudam periferico com o computador ligado.
+mosaic.musicStatus = function()
+    estado.temSom = audio.has()
+    estado.relay = httpx.gateway() ~= nil
+    estado.segundos = st and st:seconds() or 0
+    return estado
+end
 
 -- ---------------------------------------------------------------- reproducao
 

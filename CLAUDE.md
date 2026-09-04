@@ -305,6 +305,10 @@ Música (`os/net/musicd.lua`, `os/apps/music.lua`, `relay/musica.js`):
   se perder, a música pararia calada e para sempre. Por isso o serviço tem uma batida de 1 s.
 - **Sobrescrever `onKey` numa instância de widget mata a navegação.** O `onKey` vem da classe (setas,
   Enter, PageUp); guarde o original e chame-o no fim.
+- **Pergunta sobre o mundo se responde na hora, não se guarda.** "Tem alto-falante?" e "tem relay?"
+  ficavam gravadas no estado publicado, tiradas no boot — e no boot ainda não há periférico nenhum. O
+  app dizia "nenhum alto-falante" para sempre. No jogo é pior: gruda-se periférico com o computador
+  ligado. Essas respostas são calculadas dentro de `musicStatus()`.
 - Exige **CC:T 1.100+** no servidor (é de lá que vêm `playAudio` e `cc.audio.dfpwm`), `http` ligado, e
   o relay num endereço que o CC aceite — faixa privada é recusada com "Domain not permitted".
 - **`$private` inclui `127.0.0.0/8`**: testar em mundo local com o relay no mesmo PC **não funciona de
@@ -327,6 +331,16 @@ Música (`os/net/musicd.lua`, `os/apps/music.lua`, `relay/musica.js`):
 - `node tools/test-gateway.js` — o lado do relay que olha para fora: HTML→blocos, filtro de endereço e
   divisão do áudio. **Roda sem rede e sem o relay ligado** — é texto entrando e blocos saindo.
 - `node tools/test-relay.js` — sobe o relay de verdade e conversa com ele como um computador do jogo.
+- `node tools/craftos.js live [--size 80x30]` — **um Mosaic para mexer, não para fotografar**: janela
+  gráfica, alto-falante que sai som de verdade, dois monitores, e o relay ligado e configurado. Sobe o
+  relay sozinho se não houver um. É o mais perto do jogo sem o jogo — e as três coisas que ele arruma
+  são as mesmas do Minecraft: IP local liberado, alto-falante ao lado, endereço do relay nas
+  configurações. `--check` faz o mesmo preparo mas roda headless e confere, em vez de abrir a janela —
+  é o que impede o preparo de apodrecer calado.
+  - **Monitor só existe no modo gráfico.** No headless o `periphemu.create` responde "Monitors are not
+    available in this mode"; alto-falante, `playNote`, `playAudio` e `cc.audio.dfpwm` funcionam nos dois.
+  - **O `.settings` do CC é tabela Lua, não JSON.** `{"a":"b"}` não carrega, e a falha é silenciosa: o
+    OS abriria simplesmente sem relay.
 - `node tools/craftos.js <test|boot|app <nome>|exec "<lua>"|run <arquivo>>` — roda no **CraftOS-PC**
   instalado na máquina (implementação real do CC: ROM, shell, `edit`, `paint` e API `window` de verdade).
   Acha o executável sozinho no Windows, ou use a variável `CRAFTOS`.

@@ -97,14 +97,149 @@ const sizeArg = process.argv.indexOf('--size');
 const SIZE = sizeArg > 0 && process.argv[sizeArg + 1]
   ? process.argv[sizeArg + 1].toLowerCase().split('x').map(Number)
   : [51, 19];
-function writeSize() {
+// `extra` entra no global.json junto com o tamanho. Serve para o modo `live` liberar o
+// endereco local: o CraftOS-PC tambem bloqueia IP local por padrao (http_blacklist), como o
+// CC:T do jogo faz com a regra $private.
+function writeSize(extra) {
   const dir = path.join(DATA, 'config');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'global.json'),
-    JSON.stringify({ defaultWidth: SIZE[0], defaultHeight: SIZE[1] }, null, 2));
+    JSON.stringify({ defaultWidth: SIZE[0], defaultHeight: SIZE[1], ...(extra || {}) }, null, 2));
   // Tamanho por computador. Nem isso vale no headless, mas o modo grafico obedece.
   fs.writeFileSync(path.join(dir, '0.json'),
     JSON.stringify({ computerWidth: SIZE[0], computerHeight: SIZE[1], isColor: true }, null, 2));
+}
+
+// ---------------------------------------------------------------- live
+// Um Mosaic de verdade para MEXER, nao para fotografar: janela grafica, alto-falante que sai
+// som, monitores, e o relay ligado. E' o mais perto do jogo que da para chegar sem o jogo.
+//
+//   node tools/craftos.js live [--size 80x30]
+//
+// Tres coisas precisam ser arrumadas para a musica tocar aqui, e as tres sao o mesmo
+// problema que aparece no Minecraft:
+//   1. o CraftOS-PC bloqueia IP local por padrao (http_blacklist), como o $private do CC:T;
+//   2. o computador precisa de um alto-falante ao lado (periphemu);
+//   3. o OS precisa do endereco do relay nas configuracoes.
+if (cmd === 'live') {
+  const { spawn } = require('child_process');
+  const PORTA = parseInt(process.env.PORT || '8765', 10);
+  const relayDir = path.join(ROOT, 'relay');
+  const tokenFile = path.join(relayDir, '.token');
+
+  const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+  const ping = async () => {
+    try {
+      const r = await fetch(`http://127.0.0.1:${PORTA}/api/ping`);
+      return r.ok;
+    } catch (_) { return false; }
+  };
+
+  (async () => {
+    // Aproveita um relay ja rodando; so' sobe um se nao houver. Subir um segundo daria
+    // "porta em uso" e o erro nao explicaria nada.
+    let meuRelay = null;
+    if (await ping()) {
+      console.log(`relay: ja estava rodando na porta ${PORTA}`);
+    } else {
+      if (!fs.existsSync(path.join(relayDir, 'node_modules'))) {
+        console.error('Falta `cd relay && npm install`.');
+        process.exit(2);
+      }
+      meuRelay = spawn(process.execPath, ['relay.js'], {
+        cwd: relayDir, env: { ...process.env, PORT: String(PORTA) },
+        stdio: ['ignore', 'ignore', 'inherit'],
+      });
+      for (let i = 0; i < 30 && !(await ping()); i++) await espera(300);
+      if (!(await ping())) { console.error('o relay nao subiu'); process.exit(1); }
+      console.log(`relay: subi um na porta ${PORTA} (morre junto com esta janela)`);
+    }
+
+    const token = fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, 'utf8').trim() : '';
+
+    resetComputer();
+    // http_blacklist vazio: sem isto o computador nao alcanca o relay em 127.0.0.1, que e'
+    // exatamente a armadilha do $private no jogo.
+    writeSize({ http_blacklist: [], http_whitelist: ['*'], http_enable: true, http_websocket_enabled: true });
+    fs.copyFileSync(path.join(ROOT, 'startup.lua'), path.join(COMPUTER, 'startup.lua'));
+
+    const OUT = path.join(DATA, 'out');
+    fs.rmSync(OUT, { recursive: true, force: true });
+    fs.mkdirSync(OUT, { recursive: true });
+    // periphemu e' extensao do emulador (proibida em os/), e por isso mora aqui fora.
+    fs.writeFileSync(path.join(OUT, 'perifericos.lua'), [
+      'if not periphemu then return end',
+      'pcall(periphemu.create, "left", "speaker")',
+      '-- Monitores para experimentar o "Enviar para monitor" da barra de tarefas. No modo',
+      '-- grafico cada um abre a propria janela; no headless o CraftOS-PC recusa.',
+      'pcall(periphemu.create, "top", "monitor")',
+      'pcall(periphemu.create, "right", "monitor")',
+    ].join('\n'));
+
+    // O .settings do CC e' tabela LUA (textutils.serialize), nao JSON: `{"a":"b"}` nao
+    // carrega, e a falha e' silenciosa - o OS so' abriria sem relay nenhum.
+    fs.writeFileSync(path.join(COMPUTER, '.settings'), [
+      '{',
+      `  ["mosaic.relay.url"] = "ws://127.0.0.1:${PORTA}/ws/computer",`,
+      `  ["mosaic.relay.token"] = "${token.replace(/"/g, '')}",`,
+      '  ["mosaic.som.enabled"] = true,',
+      '  ["mosaic.som.volume"] = 1,',
+      '  ["mosaic.autostart"] = {',
+      '    "/out/perifericos.lua",',
+      '  },',
+      '}',
+      '',
+    ].join('\n'));
+
+    // `--check` faz o mesmo preparo mas roda headless e confere, em vez de abrir a janela.
+    // Existe para o preparo nao apodrecer calado: se o formato do .settings mudar, ou o
+    // musicd parar de enxergar o relay, isto acusa - e ninguem descobre so' ao abrir.
+    if (process.argv.includes('--check')) {
+      fs.writeFileSync(path.join(OUT, 'checar.lua'), [
+        'sleep(2)',   // deixa os perifericos e os servicos subirem',
+        'local L = {}',
+        'local function diz(k, v) L[#L + 1] = k .. "=" .. tostring(v) end',
+        'diz("relay.url", settings.get("mosaic.relay.url"))',
+        'diz("speaker", peripheral.find("speaker") ~= nil)',
+        'local st = mosaic.musicStatus and mosaic.musicStatus()',
+        'diz("musicd", st ~= nil)',
+        'diz("musicd.relay", st and st.relay)',
+        'diz("musicd.temSom", st and st.temSom)',
+        'local doc, err = mosaic.lib("httpx").gatewayJSON("/api/deps")',
+        'diz("relay.deps", doc and (tostring(doc.ok) .. " falta:" .. table.concat(doc.falta or {}, ",")) or ("ERRO " .. tostring(err)))',
+        'local h = fs.open("/out/live.txt", "w") h.write(table.concat(L, "\\n")) h.close()',
+        'os.shutdown()',
+      ].join('\n'));
+      fs.writeFileSync(path.join(COMPUTER, '.settings'),
+        fs.readFileSync(path.join(COMPUTER, '.settings'), 'utf8')
+          .replace('"/out/perifericos.lua",', '"/out/perifericos.lua",\n    "/out/checar.lua",'));
+      run([...mounts(true), '--mount-rw', `/out=${OUT}`], 60000);
+      const rel = path.join(OUT, 'live.txt');
+      if (meuRelay) meuRelay.kill();
+      if (!fs.existsSync(rel)) { console.error('o OS nao chegou a conferir nada'); process.exit(1); }
+      const texto = fs.readFileSync(rel, 'utf8');
+      console.log(texto);
+      const ruim = /=(false|nil)|ERRO/.test(texto);
+      process.exit(ruim ? 1 : 0);
+    }
+
+    console.log('');
+    console.log('  Mosaic ao vivo no CraftOS-PC');
+    console.log('  ---------------------------------------------');
+    console.log(`  relay:       http://127.0.0.1:${PORTA}/`);
+    console.log('  alto-falante: left      monitores: top, right');
+    console.log('  som:         abra Musica, cole um link ou digite um nome');
+    console.log('  monitor:     botao direito no botao da barra de tarefas');
+    console.log('');
+    console.log('  Feche a janela do CraftOS-PC para encerrar.');
+    console.log('');
+
+    const gui = EXE.replace('_console', '');
+    const filho = spawn(gui, ['-d', DATA, ...mounts(true), '--mount-rw', `/out=${OUT}`],
+      { stdio: 'inherit' });
+    filho.on('close', () => { if (meuRelay) meuRelay.kill(); process.exit(0); });
+  })();
+  return;
 }
 
 if (cmd === 'bench') {

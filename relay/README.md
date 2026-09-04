@@ -6,6 +6,16 @@ Ponte entre os computadores do Minecraft e o seu PC. Serve três coisas na mesma
 - **API HTTP** em `/api/*` — o que o dashboard e o MCP consomem
 - **websocket** em `/ws/computer` — onde os computadores do jogo se conectam
 
+## Testar sem o Minecraft, com som
+
+Se você só quer ouvir a coisa funcionando, não precisa de nada disto: um comando só arruma
+tudo (relay ligado, IP local liberado, alto-falante e monitores no computador) e abre um
+Mosaic de verdade para mexer.
+
+```bash
+node tools/craftos.js live
+```
+
 ## Subir
 
 ```bash
