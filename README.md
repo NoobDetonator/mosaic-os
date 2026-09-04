@@ -222,6 +222,7 @@ O manual completo está em [`os/docs/`](os/docs) e é lido pelo app **Ajuda** de
 6. [Calculadora](os/docs/06-calculadora.md)
 7. [Estado e limites](os/docs/07-estado-e-limites.md)
 8. [Três dimensões](os/docs/08-3d.md)
+9. [Reator](os/docs/09-reator.md)
 
 ## Licença
 

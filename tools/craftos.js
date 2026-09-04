@@ -151,6 +151,10 @@ function bootAndShoot(actions, secs, outFile) {
   const OUT = path.join(DATA, 'out');
   fs.rmSync(OUT, { recursive: true, force: true });
   fs.mkdirSync(OUT, { recursive: true });
+  // O reator falso vive em tools/test, que nao e' montado no computador: vai junto
+  // para /out, que ja e' montado rw para o snap.
+  fs.copyFileSync(path.join(ROOT, 'tools', 'test', 'fake-reactor.lua'),
+    path.join(OUT, 'fake-reactor.lua'));
   fs.writeFileSync(path.join(OUT, 'snap.lua'), [
     'mosaic.minimize()',
     `sleep(${secs})`,
@@ -268,6 +272,26 @@ if (cmd === 'shot') {
     arame: ['mosaic.launchWith({ title = "Modelos", w = 50, h = 17 }, "/os/demos/modelo.lua")',
                 'sleep(1)', 'os.queueEvent("key", keys.space, false)', 'sleep(0.3)',
                 'os.queueEvent("key", keys.a, false)', 'sleep(1.5)'],
+    // O painel do reator com um reator de mentira: o de verdade so' existe no jogo.
+    // `janela` e' o tamanho, para conferir o mesmo painel em tela de monitor.
+    reator: ['dofile("/out/fake-reactor.lua").instalar()',
+                'local W, H = mosaic.screenSize()',
+                'mosaic.launchWith({ title = "Reator", x = 1, y = 1, w = W, h = H - 1 }, "/os/apps/reactor.lua")',
+                'sleep(6)'],
+    // O mesmo painel no tamanho do monitor de verdade do servidor: 36x24 na escala 0,5.
+    reatormon: ['dofile("/out/fake-reactor.lua").instalar()',
+                'mosaic.launchWith({ title = "Reator", x = 1, y = 1, w = 36, h = 24 }, "/os/apps/reactor.lua")',
+                'sleep(6)'],
+    // O painel do reator em 3D: a aba fica depois de Painel, Controle e Config.
+    reator3d: ['dofile("/out/fake-reactor.lua").instalar()',
+                'local W, H = mosaic.screenSize()',
+                'mosaic.launchWith({ title = "Reator", x = 1, y = 1, w = W, h = H - 1 }, "/os/apps/reactor.lua")',
+                'sleep(4)',
+                'for _, p in ipairs(mosaic.list()) do if p.title == "Reator" then',
+                '  os.queueEvent("mouse_click", 1, p.x + 27, p.y + p.h) end end',
+                // Espaco congela o giro: sem isso cada print sai num angulo diferente e
+                // nao da' para comparar um ajuste com o outro.
+                'sleep(0.5)', 'os.queueEvent("key", keys.space, false)', 'sleep(1.5)'],
     startctx: ['local _, H = mosaic.screenSize()',
                'os.queueEvent("mouse_click", 1, 3, H)', 'sleep(1)',
                'os.queueEvent("mouse_click", 2, 5, 5)', 'sleep(1.5)'],

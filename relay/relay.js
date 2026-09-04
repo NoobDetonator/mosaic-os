@@ -112,6 +112,27 @@ const server = http.createServer(async (req, res) => {
     return res.end(fs.readFileSync(file));
   }
 
+  // Servir o /os do repositorio, para o computador do jogo puxar um arquivo alterado sem
+  // passar pelo GitHub. E' so' para desenvolvimento: no jogo o caminho normal continua
+  // sendo o app "Atualizar OS", que confere sha1 contra o manifest.
+  //
+  //   http.get("http://<relay>/dev/<token>/lib/powah.lua")
+  //
+  // O token vai no caminho porque o `http.get` do CC:T 1.101 aceita cabecalho, mas um
+  // caminho simples e' menos coisa para errar de dentro do jogo. E o caminho e' resolvido
+  // contra os/ e conferido depois: sem isso, "../../.." leria o disco inteiro.
+  const dev = route.match(/^\/dev\/([^/]+)\/(.+)$/);
+  if (dev) {
+    if (dev[1] !== TOKEN) return json(res, 401, { error: 'token invalido' });
+    const base = path.resolve(__dirname, '..', 'os');
+    const file = path.resolve(base, dev[2]);
+    if (!file.startsWith(base + path.sep) || !fs.existsSync(file)) {
+      return json(res, 404, { error: 'nao encontrado' });
+    }
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end(fs.readFileSync(file));
+  }
+
   if (!route.startsWith('/api/')) return json(res, 404, { error: 'nao encontrado' });
   if (!authorized(req)) return json(res, 401, { error: 'token invalido ou ausente' });
 

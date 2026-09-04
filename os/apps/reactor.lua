@@ -14,13 +14,21 @@ local INTERVAL = 1
 settings.define("mosaic.reactor.chest", { description = "Inventario com uraninita", type = "string" })
 settings.define("mosaic.reactor.fuelMin", { description = "Alerta de combustivel abaixo de", type = "number", default = 8 })
 settings.define("mosaic.reactor.waterMin", { description = "Alerta de agua abaixo de (mB)", type = "number", default = 500 })
-settings.define("mosaic.reactor.autofeed", { description = "Repor combustivel sozinho", type = "boolean", default = false })
+settings.define("mosaic.reactor.autofeed", { description = "Repor sozinho o que faltar", type = "boolean", default = false })
+settings.define("mosaic.reactor.target", { description = "Completar cada item ate", type = "number", default = 64 })
 settings.define("mosaic.reactor.alerts", { description = "Avisar no chat", type = "boolean", default = true })
 
 local hw = powah.discover()
 local reading = powah.read(hw)
 local firing = {}                       -- alertas ativos, para nao repetir no chat
-local hFuel = chart.history(60)
+-- Uma serie por ITEM, criada quando o item aparece pela primeira vez. Antes so'
+-- existiam duas series cravadas (combustivel e agua) e os outros tres slots do reator
+-- nao tinham historico nenhum.
+local hItem = {}
+local function serieDe(id)
+    hItem[id] = hItem[id] or chart.history(60)
+    return hItem[id]
+end
 local hWater = chart.history(60)
 local hRate = chart.history(60)
 local hEnergy = chart.history(60)
@@ -75,6 +83,31 @@ local function prazo(valor, hist)
     return string.format(" ~%.1fh", m / 60)
 end
 
+-- O que esta dentro do reator agora, na ordem dos slots. Recalculado a cada amostra.
+local itens = {}
+
+-- Completa tudo o que falta, do bau para o reator, e conta o que entrou. Uma linha por
+-- item no registro e uma frase so' no chat: reposicao automatica que fala demais vira
+-- ruido e o operador para de ler.
+local function reabastece(chest, automatico)
+    local alvo = settings.get("mosaic.reactor.target") or 64
+    local feito, err = powah.topUp(hw, chest, reading, nil, alvo)
+    if err then
+        say("falhou repor: " .. tostring(err))
+        return 0, err
+    end
+    local total, partes = 0, {}
+    for _, ff in ipairs(feito) do
+        total = total + ff.moved
+        partes[#partes + 1] = ff.label .. " +" .. ff.moved .. " (" .. ff.para .. ")"
+        say("+ " .. ff.label .. " +" .. ff.moved .. " -> " .. ff.para .. ", de " .. chest)
+    end
+    if total > 0 and chatOn() then
+        hal.chat((automatico and "Reposto: " or "Abastecido: ") .. table.concat(partes, ", "), "Reator")
+    end
+    return total
+end
+
 local function sample()
     reading = powah.read(hw)
     if reading.error then
@@ -83,7 +116,9 @@ local function sample()
     end
     alert("reator", false, "")
 
-    hFuel:push(reading.fuel.count)
+    -- Historico de todos os itens, nao so' do combustivel.
+    itens = powah.consumables(reading)
+    for _, it in ipairs(itens) do serieDe(it.name):push(it.count) end
     if reading.tank then
         tankMax = math.max(tankMax, reading.tank.amount)
         hWater:push(reading.tank.amount)
@@ -106,8 +141,23 @@ local function sample()
     end
 
     local fuelMin = settings.get("mosaic.reactor.fuelMin") or 8
-    alert("combustivel", low("combustivel", reading.fuel.count, fuelMin),
-        "Combustivel baixo: " .. reading.fuel.count .. " uraninita")
+
+    -- Um alerta por item do reator. Antes so' a uraninita tinha aviso; o gelo seco
+    -- podia zerar sem ninguem saber, e ele e' consumido de verdade (medido no servidor).
+    for _, it in ipairs(itens) do
+        alert("item:" .. it.name, low("item:" .. it.name, it.count, fuelMin),
+            it.label .. " baixo: " .. it.count)
+    end
+
+    -- Item que sumiu do reator: o alerta dele nao pode ficar preso ligado para sempre.
+    for chave in pairs(firing) do
+        local id = chave:match("^item:(.+)$")
+        if id then
+            local achou = false
+            for _, it in ipairs(itens) do if it.name == id then achou = true end end
+            if not achou then alert(chave, false, "") end
+        end
+    end
 
     if reading.tank then
         local waterMin = settings.get("mosaic.reactor.waterMin") or 500
@@ -121,7 +171,7 @@ local function sample()
     end
 
     -- Projecao no lugar da temperatura: avisa antes de acabar, nao depois.
-    local mFuel = acabaEm(reading.fuel.count, hFuel)
+    local mFuel = acabaEm(reading.fuel.count, serieDe(powah.FUEL))
     alert("prazo do combustivel", mFuel ~= nil and low("prazo do combustivel", mFuel, 10),
         string.format("Combustivel acaba em ~%d min no ritmo atual", math.floor((mFuel or 0) + 0.5)))
     if reading.tank then
@@ -141,86 +191,65 @@ local function sample()
     end
 
     local chest = settings.get("mosaic.reactor.chest")
-    if settings.get("mosaic.reactor.autofeed") and chest and reading.fuel.count < fuelMin then
-        local moved = powah.feed(hw, chest, powah.fuelSlot(hw, reading))
-        if moved > 0 then say("+ reposto " .. moved .. " uraninita de " .. chest) end
+    if settings.get("mosaic.reactor.autofeed") and chest then
+        -- Repoe QUALQUER item que esteja abaixo do minimo, nao so' o combustivel: quem
+        -- diz do que o reator precisa e' o proprio reator, pelo que tem dentro.
+        local precisa = false
+        for _, it in ipairs(itens) do if it.count < fuelMin then precisa = true end end
+        if precisa then reabastece(chest, true) end
     end
 end
 
 -- ---------------------------------------------------------------- painel
+
+-- Uma barra: a parte cheia na cor do recurso, o resto num cinza neutro.
+--
+-- Cinza e nao azul: azul era a cor do tanque de agua, entao o "vazio" de toda barra
+-- tinha a mesma cor que o cheio de uma delas, e de longe nao dava para saber qual era
+-- qual.
 local function bar(t, x, y, bw, frac, color)
     frac = math.max(0, math.min(1, frac or 0))
     local n = math.floor(frac * bw + 0.5)
+    -- Valor pequeno mas diferente de zero merece pelo menos um ponto: "quase nada" e
+    -- "nada" sao coisas diferentes num reator.
+    if n == 0 and frac > 0 then n = 1 end
     t.setCursorPos(x, y)
     t.setBackgroundColor(color)
     t.write(string.rep(" ", n))
-    t.setBackgroundColor(theme.mutedFg)
+    t.setBackgroundColor(colors.gray)
     t.write(string.rep(" ", bw - n))
     t.setBackgroundColor(theme.appBg)
 end
 
--- Largura do rotulo acompanha a coluna. "Combustivel" tem 11: com 0.4 uma coluna
--- de 28 ja cabe o nome inteiro, e abaixo disso encolhe em vez de estourar.
-local function labelWidth(cw)
-    return math.max(5, math.min(11, math.floor(cw * 0.4)))
-end
-
--- Uma barra rotulada dentro de uma coluna que comeca em x e tem cw de largura.
-local function row(t, x, y, cw, label, value, frac, color)
-    local lw = labelWidth(cw)
-    -- O valor nunca pode empurrar a barra para fora da coluna: corta ele primeiro,
-    -- senao a linha vaza para a coluna vizinha.
-    value = strutil.ellipsis(value, math.max(1, cw - lw - 6))
-    t.setCursorPos(x, y)
-    t.setBackgroundColor(theme.appBg)
-    t.setTextColor(theme.appFg)
-    t.write(" " .. strutil.pad(strutil.ellipsis(label, lw), lw))
-    local bx = x + lw + 1
-    local barW = math.max(3, cw - lw - 2 - #value - 1)
-    bar(t, bx, y, barW, frac, color)
-    t.setCursorPos(bx + barW + 1, y)
-    t.setTextColor(theme.appFg)
-    t.write(value)
-end
-
--- Faixa de grafico com titulo. Devolve a primeira linha livre depois dela.
-local function drawChart(t, x, cw, y, ch, hist, color, nome, minimo)
-    if ch < 3 or hist.n < 2 then return y end
-    t.setCursorPos(x, y)
-    t.setBackgroundColor(theme.appBg)
-    t.setTextColor(theme.mutedFg)
-    t.write(strutil.pad(strutil.ellipsis(nome .. " (" .. hist.n .. ")", cw), cw))
-    chart.line(t, { x = x, y = y + 1, w = cw, h = ch - 1, data = hist.data,
-                    min = minimo, fg = color, bg = colors.black, fill = true })
-    return y + ch
-end
-
--- As barras, numa coluna. Devolve a primeira linha livre.
-local function drawGauges(t, x, cw, y0)
-    local y = y0
-    -- Coluna estreita nao comporta o "~26min" junto do valor: ou some a barra.
-    local comPrazo = cw >= 34
-    local function put(label, value, frac, color)
-        row(t, x, y, cw, label, value, frac, color)
-        y = y + 1
+-- As linhas do painel, montadas antes de desenhar.
+--
+-- Montar primeiro e desenhar depois nao e' capricho: e' o que permite alinhar os
+-- numeros numa coluna so'. Antes cada linha calculava a propria largura, entao 46, 15,
+-- 759 mB e -6.6 FE/t comecavam cada um numa coluna diferente e a leitura de relance
+-- ficava impossivel.
+local function medidas()
+    local m = {}
+    local function put(label, value, frac, color, dica)
+        m[#m + 1] = { label = label, value = value, frac = frac, color = color, dica = dica }
     end
-    put("Combustivel", reading.fuel.count .. (comPrazo and prazo(reading.fuel.count, hFuel) or ""),
-        reading.fuel.count / 64, colors.lime)
-    if reading.coolant.count > 0 then
-        put("Gelo seco", tostring(reading.coolant.count), reading.coolant.count / 64, colors.lightBlue)
+    for _, it in ipairs(itens) do
+        put(it.label, tostring(it.count), it.count / it.limit, it.color, prazo(it.count, serieDe(it.name)))
     end
+    if #itens == 0 then put("Reator vazio", "0", 0, colors.red) end
     if reading.tank then
-        put("Agua", reading.tank.amount .. " mB" .. (comPrazo and prazo(reading.tank.amount, hWater) or ""),
-            tankMax > 0 and (reading.tank.amount / tankMax) or 0, colors.blue)
+        put("Agua", reading.tank.amount .. " mB",
+            tankMax > 0 and (reading.tank.amount / tankMax) or 0, colors.blue,
+            prazo(reading.tank.amount, hWater))
     end
     if reading.energy and reading.energy.capacity > 0 then
-        -- math.floor: em Lua 5.3 o %d recusa float, e o percentual e fracionario.
+        -- Roxo e nao vermelho: o vermelho agora e' a cor do bloco de redstone, e duas
+        -- barras da mesma cor com significados diferentes confundem de longe.
         put("Energia", string.format("%d%%", math.floor(reading.energy.percent)),
-            reading.energy.percent / 100, colors.red)
+            reading.energy.percent / 100, colors.purple)
     end
     if netFeTick then
         -- Com sinal: verde carregando, laranja drenando. E o numero que responde
-        -- "produzo mais do que gasto?", que o throughput sozinho nao responde.
+        -- "produzo mais do que gasto?", que a vazao sozinha nao responde.
         local mag = math.abs(netFeTick)
         put("Balanco", (netFeTick >= 0 and "+" or "-") ..
             (mag >= 1000 and strutil.short(mag) or string.format("%.1f", mag)) .. " FE/t",
@@ -231,7 +260,222 @@ local function drawGauges(t, x, cw, y0)
         put("Saida", strutil.short(reading.energy.rate) .. " FE/t",
             rateMax > 0 and (reading.energy.rate / rateMax) or 0, colors.yellow)
     end
+    return m
+end
+
+-- Desenha as barras numa coluna que comeca em x e tem cw de largura, com rotulo e
+-- numero cada um na sua coluna fixa. Devolve a primeira linha livre.
+local function drawGauges(t, x, cw, y0)
+    local m = medidas()
+    if #m == 0 then return y0 end
+
+    -- As tres colunas saem do conteudo, nao de numero cravado: rotulo pelo maior nome,
+    -- numero pelo maior valor, e a barra fica com o que sobrar.
+    local lw, vw = 5, 3
+    for _, r in ipairs(m) do
+        if #r.label > lw then lw = #r.label end
+        if #r.value > vw then vw = #r.value end
+    end
+    lw = math.min(lw, math.max(5, math.floor(cw * 0.35)))
+    vw = math.min(vw, math.max(3, math.floor(cw * 0.30)))
+
+    -- O prazo ("~7min") so' entra se sobrar barra de verdade depois dele: numa coluna
+    -- estreita ele comeria o desenho, e a barra e' o que se le de longe.
+    local dw = 0
+    for _, r in ipairs(m) do if r.dica and #r.dica > dw then dw = #r.dica end end
+    if cw - lw - vw - dw - 4 < 8 then dw = 0 end
+
+    local barW = cw - lw - vw - dw - 4
+    local y = y0
+    for _, r in ipairs(m) do
+        t.setBackgroundColor(theme.appBg)
+        t.setTextColor(theme.appFg)
+        t.setCursorPos(x, y)
+        t.write(" " .. strutil.pad(strutil.ellipsis(r.label, lw), lw) .. " ")
+        if barW >= 3 then bar(t, x + lw + 2, y, barW, r.frac, r.color) end
+        t.setBackgroundColor(theme.appBg)
+        t.setTextColor(theme.appFg)
+        t.setCursorPos(x + lw + 2 + math.max(0, barW) + 1, y)
+        -- Numero encostado a DIREITA: e' o que faz a coluna de valores ficar reta.
+        t.write(string.rep(" ", math.max(0, vw - #r.value)) .. r.value)
+        if dw > 0 then
+            t.setTextColor(theme.mutedFg)
+            t.write(strutil.pad(r.dica or "", dw))
+        end
+        y = y + 1
+    end
     return y
+end
+
+-- Faixa de grafico com titulo, escala e legenda. Devolve a primeira linha livre.
+--
+-- O grafico de antes era so' a mancha: sem eixo, sem numero, sem nome de unidade. Dava
+-- para ver que subia ou descia e mais nada. Agora o titulo carrega o valor de agora e o
+-- topo da escala, que e' o minimo para o desenho querer dizer alguma coisa.
+local function drawChart(t, x, cw, y, ch, hist, color, nome)
+    if ch < 3 or hist.n < 2 then return y end
+    local atual = hist.data[hist.n]
+    local lo, hi = atual, atual
+    for i = 1, hist.n do
+        local v = hist.data[i]
+        if v < lo then lo = v end
+        if v > hi then hi = v end
+    end
+
+    local function curto(v)
+        local a = math.abs(v)
+        if a >= 1000 then return strutil.short(v) end
+        if a >= 10 or v == math.floor(v) then return string.format("%d", math.floor(v + 0.5)) end
+        return string.format("%.1f", v)
+    end
+
+    -- Titulo no MESMO fundo do grafico: com o fundo do painel atras dele, a faixa preta
+    -- comecava um caractere abaixo e o titulo parecia pertencer as barras, nao ao desenho.
+    t.setCursorPos(x, y)
+    t.setBackgroundColor(colors.black)
+    t.setTextColor(color)
+    local titulo = " " .. nome .. ": " .. curto(atual)
+    local escala = curto(lo) .. ".." .. curto(hi) .. " "
+    t.write(strutil.pad(strutil.ellipsis(titulo, cw), math.max(0, cw - #escala)))
+    t.setTextColor(colors.lightGray)
+    t.write(strutil.ellipsis(escala, cw))
+    t.setBackgroundColor(theme.appBg)
+
+    -- Linha, e nao area preenchida.
+    --
+    -- Com preenchimento e escala presa no zero, uma serie que vive perto do maximo
+    -- (o buffer a 97%, a uraninita em 46 de 47) virava um retangulo solido de cor: o
+    -- desenho ficava bonito e nao dizia nada. A linha mostra a FORMA, que e' o que um
+    -- grafico tem para dar, e a faixa vai escrita no titulo para o desenho nao mentir
+    -- sobre a escala.
+    chart.line(t, { x = x, y = y + 1, w = cw, h = ch - 1, data = hist.data,
+                    fg = color, bg = colors.black })
+    return y + ch
+end
+
+-- ---------------------------------------------------------------- painel 3D
+--
+-- O mesmo painel em barras de tres dimensoes: uma coluna por recurso, altura pela
+-- porcentagem, cor igual a da barra chata, e legenda ao lado com o numero.
+--
+-- E' enfeite assumido, e por isso mora numa aba propria: quem esta operando o reator
+-- le numero, nao perspectiva. Mas e' enfeite honesto — a altura e' a mesma fracao que a
+-- barra mostra, entao nao ha nada aqui que o painel normal nao diga.
+local pixel = mosaic.lib("pixel")
+local mesh = mosaic.lib("mesh")
+local three = mosaic.lib("three")
+local shade = mosaic.lib("shade")
+
+local giro3d, alt3d = 0.7, 0.8
+local c3d, f3d, cw3d, ch3d
+
+-- Monta a cena do zero a cada quadro: sao ~100 triangulos, e guardar malha entre quadros
+-- exigiria saber quando um recurso entrou ou saiu do reator. Medido no CraftOS-PC, a
+-- Suzanne inteira (968 triangulos) leva 3 ms; isto aqui nao chega perto de doer.
+local function cena3d()
+    local m = medidas()
+    if #m == 0 then return nil, m end
+    local n = #m
+    local corpo = mesh.new()
+    local ALTURA = 2.4
+
+    -- As barras ficam num CIRCULO, e nao numa fileira.
+    --
+    -- Em fileira a cena tem angulo ruim: a meia volta do giro voce olha a fila de perfil,
+    -- as colunas se escondem umas atras das outras e sobra um borrao — foi o que o
+    -- primeiro print mostrou. No circulo toda volta mostra todas as barras, e ainda da'
+    -- a nocao de profundidade que uma fileira vista de frente nao da'.
+    local raio = math.max(1.0, n * 0.30)
+    for i = 1, n do
+        local ang = (i - 1) * 2 * math.pi / n
+        local x, z = math.sin(ang) * raio, math.cos(ang) * raio
+
+        -- Uma base por barra: e' o chao que diz onde a coluna comeca quando ela e' baixa.
+        local piso = mesh.cube { top = colors.lightGray, side = colors.gray, bottom = colors.gray }
+        piso:scale(0.86, 0.08, 0.86):translate(x - 0.43, -0.08, z - 0.43)
+        for _, t in ipairs(piso.tris) do corpo.tris[#corpo.tris + 1] = t end
+
+        -- Cor por ORIENTACAO da face (topo claro, lados um degrau abaixo), e nao por
+        -- Lambert. E' a mesma licao que o mesh.voxels ja tinha aprendido: caixa alinhada
+        -- aos eixos so' tem seis normais, e luz direcional joga metade delas no degrau
+        -- escuro — no primeiro print as colunas apareceram quase todas cinzas, com um
+        -- fiapo da cor de verdade. Assim cada barra fica com a propria cor de longe.
+        local base = m[i].color
+        local lado = shade.darker[base] or colors.gray
+        local alt = math.max(0.08, (m[i].frac or 0) * ALTURA)
+        local barra = mesh.cube { top = base, side = lado, bottom = lado }
+        barra:scale(0.68, alt, 0.68):translate(x - 0.34, 0, z - 0.34)
+        for _, t in ipairs(barra.tris) do corpo.tris[#corpo.tris + 1] = t end
+    end
+    -- Sem shade.apply nenhum: a cor ja veio da orientacao da face, e passar uma luz por
+    -- cima disso desfaria justamente o que resolveu o problema.
+    corpo.closed = true
+    return corpo, m
+end
+
+local function draw3d(t, reserva)
+    local tw, th = t.getSize()
+    th = th - (reserva or 0)
+    t.setBackgroundColor(theme.appBg)
+    t.setTextColor(theme.appFg)
+    t.clear()
+
+    local corpo, m = cena3d()
+    if not corpo then
+        t.setCursorPos(2, 2)
+        t.write("Sem leitura do reator.")
+        return
+    end
+
+    -- A legenda fica embaixo (tela estreita) ou a direita (tela larga), e o desenho
+    -- pega o resto. Duas colunas de legenda quando ha altura de sobra.
+    local legW = 0
+    for _, r in ipairs(m) do
+        local n = #r.label + #r.value + 4
+        if n > legW then legW = n end
+    end
+    local aoLado = tw - legW >= 24
+    local gw = aoLado and (tw - legW) or tw
+    local gh = aoLado and th or math.max(3, th - #m)
+
+    if not c3d or cw3d ~= gw or ch3d ~= gh then
+        c3d = pixel.new(gw, gh, colors.black)
+        f3d = three.frame(c3d)
+        -- 45 graus e nao os 70 de fabrica: com o campo aberto e a camera perto, a
+        -- perspectiva entorta tanto as colunas que o circulo deixa de parecer um
+        -- circulo. Campo mais fechado e camera mais longe achatam o desenho e ele
+        -- volta a se ler nos 62 x 51 pontos que a janela tem.
+        f3d:setFoV(45)
+        cw3d, ch3d = gw, gh
+    end
+
+    -- Enquadramento pela esfera que envolve a cena, contra a MENOR metade do canvas:
+    -- e' o que faz caber tanto numa janela larga e baixa quanto num monitor alto.
+    local x0, y0, z0, x1, y1, z1 = corpo:bounds()
+    local cx, cy, cz = (x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2
+    local raio = math.sqrt((x1 - cx) ^ 2 + (y1 - cy) ^ 2 + (z1 - cz) ^ 2)
+    -- A esfera que envolve a cena ja e' folgada num circulo de barras (ela cobre os
+    -- cantos, que projetam para os lados e nao para cima), entao a margem aqui e' 1,0.
+    local dist = raio * f3d:begin().escala / (math.min(c3d.w, c3d.h) / 2)
+
+    f3d:orbit({ cx, cy, cz }, dist, giro3d, alt3d)
+    f3d:clear(colors.black)
+    f3d:draw({ { model = corpo } })
+    c3d:render(t, 1, 1)
+
+    -- Legenda: quadradinho na cor, nome e valor. Sem ela o desenho e' so' cor bonita.
+    local lx, ly = aoLado and (gw + 1) or 1, aoLado and 1 or (gh + 1)
+    for _, r in ipairs(m) do
+        if ly > th then break end
+        t.setCursorPos(lx, ly)
+        t.setBackgroundColor(r.color)
+        t.write("  ")
+        t.setBackgroundColor(theme.appBg)
+        t.setTextColor(theme.appFg)
+        local espaco = math.max(0, tw - lx - 1 - #r.value - #r.label - 2)
+        t.write(" " .. r.label .. string.rep(" ", espaco) .. r.value .. " ")
+        ly = ly + 1
+    end
 end
 
 -- Desenha o painel em qualquer terminal: a janela do OS ou um monitor.
@@ -286,33 +530,42 @@ local function drawPanel(t, reserva)
         y = y + 1
     end
 
+    -- Os graficos preenchem TODA a altura que sobrou, seja ela qual for.
+    --
+    -- Antes o de coluna unica tinha teto de 7 linhas, e num monitor alto o resto da
+    -- parede ficava cinza — foi o buraco que apareceu na foto do servidor. Agora a
+    -- sobra e' repartida entre quantos graficos couberem, e o ultimo encosta embaixo.
+    local candidatos = {}
+    local function serie(hist, cor, nome)
+        if hist and hist.n > 1 then candidatos[#candidatos + 1] = { hist, cor, nome } end
+    end
+    -- Ordem de importancia: o que responde "vai durar?" antes do que enfeita.
+    serie(hNet, colors.orange, "Balanco FE/t")
+    serie(hEnergy, colors.purple, "Buffer FE")
+    for _, it in ipairs(itens) do serie(serieDe(it.name), it.color, it.label) end
+    serie(hWater, colors.blue, "Agua mB")
+    serie(hRate, colors.yellow, "Saida FE/t")
+
+    local gx, gw = 1, tw
+    local gy, gh = y + ((th < 14) and 0 or 1), 0
     if largo then
-        -- Dois graficos empilhados na coluna da direita, dividindo a altura.
-        local cx, cw = colW + 2, tw - colW - 1
-        local disp = th - topo + 1
-        local metade = math.floor(disp / 2)
-        local yy = topo
-        if hEnergy.n > 1 then
-            yy = drawChart(t, cx, cw, yy, metade, hEnergy, colors.red, "Buffer FE", 0)
-        else
-            yy = drawChart(t, cx, cw, yy, metade, hFuel, colors.lime, "Combustivel", 0)
+        -- Em coluna dupla os graficos ficam a direita e usam a altura inteira, do topo
+        -- das barras ate' embaixo, e nao so' o que sobra debaixo delas.
+        gx, gw, gy = colW + 2, tw - colW - 1, topo
+    end
+    gh = th - gy + 1
+    if gh >= 3 and #candidatos > 0 then
+        -- Cada grafico quer ao menos 4 linhas (titulo + 3 de desenho). Quantos cabem
+        -- e' o que decide, e a divisao inteira distribui a sobra nos primeiros.
+        local quantos = math.max(1, math.min(#candidatos, math.floor(gh / 4)))
+        local base = math.floor(gh / quantos)
+        local resto = gh - base * quantos
+        for i = 1, quantos do
+            local alt = base + (i <= resto and 1 or 0)
+            local c = candidatos[i]
+            drawChart(t, gx, gw, gy, alt, c[1], c[2], c[3])
+            gy = gy + alt
         end
-        if hNet.n > 1 then
-            -- Sem min = 0: o balanco fica negativo quando drena, e cortar isso
-            -- em zero esconderia justamente a informacao que interessa.
-            drawChart(t, cx, cw, yy, disp - metade, hNet, colors.orange, "Balanco FE/t")
-        else
-            drawChart(t, cx, cw, yy, disp - metade, hWater, colors.blue, "Agua", 0)
-        end
-    else
-        -- Coluna unica: um grafico embaixo, com teto. Solto, ele viraria um bloco
-        -- de cor ocupando a tela toda num monitor baixo.
-        y = y + ((th < 14) and 0 or 1)
-        local sobra = math.min(7, th - y + 1)
-        local serie, cor2, nome, mn = hFuel, colors.lime, "Combustivel", 0
-        if hNet.n > 1 then serie, cor2, nome, mn = hNet, colors.orange, "Balanco FE/t", nil
-        elseif hEnergy.n > 1 then serie, cor2, nome, mn = hEnergy, colors.red, "Buffer FE", 0 end
-        drawChart(t, 1, tw, y, sobra, serie, cor2, nome, mn)
     end
 end
 
@@ -370,8 +623,11 @@ local function inventories()
     return out
 end
 
+local animar   -- definida junto do temporizador, la' embaixo
+
 local function setMode(m)
     mode = m
+    if animar then animar(m == "3d") end
     for _, wd in ipairs(f.widgets) do
         if wd.tab then wd.visible = (wd.tab == m) end
     end
@@ -386,40 +642,181 @@ local function setMode(m)
 end
 
 f.onDraw = function(_, t)
-    if mode == "painel" then drawPanel(t, 1) end
+    if mode == "painel" then drawPanel(t, 1)
+    elseif mode == "3d" then draw3d(t, 1) end
 end
 
 -- ---- barra de abas, presa no rodape (nao rola com o conteudo)
+-- A barra de abas cabe em janela estreita em vez de ser cortada.
+--
+-- Aberto pelo caminho o app nasce com 36 colunas, e pela area de trabalho com 51: com os
+-- nomes longos a barra passava da borda e o ultimo botao sumia sem nenhum aviso. Entao
+-- ela mede antes — nome longo se couber, curto se nao — e o Parar so' entra se ainda
+-- sobrar espaco. Ele tambem esta na aba Controle, entao perde-lo aqui perde o atalho,
+-- nao a acao.
+local ABAS = {
+    { longo = "Painel",   curto = "Painel", modo = "painel" },
+    { longo = "Controle", curto = "Acoes",  modo = "controle" },
+    { longo = "Config",   curto = "Config", modo = "config" },
+    { longo = "3D",       curto = "3D",     modo = "3d" },
+    { longo = "Registro", curto = "Log",    modo = "registro" },
+}
+local PARAR = 7   -- #"Parar" + 2
+
 local navX = 1
 local nav = {}
+local abaBotoes = {}
+
+local function larguraDas(campo, comParar, gap)
+    local total = comParar and (PARAR + gap) or 0
+    for _, a in ipairs(ABAS) do total = total + #a[campo] + 2 + gap end
+    return total - gap
+end
+
+-- Tenta na ordem do mais legivel para o mais apertado. O espaco de um caractere entre os
+-- botoes e' o primeiro a cair: cada botao ja tem a propria folga interna, entao colados
+-- eles continuam se lendo — e "Controle" colado e' melhor que "Acoes" separado. Foi por
+-- UMA coluna que a barra inteira caia para os nomes curtos em 51 colunas.
+local function montaBarra()
+    for _, tentativa in ipairs({
+        { "longo", true, 1 }, { "longo", true, 0 },
+        { "curto", true, 1 }, { "curto", true, 0 },
+        { "curto", false, 1 }, { "curto", false, 0 },
+    }) do
+        if larguraDas(tentativa[1], tentativa[2], tentativa[3]) <= w then
+            return tentativa[1], tentativa[2], tentativa[3]
+        end
+    end
+    return "curto", false, 0
+end
+
+local campoAba, comParar, gapAba = montaBarra()
+
 local function tab(label, m)
     local b
     b = f:add(ui.button { x = navX, y = h, text = label, pinned = true,
         alt = true, onClick = function() setMode(m) end })
     nav[#nav + 1] = b
-    navX = navX + b:width() + 1
+    navX = navX + b:width() + gapAba
     return b
 end
-tab("Painel", "painel")
-tab("Config", "config")
-tab("Registro", "registro")
+for _, a in ipairs(ABAS) do
+    abaBotoes[#abaBotoes + 1] = tab(a[campoAba], a.modo)
+end
 
-nav[#nav + 1] = f:add(ui.button { x = navX, y = h, text = "Parar", pinned = true, bg = colors.red, fg = colors.white,
-    onClick = function()
-        local chest = settings.get("mosaic.reactor.chest")
-        if not chest then
-            ui.msgbox("Escolha antes, na aba Config, o inventario para onde tirar o combustivel.", "Parada")
-            setMode("config")
-            return
+-- Os tres botoes de acao. "Parar" existia sozinho desde o comeco, o que era estranho:
+-- parar e' tirar a uraninita do reator, entao ligar e' po-la de volta, e esse botao
+-- nunca tinha sido escrito. Agora o par esta completo, e no meio deles o abastecimento
+-- manual, que e' a mesma coisa que o automatico faz — so' que na hora que voce mandar.
+--
+-- Todos pedem o bau da aba Config, porque sem inventario de destino nao ha para onde
+-- tirar o combustivel nem de onde trazer.
+local function precisaDeBau(titulo)
+    local chest = settings.get("mosaic.reactor.chest")
+    if chest then return chest end
+    ui.msgbox("Escolha antes, na aba Config, o bau com os itens do reator.", titulo)
+    setMode("config")
+    return nil
+end
+
+-- So' o Parar fica na barra de abas, e por um motivo: e' o botao de emergencia, e
+-- emergencia nao pode estar atras de uma aba. Iniciar e Abastecer vivem na aba
+-- Controle, com uma linha explicando o que cada um faz — em 51 colunas os seis botoes
+-- juntos nao cabiam, e cortados ficariam piores que escondidos.
+local function iniciar()
+    local chest = precisaDeBau("Iniciar")
+    if not chest then return end
+    local alvo = settings.get("mosaic.reactor.target") or 64
+    -- Reator parado esta sem uraninita nenhuma, entao nao ha item dentro para o
+    -- topUp completar: o combustivel entra pelo `feed`, que sabe achar o slot vazio.
+    local n = powah.feed(hw, chest, powah.fuelSlot(hw, reading), alvo)
+    if n > 0 then
+        say("> iniciado: " .. n .. " uraninita de " .. chest)
+        if chatOn() then hal.chat("INICIADO: " .. n .. " uraninita no reator", "Reator") end
+    else
+        ui.msgbox("Nao achei uraninita em " .. chest .. ".", "Iniciar")
+    end
+    sample()
+    f.dirty = true
+end
+
+local function abastecer()
+    local chest = precisaDeBau("Abastecer")
+    if not chest then return end
+    local total = reabastece(chest, false)
+    if total == 0 then mosaic.notify("Ja esta tudo no alvo") end
+    sample()
+    f.dirty = true
+end
+
+local function parar()
+    local chest = precisaDeBau("Parada")
+    if not chest then return end
+    if not ui.confirm("Retirar todo o combustivel do reator?", "Parada de emergencia") then return end
+    local n, err = powah.pullFuel(hw, chest, reading)
+    say(n > 0 and ("- parado: " .. n .. " uraninita para " .. chest)
+        or ("falhou parar: " .. tostring(err)))
+    if n > 0 and chatOn() then hal.chat("PARADA: combustivel retirado do reator", "Reator") end
+    sample()
+    f.dirty = true
+end
+
+local pararBtn = f:add(ui.button { x = navX, y = h, text = "Parar", pinned = true,
+    bg = colors.red, fg = colors.white, onClick = parar })
+pararBtn.visible = comParar
+nav[#nav + 1] = pararBtn
+
+-- ---- aba Controle
+--
+-- Uma tela so' para as tres alavancas que existem, cada uma com uma linha dizendo o que
+-- faz. O reator do Powah nao tem liga/desliga: o que liga e desliga e' haver ou nao
+-- uraninita dentro dele. Como isso nao e' obvio para quem chega, esta escrito na tela.
+local cty = 2
+local function acao(label, cor, dica, fn)
+    f:add(ui.button { x = 2, y = cty, text = label, bg = cor, fg = colors.white,
+        tab = "controle", onClick = fn })
+    f:add(ui.label { x = 13, y = cty, w = w - 14, text = dica, tab = "controle",
+        fg = theme.mutedFg })
+    cty = cty + 2
+end
+
+f:add(ui.label { x = 1, y = 1, w = w, text = " Controle do reator", tab = "controle",
+    bg = theme.accent, fg = theme.accentFg })
+cty = 3
+acao("Iniciar", colors.green, "poe uraninita e liga", function() iniciar() end)
+acao("Abastecer", colors.blue, "completa tudo que falta", function() abastecer() end)
+acao("Parar", colors.red, "tira a uraninita e desliga", function() parar() end)
+
+local estadoLabel = f:add(ui.text { x = 2, y = cty, w = w - 3, h = 9, text = "", tab = "controle" })
+
+-- O texto de estado explica em palavras o que as barras dizem em cor, para quem abriu o
+-- app pela primeira vez entender o que esta olhando.
+local function estadoTexto()
+    if reading.error then return "Sem leitura do reator.\n" .. reading.error end
+    local l = {}
+    local combustivel = 0
+    for _, it in ipairs(itens) do
+        if it.name == powah.FUEL then combustivel = it.count end
+    end
+    l[#l + 1] = combustivel > 0
+        and ("LIGADO - " .. combustivel .. " uraninita dentro")
+        or "PARADO - sem uraninita dentro"
+    local chest = settings.get("mosaic.reactor.chest")
+    l[#l + 1] = chest and ("Bau: " .. chest) or "Bau: nenhum escolhido (aba Config)"
+    l[#l + 1] = settings.get("mosaic.reactor.autofeed")
+        and ("Reposicao automatica LIGADA, ate " .. (settings.get("mosaic.reactor.target") or 64))
+        or "Reposicao automatica desligada"
+    l[#l + 1] = ""
+    l[#l + 1] = "Dentro do reator:"
+    if #itens == 0 then
+        l[#l + 1] = "  (vazio)"
+    else
+        for _, it in ipairs(itens) do
+            l[#l + 1] = "  " .. it.label .. ": " .. it.count .. "/" .. it.limit
         end
-        if not ui.confirm("Retirar todo o combustivel do reator?", "Parada de emergencia") then return end
-        local n, err = powah.pullFuel(hw, chest, reading)
-        say(n > 0 and ("- retirado " .. n .. " uraninita para " .. chest)
-            or ("falhou parar: " .. tostring(err)))
-        if n > 0 and chatOn() then hal.chat("PARADA: combustivel retirado do reator", "Reator") end
-        sample()
-        f.dirty = true
-    end })
+    end
+    return table.concat(l, "\n")
+end
 
 -- ---- aba Config
 local cy = 2
@@ -433,8 +830,8 @@ local function field(label)
     cy = cy + 1
 end
 
-section("Reposicao de combustivel")
-field("Inventario com uraninita:")
+section("Abastecimento")
+field("Bau com os itens do reator:")
 local invs = inventories()
 local chestNow = settings.get("mosaic.reactor.chest")
 local chestSel = 1
@@ -447,6 +844,12 @@ local chestHint = f:add(ui.label { x = 2, y = cy, w = w - 3, tab = "config",
 cy = cy + 2
 local autofeedBox = f:add(ui.checkbox { x = 2, y = cy, text = "Repor sozinho quando faltar",
     checked = settings.get("mosaic.reactor.autofeed") == true, tab = "config" })
+cy = cy + 2
+field("Completar cada item ate:")
+local targetBox = f:add(ui.textbox { x = 2, y = cy, w = 10,
+    text = tostring(settings.get("mosaic.reactor.target") or 64), tab = "config" })
+f:add(ui.label { x = 13, y = cy, w = w - 14, tab = "config", fg = theme.mutedFg,
+    text = "vale para todo item do reator" })
 cy = cy + 2
 
 section("Alertas")
@@ -464,8 +867,13 @@ cy = cy + 2
 
 f:add(ui.button { x = 2, y = cy, text = "Salvar", tab = "config", onClick = function()
     local fuelMin, waterMin = tonumber(fuelBox.text), tonumber(waterBox.text)
-    if not fuelMin or not waterMin then
+    local alvo = tonumber(targetBox.text)
+    if not fuelMin or not waterMin or not alvo then
         ui.msgbox("Os limites precisam ser numeros.", "Config")
+        return
+    end
+    if alvo < 1 or alvo > 64 then
+        ui.msgbox("O alvo tem de ficar entre 1 e 64: um slot nao guarda mais que isso.", "Config")
         return
     end
     local chest = chestBox:current()
@@ -473,6 +881,7 @@ f:add(ui.button { x = 2, y = cy, text = "Salvar", tab = "config", onClick = func
     settings.set("mosaic.reactor.fuelMin", fuelMin)
     settings.set("mosaic.reactor.waterMin", waterMin)
     settings.set("mosaic.reactor.autofeed", autofeedBox.checked == true)
+    settings.set("mosaic.reactor.target", alvo)
     settings.set("mosaic.reactor.alerts", chatCheck.checked == true)
     settings.save()
     say("config salva")
@@ -508,17 +917,12 @@ local function hardwareText()
         lines[#lines + 1] = "[!] Esta face do reator nao da energia."
         lines[#lines + 1] = "    Ligue o cabo na peca extratora."
     end
-    if reading.coreHint then
-        -- O leitor esta numa peca. O nucleo guarda a temperatura, mas fica cercado
-        -- de pecas no meio do multiblock: nao da para encostar nada nele sem
-        -- desmontar o reator. Informa e para de pedir -- nao e' bug, e' o mod.
-        local c = reading.coreHint
-        lines[#lines + 1] = "[i] Le uma peca. O nucleo esta em"
-        lines[#lines + 1] = "    " .. c.x .. " " .. c.y .. " " .. c.z .. ", cercado: sem temperatura."
-        lines[#lines + 1] = "    Usando projecao de consumo."
-    else
-        mark("Block Reader", hw.blockReader ~= nil, "estado do multiblock")
-    end
+    -- Temperatura saiu da interface de proposito. Ela so' existe no NBT do nucleo do
+    -- multiblock, o nucleo fica cercado de pecas e nenhum Block Reader alcanca ele sem
+    -- desmontar o reator. Explicar isso em toda tela era ruido sobre uma coisa que nunca
+    -- vai existir; o sinal util no lugar dela e' o prazo ("acaba em ~7min"), que ja esta
+    -- nas barras.
+    mark("Block Reader", hw.blockReader ~= nil, "estado do multiblock")
     mark("Energy Detector", hw.energyDetector ~= nil, "FE/t e limite de saida")
     mark("Chat Box", hw.chatBox ~= nil, "alertas no chat")
     mark("Monitor", hw.monitor ~= nil, "painel na parede")
@@ -533,24 +937,63 @@ setMode("painel")
 sample()
 
 local timer = os.startTimer(INTERVAL)
+
+-- A cena 3D gira sozinha, e num tique de 1 s isso seria um solavanco por segundo. Ela
+-- tem o proprio temporizador, de 0,1 s, e ele so' existe enquanto a aba 3D esta na
+-- frente: girar uma cena que ninguem esta vendo gasta o computador a toa.
+local ANIM = 0.1
+local giroTimer = nil
+animar = function(ligar)
+    if ligar and not giroTimer then giroTimer = os.startTimer(ANIM)
+    elseif not ligar then giroTimer = nil end
+end
+
 f.onEvent = function(_, ev, id)
-    if ev == "timer" and id == timer then
+    if ev == "timer" and giroTimer and id == giroTimer then
+        if mode == "3d" and mosaic.focused() == mosaic.current() then
+            giro3d = giro3d + 0.05
+            giroTimer = os.startTimer(ANIM)
+            f.dirty = true
+        else
+            giroTimer = nil
+        end
+        return true
+    elseif ev == "timer" and id == timer then
         timer = os.startTimer(INTERVAL)
         sample()
         drawMonitor()
         hwLabel.text = hardwareText()
+        estadoLabel.text = estadoTexto()
         chestHint.text = (#chestBox.items <= 1)
             and "nenhum na rede: ponha um modem com fio no bau" or ""
         if mode == "registro" then setMode("registro") end
         f.dirty = true
         return true
+    elseif ev == "key" and mode == "3d" then
+        if id == keys.left then giro3d = giro3d - 0.2 f.dirty = true return true
+        elseif id == keys.right then giro3d = giro3d + 0.2 f.dirty = true return true
+        elseif id == keys.up then alt3d = math.min(1.3, alt3d + 0.12) f.dirty = true return true
+        elseif id == keys.down then alt3d = math.max(-0.2, alt3d - 0.12) f.dirty = true return true
+        elseif id == keys.space then animar(giroTimer == nil) return true
+        end
     elseif ev == "term_resize" then
         -- A janela pode ser maximizada depois de aberta: sem reposicionar, a barra
         -- de abas fica presa na altura antiga, no meio do formulario.
         w, h = term.getSize()
+        -- Janela maximizada depois de aberta cabe mais texto: refaz os rotulos em vez de
+        -- manter os curtos escolhidos quando ela era estreita.
+        local campo, quer, gap = montaBarra()
+        local x = 1
+        for i, a in ipairs(ABAS) do
+            abaBotoes[i].text = a[campo]
+            abaBotoes[i].x = x
+            x = x + abaBotoes[i]:width() + gap
+        end
+        pararBtn.x, pararBtn.visible = x, quer
         for _, b in ipairs(nav) do b.y = h end
         logList.w, logList.h = w, h - 1
         hwLabel.w = w - 3
+        estadoLabel.w = w - 3
         chestBox.w = math.min(28, w - 4)
         f.dirty = true
         return true

@@ -37,7 +37,10 @@ function chart.line(t, o)
     local dlo, dhi = extent(data, n)
     local lo = o.min or dlo
     local hi = o.max or dhi
-    if hi <= lo then hi = lo + 1 end   -- serie constante ainda tem de desenhar
+    -- Serie constante ainda tem de desenhar, e no MEIO da faixa. Com `hi = lo + 1` ela
+    -- caia na linha de baixo e virava um tracinho colado na borda, que se le como
+    -- "esta no fundo" quando o valor pode estar em qualquer lugar.
+    if hi <= lo then lo, hi = lo - 1, hi + 1 end
 
     local function rowOf(v)
         local f = (v - lo) / (hi - lo)
@@ -124,10 +127,19 @@ function chart.demo()
     chart.line(win, { x = 1, y = 1, w = 10, h = 4, data = { 0, 5, 10 }, bg = colors.black, fg = colors.lime })
     assert(paints(1, colors.lime), "grafico nao pintou nada na linha do topo")
 
-    -- Serie constante desenha na base, sem sumir nem dividir por zero.
+    -- Serie constante desenha no MEIO, sem sumir nem dividir por zero. No meio e nao na
+    -- base porque um valor parado nao esta "no fundo" de nada: a faixa e' inventada, e
+    -- inventar para baixo faz o painel mentir que o recurso acabou.
     chart.line(win, { x = 1, y = 1, w = 10, h = 4, data = flat, bg = colors.black, fg = colors.red })
-    assert(paints(4, colors.red), "serie constante nao desenhou")
+    assert(paints(2, colors.red), "serie constante nao desenhou no meio")
     assert(not paints(1, colors.red), "serie constante vazou para o topo")
+    assert(not paints(4, colors.red), "serie constante ficou colada na base")
+
+    -- Com preenchimento, a mesma serie pinta do meio para baixo.
+    chart.line(win, { x = 1, y = 1, w = 10, h = 4, data = flat, bg = colors.black,
+                      fg = colors.red, fill = true })
+    assert(paints(4, colors.red), "o preenchimento tem de chegar na base")
+    assert(not paints(1, colors.red), "o preenchimento vazou para o topo")
 
     local h = chart.history(3)
     h:push(1):push(2):push(3):push(4)

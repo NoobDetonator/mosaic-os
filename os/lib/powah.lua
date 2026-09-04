@@ -132,6 +132,112 @@ function powah.read(hw)
     return r
 end
 
+-- Nome legivel dos itens que o reator come. Nao e' lista de permissao: item fora
+-- daqui aparece pelo id mesmo. Serve so' para a tela nao dizer "minecraft:coal_block".
+-- Curtos de proposito: a coluna de rotulo de uma barra tem 11 caracteres, e
+-- "Bloco de carvao" saia como "Bloc...rvao", que nao diz nada. Dentro de um reator
+-- nao ha carvao que nao seja em bloco, entao "Carvao" basta.
+powah.NOMES = {
+    ["powah:uraninite"] = "Uraninita",
+    ["powah:dry_ice"] = "Gelo seco",
+    ["minecraft:coal_block"] = "Carvao",
+    ["minecraft:redstone_block"] = "Redstone",
+    ["minecraft:blaze_rod"] = "Blaze",
+    ["minecraft:ice"] = "Gelo",
+    ["minecraft:packed_ice"] = "Gelo comp.",
+    ["minecraft:blue_ice"] = "Gelo azul",
+    ["minecraft:snow_block"] = "Neve",
+}
+
+-- Cor de cada item nas barras e nos graficos. A mesma cor em todo lugar: barra,
+-- grafico e legenda. Item desconhecido cai no amarelo.
+powah.CORES = {
+    ["powah:uraninite"] = colors.lime,
+    ["powah:dry_ice"] = colors.lightBlue,
+    -- Marrom e nao cinza: cinza e' a cor do vazio da barra, e carvao cinza numa barra
+    -- de fundo cinza fica invisivel. Visto no print antes de virar regra.
+    ["minecraft:coal_block"] = colors.brown,
+    ["minecraft:redstone_block"] = colors.red,
+    ["minecraft:blaze_rod"] = colors.orange,
+    ["minecraft:ice"] = colors.lightBlue,
+    ["minecraft:packed_ice"] = colors.cyan,
+    ["minecraft:blue_ice"] = colors.blue,
+    ["minecraft:snow_block"] = colors.white,
+}
+
+function powah.corDe(id)
+    return powah.CORES[id] or colors.yellow
+end
+
+function powah.nomeDe(id)
+    return powah.NOMES[id] or (id:gsub("^.*:", ""):gsub("_", " "))
+end
+
+-- O que esta dentro do reator, por NOME DE ITEM. Um item pode ocupar mais de um slot,
+-- entao a contagem soma e o slot guardado e' o primeiro (o destino de reposicao).
+--
+-- Por nome e nao por indice de slot: o Powah muda a ordem dos slots entre versoes, e
+-- medido no servidor o slot 1 esta vazio enquanto o combustivel mora no 2. Codigo que
+-- crava numero de slot quebra calado numa atualizacao do mod.
+function powah.consumables(reading)
+    local por, ordem = {}, {}
+    for slot, item in pairs(reading and reading.slots or {}) do
+        local e = por[item.name]
+        if e then
+            e.count = e.count + item.count
+            if slot < e.slot then e.slot = slot end
+        else
+            e = { name = item.name, label = powah.nomeDe(item.name), count = item.count,
+                  slot = slot, limit = 64, color = powah.corDe(item.name) }
+            por[item.name] = e
+            ordem[#ordem + 1] = e
+        end
+    end
+    -- Ordem estavel: pelo slot. Sem isto as barras dancam de lugar entre quadros,
+    -- porque `pairs` nao promete ordem nenhuma.
+    table.sort(ordem, function(a, b) return a.slot < b.slot end)
+    return ordem, por
+end
+
+-- Completa cada item do reator ate' o alvo, puxando do inventario `fromName`.
+--
+-- `alvos` e' opcional: { ["powah:uraninite"] = 64, ... }. Item sem alvo usa `padrao`.
+-- So' repoe o que JA ESTA dentro: o reator e' que diz do que precisa, e assim nao ha
+-- risco de empurrar item errado num slot que o aceite por acaso.
+--
+-- Devolve uma lista { { label, name, moved, para } } com o que entrou, para o registro
+-- e o chat dizerem o que foi feito em vez de "reposto".
+function powah.topUp(hw, fromName, reading, alvos, padrao)
+    if not hw.reactor or not fromName then return {}, "sem reator ou sem origem" end
+    local from = peripheral.wrap(fromName)
+    if not from then return {}, "inventario '" .. fromName .. "' nao esta na rede" end
+    local okL, disponivel = pcall(from.list)
+    if not okL then return {}, "nao consegui ler " .. fromName end
+
+    alvos = alvos or {}
+    padrao = padrao or 64
+    local feito = {}
+    local _, por = powah.consumables(reading)
+    for id, e in pairs(por) do
+        local alvo = alvos[id] or padrao
+        local falta = alvo - e.count
+        if falta > 0 then
+            local moveu = 0
+            for fslot, item in pairs(disponivel or {}) do
+                if item.name == id and moveu < falta then
+                    local ok, n = pcall(hw.reactor.pullItems, fromName, fslot, falta - moveu, e.slot)
+                    if ok and n then moveu = moveu + n end
+                end
+            end
+            if moveu > 0 then
+                feito[#feito + 1] = { name = id, label = e.label, moved = moveu, para = e.count + moveu }
+            end
+        end
+    end
+    table.sort(feito, function(a, b) return a.label < b.label end)
+    return feito
+end
+
 -- Slot de combustivel: onde esta, ou o primeiro vazio, para poder reabastecer
 -- um reator que ficou sem nada.
 function powah.fuelSlot(hw, reading)
@@ -235,6 +341,83 @@ function powah.demo()
     end }
     assert(powah.read({ reactor = fake, blockReader = noNucleo }).coreHint == nil,
         "leitor ja no nucleo nao devia pedir para mover")
+
+    -- consumables: agrupa por NOME e devolve em ordem de slot, sempre igual.
+    local itens, por = powah.consumables(r)
+    assert(#itens == 3, "deviam ser tres itens distintos, deu " .. #itens)
+    assert(itens[1].slot == 2 and itens[2].slot == 3 and itens[3].slot == 5,
+        "a ordem tem de ser a dos slots, senao as barras dancam entre quadros")
+    assert(por["powah:uraninite"].count == 16, "contagem por nome errada")
+    assert(itens[1].label == "Uraninita", "nao traduziu o nome do item")
+    assert(powah.nomeDe("mod:coisa_estranha") == "coisa estranha",
+        "item desconhecido devia virar o id sem o mod, deu " .. powah.nomeDe("mod:coisa_estranha"))
+
+    -- Dois slots com o mesmo item somam, e a reposicao vai para o PRIMEIRO deles.
+    local dobrado = powah.read({ reactor = { size = function() return 5 end,
+        list = function() return { [4] = { name = "powah:dry_ice", count = 10 },
+                                   [2] = { name = "powah:dry_ice", count = 7 } } end,
+        tanks = function() return {} end } })
+    local doisItens, doisPor = powah.consumables(dobrado)
+    assert(#doisItens == 1 and doisPor["powah:dry_ice"].count == 17,
+        "o mesmo item em dois slots tinha de somar")
+    assert(doisPor["powah:dry_ice"].slot == 2, "a reposicao tem de ir para o primeiro slot")
+
+    -- topUp: completa ate' o alvo, so' do que ja esta dentro, e conta o que moveu.
+    local movido = {}
+    local bau = { list = function()
+        return { [1] = { name = "powah:uraninite", count = 64 },
+                 [2] = { name = "powah:dry_ice", count = 30 },
+                 [3] = { name = "minecraft:diamond", count = 5 } }
+    end }
+    local comBau = { reactor = {
+        size = function() return 5 end,
+        list = fake.list, tanks = fake.tanks,
+        pullItems = function(_, fslot, limite, destino)
+            movido[#movido + 1] = { fslot = fslot, limite = limite, destino = destino }
+            return limite
+        end,
+    } }
+    -- peripheral.wrap do bau, so' para o teste
+    local wrapAntigo = peripheral.wrap
+    peripheral.wrap = function(n) if n == "bau" then return bau end return wrapAntigo(n) end
+    local feito = powah.topUp(comBau, "bau", r, nil, 64)
+    peripheral.wrap = wrapAntigo
+
+    local porNome = {}
+    for _, ff in ipairs(feito) do porNome[ff.name] = ff end
+    assert(porNome["powah:uraninite"], "nao completou o combustivel")
+    assert(porNome["powah:uraninite"].moved == 48, "16 + 48 = 64, deu " .. porNome["powah:uraninite"].moved)
+    assert(porNome["powah:uraninite"].para == 64, "o total depois da reposicao esta errado")
+    assert(porNome["powah:dry_ice"].moved == 35, "29 + 35 = 64, deu " .. porNome["powah:dry_ice"].moved)
+    -- O carvao esta no reator e falta no bau: nao aparece no relatorio, porque nada
+    -- foi movido. Item que nao existe na origem nao vira linha de "reposto".
+    assert(not porNome["minecraft:coal_block"], "sem carvao no bau, nao ha o que repor")
+    assert(not porNome["minecraft:diamond"], "nao pode empurrar item que o reator nao tem")
+    for _, mv in ipairs(movido) do
+        assert(mv.destino, "pullItems sem slot de destino cairia em qualquer lugar")
+    end
+
+    -- Alvo por item manda no padrao.
+    local movido2 = {}
+    comBau.reactor.pullItems = function(_, _, limite) movido2[#movido2 + 1] = limite return limite end
+    peripheral.wrap = function(n) if n == "bau" then return bau end return wrapAntigo(n) end
+    local feito2 = powah.topUp(comBau, "bau", r, { ["powah:uraninite"] = 20 }, 64)
+    peripheral.wrap = wrapAntigo
+    for _, ff in ipairs(feito2) do
+        if ff.name == "powah:uraninite" then
+            assert(ff.moved == 4, "com alvo 20 e 16 dentro, tinham de entrar 4, deu " .. ff.moved)
+        end
+    end
+
+    -- Item ja no alvo nao move nada, e origem que nao existe nao derruba nada.
+    local cheio = powah.read({ reactor = { size = function() return 1 end,
+        list = function() return { [1] = { name = "powah:uraninite", count = 64 } } end,
+        tanks = function() return {} end } })
+    peripheral.wrap = function() return bau end
+    assert(#powah.topUp(comBau, "bau", cheio, nil, 64) == 0, "item no alvo nao devia mover nada")
+    peripheral.wrap = wrapAntigo
+    local semBau, errBau = powah.topUp(comBau, "nao_existe", r)
+    assert(#semBau == 0 and errBau, "origem inexistente tinha de devolver erro")
 
     -- Leitor que nao le nada (apontado para o ar) nao pode derrubar a leitura.
     local noAr = { getBlockData = function() return nil end }

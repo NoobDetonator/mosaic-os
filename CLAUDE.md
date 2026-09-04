@@ -121,6 +121,38 @@ Fatos do kernel que não são óbvios:
   escrever um ângulo de luz solto foi o que deixou a casa cinza duas vezes. E a componente vertical da luz é 0,5 e
   não 0,8: o vetor é normalizado, então luz muito de cima não sobra para os lados e as duas paredes visíveis caem
   as duas em cima do corte do `applyTinted`.
+- **O `powah:reactor_part` É um inventário de 5 slots**, e é assim que se abastece o reator: ele responde
+  `list`, `getItemDetail`, `getItemLimit`, `pushItems`, `pullItems`, `tanks`, `getEnergy` e
+  `getEnergyCapacity`. Medido no servidor (CC:T 1.101.3 / MC 1.16.5): slot 1 vazio, 2 uraninita, 3 bloco de
+  carvão, 4 bloco de redstone, 5 gelo seco, todos com limite 64, e o tanque com 1000 mB de água. O gelo seco
+  **é consumido**; carvão e redstone ficaram parados no mesmo período.
+- **Abasteça por NOME DE ITEM, nunca por índice de slot.** O Powah muda a ordem dos slots entre versões, e o
+  slot 1 estar vazio enquanto o combustível mora no 2 já mostra que o número não significa nada. `powah.topUp`
+  completa o que **já está** dentro do reator até um alvo: quem diz do que o reator precisa é o reator.
+- **`pullItems`/`pushItems` só funcionam dentro da MESMA rede.** Um baú encostado no computador dá
+  "Source does not exist" para um reator que vem por cabo. O app só lista inventários que podem funcionar.
+- **O reator do Powah não tem liga/desliga**: o que liga é haver uraninita dentro. Por isso "Parar" é tirar o
+  combustível e "Iniciar" é pô-lo de volta — o app tinha o primeiro sem o segundo desde o começo, e isso
+  confundia todo mundo que abria a tela.
+- **Barra cinza no vazio, e nenhum recurso pode ser cinza.** O bloco de carvão era `colors.gray`, a mesma cor
+  do trecho vazio da barra: a barra dele ficava invisível. Virou marrom.
+- **Gráfico de série que vive perto do máximo não pode ser preenchido.** Com `fill` e escala presa no zero, o
+  buffer a 97% e a uraninita em 46 de 47 viravam retângulos sólidos de cor. Linha, escala automática, e a
+  faixa escrita no título — aí o desenho mostra a forma sem mentir sobre a escala.
+- **Painel de monitor reparte a altura, não desenha e para.** O teto de 7 linhas do gráfico deixava metade de
+  um monitor alto cinza. Agora a sobra é dividida entre quantos gráficos couberem (4 linhas cada) e o último
+  encosta embaixo.
+- **Barras 3D num CÍRCULO, não em fileira**: em fileira, a meia volta da câmera você olha a fila de perfil e as
+  colunas se escondem umas atrás das outras. E cor por **orientação da face** (topo na cor, lados um degrau
+  abaixo por `shade.darker`), nunca Lambert — é a mesma lição do `mesh.voxels`: caixa alinhada aos eixos tem
+  seis normais, e luz direcional joga metade delas no degrau escuro. Com Lambert as colunas saíram quase todas
+  cinzas, com um fiapo da cor real.
+- **O relay serve `/dev/<token>/<caminho>` a partir do `os/` do repositório**, para o computador do jogo puxar
+  um arquivo alterado sem passar pelo GitHub: `http.get("http://<relay>/dev/<token>/apps/reactor.lua")`. Use o
+  **IP público** (Radmin/Hamachi), não o da LAN: o CC:T recusa faixa privada com "Domain not permitted", mesmo
+  com o websocket do relay funcionando pelo mesmo endereço.
+- **`mosaic.lib` guarda o módulo em cache**: sobrescrever um `.lua` no computador não basta, o processo novo
+  continua com o antigo. Reinicie o computador depois de trocar arquivo por fora.
 - **O modo gráfico do CraftOS-PC NÃO existe no jogo, e é a armadilha mais cara que este projeto tem.**
   `term.setGraphicsMode`, `setPixel`, `drawPixels`, `getPixels`, `setFrozen`, `screenshot`, `showMouse`,
   `relativeMouse`, `periphemu` e `mounter` são extensões do emulador. O `term` do CC:Tweaked **não tem

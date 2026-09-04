@@ -56,7 +56,7 @@
     },
     {
       "path": "os/apps/reactor.lua",
-      "sha1": "bdcff702a847c909408fc1f735c1b46747669050"
+      "sha1": "f2bb78f0e8fcd72aee863cb4c32282e43a456061"
     },
     {
       "path": "os/apps/registry.lua",
@@ -123,6 +123,10 @@
       "sha1": "727d2ab3e4c65c59ddeac647eaa3c5ed7778e6f0"
     },
     {
+      "path": "os/docs/09-reator.md",
+      "sha1": "a018ee6a5e0239dd091d96335a334452769065b6"
+    },
+    {
       "path": "os/kernel/draw.lua",
       "sha1": "08578b66029c47eaeb57818153e258843d51bc8b"
     },
@@ -152,7 +156,7 @@
     },
     {
       "path": "os/lib/chart.lua",
-      "sha1": "7cb4360869b349cdbaca79057212fd74fce19bfe"
+      "sha1": "2d0f82d0a07f4d3fc221e4b1ec7c58927e318880"
     },
     {
       "path": "os/lib/clip.lua",
@@ -208,7 +212,7 @@
     },
     {
       "path": "os/lib/powah.lua",
-      "sha1": "257423bd1946995da23c5e7546a5967f5f111403"
+      "sha1": "734f3dac933c429d5ad51bc7271ad07e41046f7b"
     },
     {
       "path": "os/lib/props.lua",
