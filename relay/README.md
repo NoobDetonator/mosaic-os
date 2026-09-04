@@ -52,6 +52,43 @@ tem que ser um que o *servidor* enxergue:
 O servidor também precisa de `[http] enabled = true` e `websocket_enabled = true` no
 `computercraft-server.toml`, e a porta do relay liberada no firewall do seu PC (entrada, TCP).
 
+## Porta de entrada para a internet
+
+O relay também é o caminho do computador do jogo para a web. Ele busca, limpa e devolve
+pronto — no CC não cabe interpretar HTML (51 colunas, Lua 5.1, teto de 7 segundos por passo).
+
+| rota | o que faz |
+|---|---|
+| `GET /api/web?url=` | busca a página e devolve blocos: título, parágrafo, lista, código, imagem |
+| `GET /api/busca?q=` | busca no DuckDuckGo e devolve os resultados no mesmo formato |
+| `GET /api/musica?q=` | resolve link **ou nome**, converte para DFPWM e devolve `{id, titulo, duracao, blocos}` |
+| `GET /api/audio/<id>/<n>` | o enésimo pedaço de 16 KiB de áudio, cru |
+| `GET /api/deps` | diz o que está instalado nesta máquina |
+
+Todas exigem o token, menos `/api/ping`.
+
+O texto volta **sem acento** de propósito: o terminal do CC desenha byte a byte, sem UTF-8, e
+sem isso toda página em português vira lixo na tela.
+
+**Endereço de rede local é bloqueado.** O relay roda na sua máquina; um computador do servidor
+pedindo `192.168.0.1` faria dele um túnel para a sua rede de casa. O bloqueio é por IP
+literal — um *nome* que resolve para endereço privado passa, então não exponha o relay a
+quem você não conhece.
+
+### Música precisa de dois programas
+
+`yt-dlp` (baixa) e `ffmpeg` 5.1+ (converte para DFPWM). Sem eles o resto do relay continua
+funcionando normalmente, e `/api/musica` diz qual está faltando.
+
+```bash
+winget install yt-dlp.yt-dlp
+winget install Gyan.FFmpeg
+```
+
+O áudio convertido fica em `relay/cache/`, e é reaproveitado: a mesma música só é baixada uma
+vez. A busca por nome usa `ytsearch1:`, igual a um bot de música — você cola o link ou digita
+o nome.
+
 ## MCP: deixar o Claude Code operar o computador
 
 ```bash

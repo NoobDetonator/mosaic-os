@@ -188,7 +188,7 @@
     },
     {
       "path": "os/lib/httpx.lua",
-      "sha1": "c0538a4210b7c066d183a704d9f6e874524c0d27"
+      "sha1": "8e0a8456c572d64654984be5ba73b39b85f24f27"
     },
     {
       "path": "os/lib/icons.lua",

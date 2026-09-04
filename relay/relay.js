@@ -13,6 +13,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
+const gateway = require('./gateway.js');
+const musica = require('./musica.js');
 
 const PORT = parseInt(process.env.PORT || '8765', 10);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -138,6 +140,49 @@ const server = http.createServer(async (req, res) => {
 
   try {
     if (route === '/api/computers' && req.method === 'GET') return json(res, 200, computerList());
+
+    // ------------------------------------------------------------ porta para a internet
+    // O computador do jogo nao fala com o site: pede aqui e recebe blocos prontos. O
+    // trabalho de HTML fica no Node porque no CC ele nao cabe - 51 colunas, Lua 5.1 e um
+    // teto de 7 segundos por passo.
+    if (route === '/api/web' && req.method === 'GET') {
+      const alvo = url.searchParams.get('url');
+      if (!alvo) return json(res, 400, { error: 'falta ?url=' });
+      const doc = await gateway.pagina(alvo);
+      return json(res, doc.erro ? 502 : 200, doc);
+    }
+
+    if (route === '/api/busca' && req.method === 'GET') {
+      const termo = url.searchParams.get('q');
+      if (!termo) return json(res, 400, { error: 'falta ?q=' });
+      const doc = await gateway.busca(termo);
+      return json(res, doc.erro ? 502 : 200, doc);
+    }
+
+    // O que esta instalado nesta maquina. O app pergunta antes de prometer alguma coisa.
+    if (route === '/api/deps' && req.method === 'GET') {
+      return json(res, 200, await musica.dependencias(url.searchParams.get('recarrega') === '1'));
+    }
+
+    if (route === '/api/musica' && req.method === 'GET') {
+      const q = url.searchParams.get('q');
+      if (!q) return json(res, 400, { error: 'falta ?q=' });
+      const meta = await musica.resolve(q);
+      return json(res, meta.erro ? 502 : 200, meta);
+    }
+
+    // Pedaco de audio cru. Fora do json() de proposito: sao bytes, nao texto.
+    const bl = route.match(/^\/api\/audio\/([0-9a-f]{16})\/(\d+)$/);
+    if (bl && req.method === 'GET') {
+      const buf = musica.bloco(bl[1], parseInt(bl[2], 10));
+      if (!buf) return json(res, 404, { error: 'nao ha esse pedaco' });
+      res.writeHead(200, {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': buf.length,
+        'Access-Control-Allow-Origin': '*',
+      });
+      return res.end(buf);
+    }
 
     if (route === '/api/events') {
       res.writeHead(200, {

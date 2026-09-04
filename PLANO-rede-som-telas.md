@@ -361,7 +361,44 @@ sozinho na primeira falha — foi o que explicou as duas falhas desta onda em um
 **`toMonitor` relia o tamanho errado.** O `fitMonitor` mexe na escala, e a escala muda o
 tamanho em caracteres: o que o `hal.monitors()` mediu antes ja estava velho.
 
+## Onda 3 — o relay olha para fora: pronta
+
+`relay/webdoc.js` (HTML -> blocos), `relay/gateway.js` (busca com teto e filtro de endereco) e
+`relay/musica.js` (yt-dlp + ffmpeg -> DFPWM em pedacos). Cinco rotas novas: `/api/web`,
+`/api/busca`, `/api/musica`, `/api/audio/<id>/<n>` e `/api/deps`.
+
+Do lado do OS, `httpx` ganhou `getBinary` (audio nao sobrevive ao modo texto), e
+`httpx.gateway()`, que **deduz o endereco HTTP do relay do websocket ja configurado** - duas
+configuracoes dariam duas chances de discordar, e o app Configuracoes ja fazia essa conversao
+escondida dentro do botao Testar.
+
+**Sem dependencia nova no Node.** O relay continua com `ws` e mais nada: um analisador de HTML
+de verdade (jsdom) custa dezenas de megabytes para um ganho que 51 colunas nao mostram.
+
+### O que so' apareceu testando em pagina de verdade
+
+O parser passou nos 32 testes de unidade e mesmo assim entregava lixo na Wikipedia. Tres
+descobertas, cada uma virou codigo:
+
+1. **`<main>` nao e' o artigo.** A Wikipedia poe o seletor de 143 idiomas dentro do `<main>`.
+   Regra nova: entre os candidatos, o maior em texto ganha - mas um candidato **dentro** dele
+   que guarda 60% do texto ganha, porque so' perdeu a moldura. Isso exigiu extrair `<div>`
+   contando aninhamento: `[\s\S]*?</div>` para no primeiro fechamento, que e' de um filho.
+2. **Nome de idioma em alfabeto nao latino vira uma linha de '?'.** Bloco com mais de 40% de
+   interrogacao, ou sem nenhuma letra, e' descartado.
+3. **Link sem texto virava a URL crua**, tres linhas numa tela de 51 colunas. Agora vira o
+   ultimo pedaco do caminho.
+
+Conferido em example.com, Hacker News, tweaked.cc e Wikipedia.
+
+### O que nao deu para testar aqui
+
+**`yt-dlp` e `ffmpeg` nao estao instalados nesta maquina.** Entao a cadeia de conversao esta
+escrita mas nao foi exercitada de ponta a ponta. O que **foi** testado: a divisao em pedacos
+(com arquivo sintetico), o teto de tamanho, o id que nao pode virar caminho de arquivo, e o
+recado de dependencia faltando. O relay nao morre sem eles - `/api/deps` diz o que falta e as
+outras rotas continuam de pe'.
+
 ## Falta
 
-Ondas 3 a 6: o relay como porta de entrada, musica, browser e o fechamento. O plano acima
-esta inteiro.
+Ondas 4 a 6: musica, browser e o fechamento. O plano acima esta inteiro.

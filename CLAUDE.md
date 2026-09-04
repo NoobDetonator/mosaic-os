@@ -260,6 +260,31 @@ Telas de parede (`proc.toMonitor` / `proc.toScreen`):
   processo), então dispara `mosaic:window_menu` e o laço principal resolve. Chamar `proc.toMonitor`
   de dentro de uma corrotina que o scheduler está rodando é reentrância.
 
+Internet (`relay/gateway.js`, `relay/webdoc.js`, `relay/musica.js`, `os/lib/httpx.lua`):
+- **O computador do jogo não fala com o site.** Ele pede ao relay e recebe blocos prontos. Não é
+  preferência: no CC não cabe interpretar HTML — 51 colunas, Lua 5.1, teto de 7 segundos por passo. Os
+  browsers antigos de CC tentaram e o resultado documentado é "bagunçado, sem imagem".
+- **Tirar o acento no relay é obrigatório, não capricho.** O terminal do CC desenha byte a byte, sem
+  UTF-8: sem `asciify`, toda página em português vira lixo na tela.
+- **Achar o conteúdo não é só olhar `<main>`.** Medido: a Wikipedia põe o seletor de 143 idiomas dentro
+  do `<main>`, e o artigo está num `<div>` mais fundo. A regra é: entre os candidatos, o maior em texto
+  ganha — mas um candidato **dentro** dele que guarda ≥60% do texto ganha, porque só perdeu a moldura.
+- **Link vira número, estilo lynx** (`[3]`). Em 51 colunas isso ganha de cor e de linha extra, e dá para
+  escolher pelo teclado.
+- **O relay bloqueia IP privado.** Ele roda na máquina de quem joga; um computador do servidor pedindo
+  `192.168.0.1` faria dele um túnel para a rede de casa. É bloqueio por IP literal — um **nome** que
+  resolve para endereço privado passa, então não exponha o relay a quem você não conhece.
+- **Teto de tamanho lendo o corpo aos pedaços**, não `await r.text()`: um "HTML" de 300 MB seria lido
+  inteiro antes de alguém reclamar.
+- **A busca é raspagem do DuckDuckGo** (endpoint HTML, sem chave nem cota). Se eles mudarem o HTML ela
+  para de achar resultado — e por isso devolve uma linha dizendo isso, em vez de tela vazia.
+- **`yt-dlp` e `ffmpeg` são de fora e podem faltar.** O relay não morre por isso: `/api/deps` diz o que
+  falta e as outras rotas continuam de pé.
+- **O pedaço de áudio é de 16 KiB porque a conta manda**: DFPWM gasta 1 bit por amostra e `playAudio`
+  aceita no máximo 128×1024 amostras. Um byte a mais e o alto-falante recusa o buffer.
+- **`httpx.gateway()` deduz o endereço HTTP do relay do websocket já configurado.** Duas configurações
+  dariam duas chances de discordar.
+
 ## Como testar
 
 - `node tools/lint.js` — sintaxe Lua 5.1 (luaparse) + grep de APIs proibidas. Rode antes de dizer que terminou.
@@ -271,6 +296,9 @@ Telas de parede (`proc.toMonitor` / `proc.toScreen`):
 - `node tools/icons.js` — regera os icones de `os/share/icons` a partir da arte em texto dentro do proprio script. `--from <pasta>` converte uma pasta de PNG (precisa de `npm install pngjs`).
 - `node tools/craftos.js bench` — mede compositor, icone, vetor e passo do kernel. Otimizar com numero, nao com palpite.
 - `node tools/manifest.js` — regenera `manifest.json` (usado por `install.lua` e pelo app `pkg`).
+- `node tools/test-gateway.js` — o lado do relay que olha para fora: HTML→blocos, filtro de endereço e
+  divisão do áudio. **Roda sem rede e sem o relay ligado** — é texto entrando e blocos saindo.
+- `node tools/test-relay.js` — sobe o relay de verdade e conversa com ele como um computador do jogo.
 - `node tools/craftos.js <test|boot|app <nome>|exec "<lua>"|run <arquivo>>` — roda no **CraftOS-PC**
   instalado na máquina (implementação real do CC: ROM, shell, `edit`, `paint` e API `window` de verdade).
   Acha o executável sozinho no Windows, ou use a variável `CRAFTOS`.
