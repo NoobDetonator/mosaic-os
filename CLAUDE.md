@@ -307,6 +307,11 @@ Música (`os/net/musicd.lua`, `os/apps/music.lua`, `relay/musica.js`):
   Enter, PageUp); guarde o original e chame-o no fim.
 - Exige **CC:T 1.100+** no servidor (é de lá que vêm `playAudio` e `cc.audio.dfpwm`), `http` ligado, e
   o relay num endereço que o CC aceite — faixa privada é recusada com "Domain not permitted".
+- **`$private` inclui `127.0.0.0/8`**: testar em mundo local com o relay no mesmo PC **não funciona de
+  fábrica**, mesmo sendo a mesma máquina. Ou libera o host em `serverconfig/computercraft-server.toml`
+  (regra `allow` **antes** da `deny`, que a primeira que casa vence), ou usa um IP de VPN.
+- **A música anda por HTTP, não pelo websocket.** O `mosaic.relay.url` só serve para deduzir o endereço
+  HTTP. Logo o botão **Testar** das Configurações exercita exatamente o caminho da música.
 
 ## Como testar
 

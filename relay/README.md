@@ -37,17 +37,36 @@ do websocket — se o Testar passa mas a conexão não sobe, o problema é o web
 Quem faz a conexão é o computador do jogo, saindo **de dentro do servidor** até o seu PC. Então o IP
 tem que ser um que o *servidor* enxergue:
 
-| situação | o que usar |
-|---|---|
-| mundo local / servidor na mesma máquina | `ws://localhost:8765/ws/computer` |
-| servidor em outra máquina da mesma LAN | o IP LAN do seu PC (`192.168.x.x`) |
-| servidor remoto, com Radmin/Hamachi | o IP da VPN (`26.x.x.x` no Radmin, `25.x.x.x` no Hamachi) |
-| servidor remoto sem VPN | porta liberada no roteador, ou um túnel (Cloudflare Tunnel, ngrok) |
+| situação | o que usar | funciona sem mexer na config? |
+|---|---|---|
+| mundo local / servidor na mesma máquina | `ws://localhost:8765/ws/computer` | **não** — `127.*` é bloqueado |
+| servidor em outra máquina da mesma LAN | o IP LAN do seu PC (`192.168.x.x`) | **não** — faixa privada |
+| servidor remoto, com Radmin/Hamachi | o IP da VPN (`26.x.x.x` no Radmin, `25.x.x.x` no Hamachi) | **sim** |
+| servidor remoto sem VPN | porta liberada no roteador, ou um túnel (Cloudflare Tunnel, ngrok) | **sim** |
 
-> **Atenção às regras do CC:Tweaked.** O mod bloqueia faixas privadas por padrão (`192.168.*`, `10.*`,
-> `172.16-31.*`, `127.*`) na regra `$private` do `computercraft-server.toml`. Num servidor na mesma LAN
-> isso **bloqueia** a conexão até o admin liberar aquele host. IPs de Radmin (`26.x`) e Hamachi (`25.x`)
-> não caem nessa faixa, então passam nas regras padrão.
+> **A armadilha que custa mais tempo.** O CC:Tweaked bloqueia faixas privadas por padrão — e isso
+> **inclui o `localhost`**: a regra `$private` cobre `127.0.0.0/8`, `10.*`, `172.16-31.*` e `192.168.*`.
+> Ou seja, testar em mundo local com o relay no mesmo PC **não funciona de fábrica**, mesmo sendo tudo
+> a mesma máquina. IPs de Radmin (`26.x`) e Hamachi (`25.x`) não caem nessa faixa, então passam.
+
+#### Liberando um endereço local
+
+O arquivo fica em `serverconfig/computercraft-server.toml` **dentro da pasta do mundo** (vale para
+mundo local também, desde a 1.13). As regras são testadas **na ordem**, e a primeira que casa vence —
+então basta pôr uma permissão para o seu endereço *antes* da negação, sem abrir o resto:
+
+```toml
+[[http.rules]]
+    host = "127.0.0.1"
+    action = "allow"
+
+[[http.rules]]
+    host = "$private"
+    action = "deny"
+```
+
+Troque `127.0.0.1` pelo IP do seu PC se o servidor estiver em outra máquina da LAN. Salve e reinicie o
+Minecraft (ou o servidor) — a config é lida na entrada do mundo.
 
 O servidor também precisa de `[http] enabled = true` e `websocket_enabled = true` no
 `computercraft-server.toml`, e a porta do relay liberada no firewall do seu PC (entrada, TCP).
