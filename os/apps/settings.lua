@@ -60,6 +60,38 @@ f:add(ui.dropdown {
 })
 y = y + 4
 
+-- ---------------------------------------------------------------- som
+-- O aviso de "sem alto-falante" e' medido na hora de abrir, e nao um palpite: sem ele a
+-- pessoa mexe no volume e acha que quebrou alguma coisa.
+local audio = mosaic.lib("audio")
+inner = group(y, 2, "Som")
+f:add(ui.checkbox {
+    x = INSET, y = inner, text = "Sons do sistema",
+    checked = settings.get("mosaic.som.enabled") ~= false,
+    onChange = function(self)
+        settings.set("mosaic.som.enabled", self.checked)
+        save()
+        if self.checked then audio.sfx("abrir") end
+    end,
+})
+f:add(ui.label { x = INSET, y = inner + 1, text = "Volume:" })
+f:add(ui.dropdown {
+    x = INSET + 8, y = inner + 1, w = 10, items = { "0", "1", "2", "3" },
+    selected = math.floor(tonumber(settings.get("mosaic.som.volume")) or 1) + 1,
+    onChange = function(_, item)
+        settings.set("mosaic.som.volume", tonumber(item))
+        save()
+        audio.sfx("abrir")
+    end,
+})
+f:add(ui.label {
+    x = INSET + 19, y = inner + 1, w = -(INSET + 20),
+    -- Curto de proposito: sobram ~20 colunas depois do seletor de volume na janela padrao,
+    -- e "sem alto-falante ao lado" saia cortado no meio da palavra.
+    text = audio.has() and "" or "sem alto-falante", fg = theme.mutedFg,
+})
+y = y + 4
+
 -- ---------------------------------------------------------------- relay
 inner = group(y, 4, "Relay (controle remoto)")
 local relayBox = f:add(ui.textbox {

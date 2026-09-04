@@ -68,7 +68,7 @@
     },
     {
       "path": "os/apps/settings.lua",
-      "sha1": "bb99e64c4ea90c9b4808ae23af5590ea7f9fc427"
+      "sha1": "ea395c566ee7592b6803508316bfc23c69196e98"
     },
     {
       "path": "os/apps/taskman.lua",
