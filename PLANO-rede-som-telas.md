@@ -317,7 +317,51 @@ tabela do `http` e' 1.105. E' o campo `timeout` e a forma tabela do **websocket*
   isso o decodificador e' injetavel: a logica de fila roda em qualquer lugar, e o codec de
   verdade e' exercitado pelo CraftOS-PC.
 
+## Onda 2 — apps na parede: pronta, e MENOR que o planejado
+
+O plano previa um registro de telas dentro do compositor: `wm.screens[n]`, cada um com seu
+`root`, `canvas`, `W`, `H`, `last` e paleta. **Nao foi preciso, e o motivo importa:** aquele
+desenho servia a "area de trabalho inteira no monitor", que nao foi a opcao escolhida.
+
+Para um app por monitor em tela cheia, o compositor **nao entra**. Um app na parede e' um app
+cujo `p.term` e' o monitor. Duas pecas ja existiam:
+
+- `p.term` sempre pode ser qualquer terminal (o `net/relay.lua` ja usava isso para um shell
+  sem janela), e o `proc.resume` devolve o redirect de volta a cada passo;
+- `Form:draw` refaz o layout sozinho quando o terminal muda de tamanho, sem nem precisar de
+  `term_resize`.
+
+Entao: `proc.toMonitor(p, nome)` troca o terminal, aplica a paleta no monitor, encaixa a
+escala e manda um `term_resize`. `proc.toScreen(p)` desfaz. O `wm.render` pula quem tem
+`p.monitor` (senao a area de trabalho mostraria a janela congelada), e a barra de tarefas
+poe o numero do monitor na frente do nome.
+
+**A interface e' o botao direito no botao da barra de tarefas** — na barra de titulo o botao
+direito ja redimensiona, e o Windows tambem poe o menu da janela ali.
+
+**`hal.monitors()` e `hal.fitMonitor()`**: a politica de escala saiu do `reactor.lua`, onde
+tinha sido decidida medindo no servidor, e virou compartilhada. O reator passou a usar a
+versao comum — e de quebra ganhou a paleta no monitor, que ele nunca aplicava.
+
+**Testado com dois monitores falsos de tamanhos diferentes**, no emulador e na ROM: ida,
+volta, troca de monitor, monitor ocupado que expulsa o anterior, toque virando clique, foco
+do teclado que nao pode ser roubado, e o bloco quebrado no jogo (`peripheral_detach`)
+trazendo o app de volta.
+
+## Tres correcoes que sairam no caminho
+
+**Aviso tapava menu.** Toast e popup nascem no mesmo canto, em cima da barra de tarefas, e o
+aviso era desenhado por ultimo. Um aviso de passagem cobria o menu que a pessoa acabou de
+abrir. Agora popup vem depois do aviso: entre informar e deixar clicar, ganha deixar clicar.
+
+**O `check()` do teste nao fotografava a tela ao falhar.** O `snap()` tinha que ser posto na
+mao antes da checagem, ou seja, era preciso adivinhar qual ia quebrar. Agora ele fotografa
+sozinho na primeira falha — foi o que explicou as duas falhas desta onda em um minuto.
+
+**`toMonitor` relia o tamanho errado.** O `fitMonitor` mexe na escala, e a escala muda o
+tamanho em caracteres: o que o `hal.monitors()` mediu antes ja estava velho.
+
 ## Falta
 
-Ondas 2 a 6: multi-tela no kernel, o relay como porta de entrada, musica, browser e o
-fechamento. O plano acima esta inteiro.
+Ondas 3 a 6: o relay como porta de entrada, musica, browser e o fechamento. O plano acima
+esta inteiro.

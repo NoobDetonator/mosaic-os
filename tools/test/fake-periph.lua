@@ -51,7 +51,11 @@ end
 -- `escala` muda o tamanho como no jogo: quanto maior a escala, menos caracteres cabem.
 function M.monitor(name, cols, rows)
     local m = { toques = 0, escala = 1 }
-    local base = window.create(term.current(), 1, 1, cols, rows, false)
+    -- Pai e' o terminal nativo, nao o atual: um monitor falso costuma ser maior que a janela
+    -- de quem o cria, e a janela nunca aparece na tela (nasce invisivel) - so' serve de
+    -- buffer para o teste ler com getLine.
+    local pai = (term.native and term.native()) or term.current()
+    local base = window.create(pai, 1, 1, cols, rows, false)
     for k, v in pairs(base) do m[k] = v end
 
     m.getSize = function() return cols, rows end

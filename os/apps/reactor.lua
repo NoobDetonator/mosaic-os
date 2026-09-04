@@ -572,22 +572,11 @@ end
 -- Maior escala de texto que ainda deixa o painel caber: texto grande se le de
 -- longe, mas nao pode espremer as barras. Medido no servidor: um monitor 2x2 so
 -- serve a 0.5 (36x10); um maior aguenta 1 e fica bem mais legivel de longe.
+-- A politica mora no hal, porque multi-tela precisa da mesma. O 56 e' o que abre o layout
+-- de duas colunas com grafico grande (um 3x2 da 57x24 na escala 0,5, contra 29x12 na 1).
 local monitorScale
 local function fitMonitor(m)
-    -- Se a escala menor render uma tela larga, ela vence: e a unica que abre o
-    -- layout de duas colunas com grafico grande (um 3x2 da 57x24 assim, contra
-    -- 29x12 na escala 1). Texto menor, mas muito mais informacao na parede.
-    m.setTextScale(0.5)
-    if m.getSize() >= 56 then monitorScale = 0.5 return end
-    -- Senao, a MAIOR escala que ainda deixa o painel caber: num monitor pequeno
-    -- vale mais ler de longe do que espremer barra.
-    for _, s in ipairs({ 1.5, 1, 0.5 }) do
-        m.setTextScale(s)
-        local mw, mh = m.getSize()
-        if mw >= 26 and mh >= 8 then monitorScale = s return end
-    end
-    m.setTextScale(0.5)
-    monitorScale = 0.5
+    monitorScale = hal.fitMonitor(m, 26, 8, 56)
 end
 
 local function drawMonitor()

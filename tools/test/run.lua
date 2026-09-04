@@ -4,11 +4,17 @@ package.path = "/os/?.lua;/os/?/init.lua;" .. package.path
 
 local failures, passed = {}, 0
 local firstFailScreen
+-- Fotografa a tela na PRIMEIRA falha, sozinho. Antes o snap() tinha que ser posto na mao
+-- antes do check, ou seja, era preciso adivinhar qual checagem ia quebrar. E' declarado
+-- aqui em cima e preenchido la' embaixo, porque `screen()` depende do wm, que ainda nao
+-- existe neste ponto do arquivo.
+local autoSnap
 local function check(cond, msg)
     if cond then
         passed = passed + 1
     else
         failures[#failures + 1] = msg
+        if autoSnap then autoSnap() end
     end
 end
 
@@ -46,6 +52,7 @@ end
 local function screen() return wm.screenshotText() end
 local function line(y) return (wm.canvas.getLine(y)) end
 local function snap() if not firstFailScreen then firstFailScreen = screen() end end
+autoSnap = snap
 
 -- 1. Desktop como janela de fundo
 local desk = proc.launch("/os/apps/desktop.lua", {}, {
@@ -582,6 +589,125 @@ check(cai.dead == true, "o processo de teste nao morreu")
 check(#spk.notas - mudo2 == 2,
     "crash tocou " .. (#spk.notas - mudo2) .. " sons em vez de 2 (abrir + erro)")
 check(spk.notas[#spk.notas][1] == "bass", "o ultimo som de um crash tem que ser o de erro")
+
+-- 21. Multi-tela: mandar um app para a parede.
+-- Dois monitores de tamanhos diferentes, porque com um so' varios erros nao aparecem.
+local mon0 = fake.monitor("monitor_0", 30, 10)
+local mon1 = fake.monitor("monitor_1", 60, 20)
+
+local hal = require("lib.hal")
+local mons = hal.monitors()
+check(#mons == 2, "hal.monitors nao achou os dois monitores: " .. #mons)
+check(mons[1].name == "monitor_0" and mons[1].w == 30, "monitor veio sem nome ou sem tamanho")
+
+-- A politica de escala (usada pelo reactor e pelo toMonitor): a escala 0,5 vence quando abre
+-- uma tela larga, porque e' o que libera layout de duas colunas.
+local escala = hal.fitMonitor(mon1, 26, 8, 56)
+check(escala == 0.5, "fitMonitor devia preferir 0,5 num monitor que fica largo: " .. tostring(escala))
+-- Num monitor que nao fica largo nem na menor escala, vale a MAIOR que ainda couber.
+local peq = fake.monitor("monitor_x", 26, 8)
+fake.instalar()
+local escalaPeq = hal.fitMonitor(peq, 26, 8, 500)
+check(escalaPeq >= 1, "fitMonitor encolheu demais um monitor pequeno: " .. tostring(escalaPeq))
+
+-- App de teste que escreve o proprio tamanho: assim da para provar que ele se re-ajustou.
+local ultimoClique = ""
+local parede = proc.spawn { title = "Parede", x = 2, y = 2, w = 20, h = 5, fn = function()
+    while true do
+        local w, h = term.getSize()
+        term.clear()
+        term.setCursorPos(1, 1) term.write("PAREDE " .. w .. "x" .. h)
+        if ultimoClique ~= "" then term.setCursorPos(1, 2) term.write(ultimoClique) end
+        local ev = { os.pullEvent() }
+        if ev[1] == "mouse_click" then ultimoClique = "CLIQUE " .. ev[3] .. "," .. ev[4] end
+    end
+end }
+pump()
+check(screen():find("PAREDE", 1, true) ~= nil, "o app de teste nao desenhou na area de trabalho")
+
+-- Vai para a parede.
+local okMon, errMon = proc.toMonitor(parede, "monitor_0")
+check(okMon, "toMonitor falhou: " .. tostring(errMon))
+pump()
+check(parede.monitor and parede.monitor.name == "monitor_0", "o app nao registrou o monitor")
+check(parede.term == mon0, "o terminal do app nao virou o monitor")
+
+-- Desenhou LA, no tamanho de la'. O tamanho vem depois do fitMonitor, que mexe na escala.
+local esperado = "PAREDE " .. parede.monitor.w .. "x" .. parede.monitor.h
+check(mon0.tela():find(esperado, 1, true) ~= nil,
+    "o monitor nao mostra '" .. esperado .. "'; mostra: " .. mon0.tela():sub(1, 40))
+check(parede.monitor.w > 20, "o app nao ganhou area: " .. parede.monitor.w)
+
+-- E sumiu da area de trabalho, em vez de ficar la congelado no ultimo quadro.
+wm.render(proc.list(), proc.focus)
+check(screen():find("PAREDE", 1, true) == nil, "o app continua desenhado na area de trabalho")
+-- Mas continua na barra de tarefas, com o numero do monitor na frente. O nome pode sair
+-- cortado (o botao encolhe conforme o numero de janelas), entao a cobranca e' o prefixo.
+check(line(wm.H):find("0:Par", 1, true) ~= nil,
+    "a barra de tarefas nao marcou em qual monitor o app esta: " .. line(wm.H))
+
+-- Toque na parede vira clique, sem roubar o foco do teclado.
+local focoAntes = proc.focus
+mon0.tocar(5, 3)
+pump()
+check(mon0.tela():find("CLIQUE 5,3", 1, true) ~= nil,
+    "o toque no monitor nao chegou no app como clique")
+check(proc.focus == focoAntes, "o toque na parede roubou o foco do teclado")
+
+-- Um monitor so' segura um app: o segundo expulsa o primeiro.
+local outro = proc.spawn { title = "Outro", x = 2, y = 2, w = 20, h = 5, fn = function()
+    while true do term.clear() term.setCursorPos(1, 1) term.write("OUTRO") os.pullEvent() end
+end }
+pump()
+check(proc.toMonitor(outro, "monitor_0"), "o segundo app nao foi para o monitor")
+pump()
+check(parede.monitor == nil, "o primeiro app nao saiu do monitor ocupado")
+check(proc.onMonitor("monitor_0") == outro, "o monitor ficou com o app errado")
+
+-- Trocar de monitor leva o app junto e libera o anterior.
+check(proc.toMonitor(outro, "monitor_1"), "nao consegui mover para o outro monitor")
+pump()
+check(proc.onMonitor("monitor_0") == nil, "o monitor antigo continuou ocupado")
+check(outro.monitor.name == "monitor_1", "o app nao registrou o monitor novo")
+
+-- Monitor quebrado no jogo: o app volta para a tela em vez de escrever no vazio.
+os.queueEvent("peripheral_detach", "monitor_1")
+pump()
+check(outro.monitor == nil, "o app continuou preso a um monitor que sumiu")
+check(outro.term == outro.win, "o terminal do app nao voltou para a janela")
+
+-- E o caminho normal de volta.
+check(proc.toMonitor(parede, "monitor_0"), "nao consegui mandar de volta para a parede")
+pump()
+check(proc.toScreen(parede), "toScreen falhou")
+pump()
+check(parede.monitor == nil and parede.term == parede.win, "o app nao voltou para a janela")
+-- Sobe antes de conferir: a janela de erro do teste 20 continua aberta e cobre esta area.
+proc.raise(parede)
+wm.render(proc.list(), proc.focus)
+check(screen():find("PAREDE", 1, true) ~= nil, "o app nao voltou a desenhar na area de trabalho")
+
+-- O caminho que a pessoa usa: clique direito no botao da barra de tarefas.
+local slot
+for _, s in ipairs(wm.slots) do if s.p == parede then slot = s end end
+check(slot ~= nil, "o app na parede sumiu da barra de tarefas")
+if slot then
+    os.queueEvent("mouse_click", 2, slot.x1 + 1, wm.H)
+    pump()
+    local tela = screen()
+    check(tela:find("Para 0", 1, true) ~= nil and tela:find("Para 1", 1, true) ~= nil,
+        "o menu da janela nao listou os dois monitores")
+    -- Escolher a primeira linha manda para monitor_0, pelo evento que o menu dispara.
+    -- Dois pumps: o menu so' enfileira o evento ao fechar, e ele entra na fila DEPOIS do
+    -- marcador do primeiro pump. Com um so', o teste conferiria antes da acao acontecer.
+    os.queueEvent("key", keys.enter, false)
+    pump()
+    pump()
+    check(parede.monitor and parede.monitor.name == "monitor_0",
+        "escolher no menu nao mandou o app para a parede")
+end
+
+proc.kill(parede) proc.kill(outro) pump()
 
 -- Resultado
 term.redirect(term.native())

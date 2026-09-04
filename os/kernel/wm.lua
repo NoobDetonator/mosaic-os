@@ -225,8 +225,12 @@ function wm.drawTaskbar(procs, focus)
             c.setCursorPos(x, wm.H)
             c.setBackgroundColor(active and theme.taskbarActiveBg or theme.taskbarBg)
             c.setTextColor(active and theme.taskbarActiveFg or theme.taskbarFg)
+            -- App na parede leva o numero do monitor na frente: sem isso ele some da tela e
+            -- o botao nao explica para onde foi. Com dois monitores o numero e' a resposta.
+            local rotulo = p.title or "?"
+            if p.monitor then rotulo = p.monitor.label .. ":" .. rotulo end
             c.setCursorPos(x + 1, wm.H)
-            c.write(pad(p.title or "?", slotW - 2))
+            c.write(pad(rotulo, slotW - 2))
             draw.caps(c, x, wm.H, slotW, active and theme.taskbarActiveBg or theme.taskbarBg, not active)
             table.insert(wm.slots, { x1 = x, x2 = x + slotW - 1, p = p })
             x = x + slotW + 1
@@ -323,18 +327,31 @@ function wm.render(procs, focus)
     c.setBackgroundColor(theme.desktopBg)
     c.setTextColor(theme.desktopFg)
     c.clear()
+    -- `p.monitor` = o app esta desenhando numa parede, e o terminal dele nao e' mais a
+    -- janela. Compor a janela aqui mostraria o ultimo quadro dela, congelado.
+    local function desenha(p)
+        -- Sem sombra na area de trabalho (e' o fundo) nem em tela pequena, onde
+        -- cada coluna conta.
+        if not p.bottom and not wm.tiny then drawShadow(c, p) end
+        if p.chrome then drawTitle(c, p, p == focus) end
+        p.win.setVisible(true)
+        p.win.setVisible(false)
+    end
+    local function visivel(p)
+        return p.win and not p.minimized and not p.hidden and not p.monitor
+    end
     for _, p in ipairs(procs) do
-        if p.win and not p.minimized and not p.hidden then
-            -- Sem sombra na area de trabalho (e' o fundo) nem em tela pequena, onde
-            -- cada coluna conta.
-            if not p.bottom and not wm.tiny then drawShadow(c, p) end
-            if p.chrome then drawTitle(c, p, p == focus) end
-            p.win.setVisible(true)
-            p.win.setVisible(false)
-        end
+        if visivel(p) and not p.popup then desenha(p) end
     end
     wm.drawTaskbar(procs, focus)
     drawToasts()
+    -- Popup (menu Iniciar, menu de janela) vem DEPOIS do aviso, nao antes.
+    -- Menu e aviso nascem no mesmo canto - em cima da barra de tarefas - e um aviso de
+    -- passagem tapava um menu que a pessoa acabou de abrir e esta esperando para clicar.
+    -- Entre informar e deixar clicar, ganha deixar clicar.
+    for _, p in ipairs(procs) do
+        if visivel(p) and p.popup then desenha(p) end
+    end
     drawPointer()
     -- Canvas -> tela, linha a linha, so o que mudou.
     --

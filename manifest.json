@@ -56,7 +56,7 @@
     },
     {
       "path": "os/apps/reactor.lua",
-      "sha1": "f2bb78f0e8fcd72aee863cb4c32282e43a456061"
+      "sha1": "7d6d6cc7d90d93153609137917239ce20701efee"
     },
     {
       "path": "os/apps/registry.lua",
@@ -136,7 +136,7 @@
     },
     {
       "path": "os/kernel/proc.lua",
-      "sha1": "e8dce3fa6990b3ea5b90bf7a2e56d67c314890d7"
+      "sha1": "72b14ce00667c4d1c27b9b3bc04b8cade5078e1f"
     },
     {
       "path": "os/kernel/runner.lua",
@@ -152,7 +152,7 @@
     },
     {
       "path": "os/kernel/wm.lua",
-      "sha1": "88c1066ec3ed896750f3718ae36b7fbfb1efb7e9"
+      "sha1": "94fd159d53ffb03c431efd9a68997a0b0edc88cd"
     },
     {
       "path": "os/lib/audio.lua",
@@ -184,7 +184,7 @@
     },
     {
       "path": "os/lib/hal.lua",
-      "sha1": "0fef925328095fea8935a0f885e9f11b4d6c425f"
+      "sha1": "725582f81b7fc05627f502319286ec824cee9131"
     },
     {
       "path": "os/lib/httpx.lua",

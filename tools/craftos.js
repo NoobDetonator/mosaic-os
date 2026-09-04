@@ -280,6 +280,21 @@ if (cmd === 'shot') {
     arame: ['mosaic.launchWith({ title = "Modelos", w = 50, h = 17 }, "/os/demos/modelo.lua")',
                 'sleep(1)', 'os.queueEvent("key", keys.space, false)', 'sleep(0.3)',
                 'os.queueEvent("key", keys.a, false)', 'sleep(1.5)'],
+    // O menu de janela com monitores de mentira. Monitor de verdade nao existe no CraftOS-PC
+    // headless nem sai no print do modo grafico (o term.screenshot fotografa so' a janela do
+    // computador), mas o MENU aparece na tela do computador - e e' ele que se quer mostrar.
+    monitor: ['local fp = dofile("/test/fake-periph.lua")',
+                'fp.monitor("monitor_0", 30, 10)',
+                'fp.monitor("monitor_1", 60, 20)',
+                'fp.instalar()',
+                'mosaic.launchWith({ title = "Relogio", w = 24, h = 8 }, "/os/apps/clock.lua")',
+                'sleep(2)',
+                // Clique direito no botao da barra de tarefas, achado pelo titulo em vez de
+                // coordenada cravada: o botao encolhe conforme o numero de janelas abertas.
+                'local _, H = mosaic.screenSize()',
+                'for _, s in ipairs(mosaic.wm.slots) do',
+                '  if s.p.title == "Relogio" then os.queueEvent("mouse_click", 2, s.x1 + 1, H) end end',
+                'sleep(2)'],
     // O painel do reator com um reator de mentira: o de verdade so' existe no jogo.
     // `janela` e' o tamanho, para conferir o mesmo painel em tela de monitor.
     reator: ['dofile("/out/fake-reactor.lua").instalar()',

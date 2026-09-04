@@ -194,6 +194,55 @@ function hal.pulse(side, secs)
 end
 
 -- ---------------------------------------------------------------- monitores
+
+-- Todos os monitores, COM o nome e o tamanho atual.
+--
+-- O nome e' obrigatorio para multi-tela: e' ele que vem no `monitor_touch` e no
+-- `peripheral_detach`, e e' por ele que se sabe qual app esta em qual parede. Por isso nao
+-- da para usar `hal.findAll`: ele devolve os objetos e perde o nome.
+function hal.monitors()
+    local out = {}
+    if not peripheral then return out end
+    local ok, names = pcall(peripheral.getNames)
+    if not ok or not names then return out end
+    for _, name in ipairs(names) do
+        if peripheral.getType(name) == "monitor" then
+            local m = peripheral.wrap(name)
+            -- Monitor quebrado no jogo entre o getNames e o wrap: some da lista, nao estoura.
+            local okSize, w, h = pcall(function() return m.getSize() end)
+            if m and okSize then
+                out[#out + 1] = { name = name, p = m, w = w, h = h }
+            end
+        end
+    end
+    return out
+end
+
+-- Maior escala de texto que ainda deixa o conteudo caber: texto grande se le de longe, mas
+-- nao pode espremer o que esta escrito.
+--
+-- Veio do apps/reactor.lua, onde a politica foi decidida medindo no servidor: um monitor
+-- 2x2 so' serve a 0,5 (36x10); um maior aguenta 1 e fica bem mais legivel de longe.
+function hal.fitMonitor(m, minW, minH, wideW)
+    minW, minH = minW or 26, minH or 8
+    -- Se a escala menor render uma tela larga, ela vence: e' a unica que abre layout de duas
+    -- colunas. Texto menor, mas muito mais informacao na parede.
+    if wideW then
+        local ok = pcall(m.setTextScale, 0.5)
+        if ok and select(1, m.getSize()) >= wideW then return 0.5 end
+    end
+    -- Senao, a MAIOR escala que ainda deixa caber: num monitor pequeno vale mais ler de
+    -- longe do que espremer.
+    for _, s in ipairs({ 5, 4, 3, 2, 1.5, 1, 0.5 }) do
+        if pcall(m.setTextScale, s) then
+            local mw, mh = m.getSize()
+            if mw >= minW and mh >= minH then return s end
+        end
+    end
+    pcall(m.setTextScale, 0.5)
+    return 0.5
+end
+
 -- Prepara um monitor: escala, limpa e devolve o objeto.
 function hal.monitor(scale, name)
     local mon = name and peripheral.wrap(name) or peripheral.find("monitor")

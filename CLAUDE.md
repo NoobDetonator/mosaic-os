@@ -231,6 +231,35 @@ Som (`os/lib/audio.lua`, CC:T 1.100+):
 - **Um evento, um som.** Um crash chegou a tocar quatro (abrir, fechar, erro, abrir da janela de erro).
   `spec.silent` no `proc.spawn` e `p.silent` existem para isso, e o teste conta os sons.
 
+Telas de parede (`proc.toMonitor` / `proc.toScreen`):
+- **Um app na parede não passa pelo compositor.** O terminal dele (`p.term`) *vira* o monitor.
+  Funciona porque `p.term` sempre pôde ser qualquer terminal (o daemon do relay já usava isso) e
+  porque `Form:draw` refaz o layout sozinho quando o terminal muda de tamanho — não precisa nem de
+  `term_resize`, embora o kernel mande um para o app que está parado esperando evento.
+- **`wm.render` pula quem tem `p.monitor`.** Sem isso a área de trabalho mostraria a janela congelada
+  no último quadro de antes da mudança. Mas o app continua na barra de tarefas, com o número do
+  monitor na frente do nome — senão ele some da tela e nada explica para onde foi.
+- **`monitor_touch` é só clique de botão direito.** Não existe `monitor_drag` nem `monitor_up`, e
+  monitor não manda tecla. Foi isso que decidiu "um app por monitor" em vez de área de trabalho
+  completa: arrastar janela numa parede é impossível, não difícil.
+- **Tocar na parede NÃO rouba o foco do teclado.** Quem toca o monitor pode estar digitando em outra
+  janela no computador; roubar o foco mandaria as letras para o lugar errado.
+- **Monitor tem paleta própria, por terminal.** `palette.apply(mon)` na ida e `restore` na volta. O
+  `mirror.lua` já sabia disso; o `reactor.lua` nunca aplicou — era um bug de cor latente.
+- **`setTextScale` muda o tamanho em caracteres**, então releia `getSize()` depois de encaixar: o que
+  `hal.monitors()` mediu antes já é velho. A política de escala mora em `hal.fitMonitor`, medida no
+  servidor: 0,5 se render ≥56 colunas (abre layout de duas colunas), senão a **maior** que ainda
+  couber — de longe, ler ganha de caber.
+- **`peripheral_detach` traz o app de volta.** No jogo alguém quebra o bloco com o computador ligado;
+  o app não pode ficar escrevendo num monitor que não existe. Tudo em `pcall`.
+- **Popup é desenhado DEPOIS do aviso (toast).** Os dois nascem em cima da barra de tarefas, e um
+  aviso de passagem tapava o menu que a pessoa acabou de abrir.
+- **O menu da janela é o botão direito na barra de tarefas**, não na barra de título — ali o botão
+  direito já redimensiona.
+- **O menu não chama o scheduler direto.** Ele é modal (roda o próprio laço de eventos dentro de um
+  processo), então dispara `mosaic:window_menu` e o laço principal resolve. Chamar `proc.toMonitor`
+  de dentro de uma corrotina que o scheduler está rodando é reentrância.
+
 ## Como testar
 
 - `node tools/lint.js` — sintaxe Lua 5.1 (luaparse) + grep de APIs proibidas. Rode antes de dizer que terminou.

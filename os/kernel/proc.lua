@@ -297,6 +297,137 @@ local function pointerKey(name, code, isHeld)
     return false
 end
 
+-- ---------------------------------------------------------------- telas de parede
+--
+-- Um app "na parede" e' um app cujo TERMINAL e' o monitor, em vez da janela dele na area de
+-- trabalho. Nao passa pelo compositor: o monitor nao tem z-order, nem barra de tarefas, nem
+-- janela por cima. E nao precisa mesmo - o `monitor_touch` do CC so' da clique de botao
+-- direito, sem arrastar e sem soltar, entao gerenciar janelas numa parede seria capengo.
+--
+-- Isso funciona porque duas pecas ja existiam: `p.term` pode ser qualquer terminal (o daemon
+-- do relay ja usa isso para um shell sem janela), e o `Form:draw` refaz o layout sozinho
+-- quando o terminal muda de tamanho. Mandar um app para a parede e' trocar o terminal dele.
+
+-- Rotulo curto do monitor, para caber no botao da barra de tarefas: "monitor_3" vira "3",
+-- e um monitor grudado no lado vira "top".
+local function monLabel(name)
+    return name:match("_(%d+)$") or name:sub(1, 3)
+end
+
+function proc.monitors() return require("lib.hal").monitors() end
+
+-- Devolve o processo que esta usando este monitor, se houver.
+function proc.onMonitor(name)
+    for _, p in ipairs(procs) do
+        if p.monitor and p.monitor.name == name then return p end
+    end
+end
+
+-- Manda o app para o monitor. Devolve true, ou false + motivo.
+function proc.toMonitor(p, name)
+    if not p or p.dead or p.bottom or p.hidden then return false, "esse programa nao vai" end
+    local alvo
+    for _, m in ipairs(proc.monitors()) do if m.name == name then alvo = m end end
+    if not alvo then return false, "monitor nao encontrado" end
+
+    local ocupado = proc.onMonitor(name)
+    if ocupado and ocupado ~= p then proc.toScreen(ocupado) end
+    if p.monitor then proc.toScreen(p) end
+
+    -- Tudo em pcall: no jogo alguem quebra o bloco com o computador ligado.
+    local ok = pcall(function()
+        -- O monitor tem paleta PROPRIA: sem isto o app sai com as cores erradas na parede.
+        -- O apps/mirror.lua ja tinha descoberto isso; o reactor.lua nunca aplicou.
+        local palette = require("kernel.palette")
+        if palette.enabled() then palette.apply(alvo.p) end
+        alvo.scale = require("lib.hal").fitMonitor(alvo.p, 26, 8, 56)
+        -- A escala muda o tamanho em caracteres, entao o que hal.monitors() mediu ja e'
+        -- velho. Sem reler aqui, o menu mostraria o tamanho de antes de encaixar.
+        alvo.w, alvo.h = alvo.p.getSize()
+        alvo.p.setBackgroundColor(theme.appBg)
+        alvo.p.setTextColor(theme.appFg)
+        alvo.p.clear()
+        alvo.p.setCursorPos(1, 1)
+    end)
+    if not ok then return false, "o monitor nao respondeu" end
+
+    alvo.label = monLabel(name)
+    p.monitor = alvo
+    p.term = alvo.p
+    -- term_resize para o app refazer o layout no tamanho da parede. Sem isto ele so' se
+    -- ajustaria no proximo desenho, e um app parado esperando evento nunca desenharia.
+    proc.resume(p, "term_resize")
+    dirty = true
+    return true
+end
+
+-- Traz o app de volta para a area de trabalho.
+function proc.toScreen(p)
+    if not p or not p.monitor then return false end
+    local mon = p.monitor
+    p.monitor = nil
+    p.term = p.win or wm.nullTerm
+    pcall(function()
+        local palette = require("kernel.palette")
+        -- restore usa nativePaletteColour, que e' da 1.81 e nao existe no emulador: quando
+        -- ele nao da conta, devolve slot a slot pelas cores de fabrica.
+        if not palette.restore(mon.p) then
+            palette.restoreSlots(mon.p, palette.ccDefaults)
+        end
+        mon.p.setBackgroundColor(colors.black)
+        mon.p.setTextColor(colors.white)
+        mon.p.clear()
+        mon.p.setCursorPos(1, 1)
+    end)
+    if not p.dead then proc.resume(p, "term_resize") end
+    dirty = true
+    return true
+end
+
+-- Menu da janela: clique direito no botao da barra de tarefas.
+--
+-- A barra de titulo nao serve de gatilho porque o botao direito nela ja redimensiona, e o
+-- Windows tambem poe o menu da janela no botao da barra.
+--
+-- O menu e' modal (ui.dialog roda o proprio laco de eventos), entao tem que viver dentro de
+-- um processo. E ele nao chama proc.toMonitor direto: manda um evento e o laco principal
+-- resolve. Chamar o scheduler de dentro de uma corrotina que o scheduler esta rodando e'
+-- reentrancia, e nao vale o susto por tres linhas economizadas.
+function proc.windowMenu(p, x)
+    if not p or p.dead then return end
+    local itens, acoes = {}, {}
+    for _, m in ipairs(proc.monitors()) do
+        if not (p.monitor and p.monitor.name == m.name) then
+            itens[#itens + 1] = { text = "Para " .. monLabel(m.name) .. " (" .. m.w .. "x" .. m.h .. ")" }
+            acoes[#acoes + 1] = { "monitor", m.name }
+        end
+    end
+    if p.monitor then
+        itens[#itens + 1] = { text = "Trazer de volta" }
+        acoes[#acoes + 1] = { "tela" }
+    end
+    if #itens == 0 then
+        itens[1] = { text = "Nenhum monitor", disabled = true }
+        acoes[1] = { "nada" }
+    end
+
+    local w = 12
+    for _, it in ipairs(itens) do w = math.max(w, #it.text + 2) end
+    w = math.min(w, wm.W)
+    local h = math.min(#itens, wm.H - 2)
+    local id = p.id
+    proc.spawn {
+        title = "Janela", chrome = false, popup = true, holdOnError = false,
+        x = math.max(1, math.min(x or 1, wm.W - w + 1)), y = math.max(1, wm.H - h),
+        w = w, h = h, bg = theme.appBg, fg = theme.appFg,
+        fn = function()
+            local idx = mosaic.ui.menu(itens, 1, 1, w)
+            local a = idx and acoes[idx]
+            if a and a[1] ~= "nada" then os.queueEvent("mosaic:window_menu", id, a[1], a[2]) end
+        end,
+    }
+end
+
 function proc.togglePointer()
     local p = wm.pointer
     p.on = not p.on
@@ -348,7 +479,9 @@ local function handleMouse(name, btn, x, y)
         elseif h.kind == "start" then
             proc.toggleStartMenu()
         elseif h.kind == "taskbar" and h.p then
-            if h.p == proc.focus and not h.p.minimized then
+            if btn == 2 then
+                proc.windowMenu(h.p, h.p and x or 1)
+            elseif h.p == proc.focus and not h.p.minimized then
                 h.p.minimized = true refocus()
             else
                 proc.raise(h.p) proc.setFocus(h.p)
@@ -418,6 +551,44 @@ function proc.step()
     elseif name == "mouse_click" or name == "mouse_up" or name == "mouse_drag" or name == "mouse_scroll" then
         handleMouse(name, ev[2], ev[3], ev[4])
         dirty = true
+    elseif name == "mosaic:window_menu" then
+        local alvo = byId[ev[2]]
+        if alvo then
+            if ev[3] == "monitor" then
+                local ok, err = proc.toMonitor(alvo, ev[4])
+                if not ok then wm.toast(err or "nao deu", 4) end
+            elseif ev[3] == "tela" then
+                proc.toScreen(alvo)
+            end
+        end
+    elseif name == "monitor_touch" then
+        -- Toque na parede vira clique no app daquele monitor. Coordenada sai igual: o app
+        -- ocupa a tela inteira, entao nao ha janela para descontar.
+        --
+        -- O foco do TECLADO nao muda de proposito. Quem toca a parede pode estar digitando
+        -- noutra janela no computador, e roubar o foco mandaria as letras para o lugar
+        -- errado. Alem disso o monitor so' manda clique: nao existe arrastar nem soltar.
+        local alvo = proc.onMonitor(ev[2])
+        if alvo then proc.resume(alvo, "mouse_click", 1, ev[3], ev[4]) end
+    elseif name == "monitor_resize" then
+        local alvo = proc.onMonitor(ev[2])
+        if alvo and alvo.monitor then
+            local ok, w, h = pcall(function() return alvo.monitor.p.getSize() end)
+            if ok then alvo.monitor.w, alvo.monitor.h = w, h end
+            proc.resume(alvo, "term_resize")
+        end
+    elseif name == "peripheral_detach" then
+        -- Alguem quebrou o bloco com o computador ligado. O app volta para a area de
+        -- trabalho em vez de escrever num monitor que nao existe mais.
+        local alvo = proc.onMonitor(ev[2])
+        if alvo then
+            alvo.monitor = nil          -- some antes do toScreen: o monitor nao responde mais
+            alvo.term = alvo.win or wm.nullTerm
+            if not alvo.dead then proc.resume(alvo, "term_resize") end
+            wm.toast("O monitor sumiu: " .. tostring(alvo.title) .. " voltou para a tela", 5)
+            dirty = true
+        end
+        broadcast(ev)
     else
         broadcast(ev)
     end
