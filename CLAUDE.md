@@ -9,7 +9,9 @@ Isso significa CC:Tweaked ~1.95–1.101 e **Lua 5.1 (Cobalt)**. Advanced Periphe
   `coroutine.isyieldable`, escapes `\u{}`, `%g` em format, `math.tointeger/type/ult`. Bitwise: use `bit32`.
 - `load(code, "=name", "t", env)` **sempre com env explícito** (pré-1.109 o `load` usa o env do chamador).
 - **APIs do CC:T proibidas** (mais novas que 1.101):
-  - `http.get/post/request{ url=..., timeout=... }` e `http.websocket{...}` (forma tabela, 1.105) → use argumentos posicionais.
+  - Campo `timeout` em `http.get/post/request{...}` (1.105) e a **forma tabela do `http.websocket`/
+    `websocketAsync`** (1.105) → use argumentos posicionais em tudo. (A forma tabela do `get`/`post`/
+    `request` em si é de 1.80pr1.6 e seria permitida; posicional em tudo é mais fácil de conferir.)
   - `textutils.serialiseJSON(t, {opts})` (1.106+) → use `serialiseJSON(t)`; `textutils.serialise(t, {compact=})` (1.97).
   - `fs.open(p, "r+")`/`"w+"` (1.109); `fs.find` com `?` (1.106); `fs.combine` com mais de 2 args; `fs.attributes().isReadOnly`.
   - `colors.fromBlit` (1.106) → `2 ^ tonumber(c, 16)`. `cc.expect.range` (1.96). `parallel.*` com arg `spawn` (1.120).
@@ -32,7 +34,8 @@ os/kernel/proc.lua -> scheduler: spawn/launch/resume/kill/terminate/setFocus/rai
 os/kernel/wm.lua   -> canvas offscreen (window.create(root,1,1,W,H,false)), z-order, hitTest, drag/resize, taskbar, screenshot
 os/kernel/ui.lua   -> widgets (form/label/button/textbox/list/checkbox/dropdown/progress) + msgbox/confirm/prompt modais
 os/kernel/theme.lua-> cores nomeadas
-os/lib/*           -> chart, clip (recortar/colar), fileops (acoes + menus), fsx, hal (periféricos), httpx, icons (.nfp 12x12),
+os/lib/*           -> audio (alto-falante, sons do sistema, fluxo DFPWM), chart, clip (recortar/colar),
+                      fileops (acoes + menus), fsx, hal (periféricos), httpx, icons (.nfp 12x12),
                       log, pixel (teletext 2x3), powah, props, shortcut (.lnk), strutil, vector (rasterizador)
 os/net/*           -> relay.lua (websocket p/ relay Node), netd.lua (rednet entre computadores Mosaic)
 os/docs/*          -> guias em markdown simples lidos pelo app Ajuda (entram no manifest)
@@ -183,6 +186,9 @@ Fatos do kernel que não são óbvios:
 - **O CraftOS-PC headless não cria monitor** (`periphemu.create` responde "Monitors are not available in
   this mode"). Para testar monitor é preciso o modo gráfico, e aí o `term.screenshot` fotografa só o
   computador — a prova vem de `getSize()` e de o app não ter estourado, não de um print.
+  **Mas dá para testar com periférico falso:** `tools/test/fake-periph.lua` sobrescreve o `peripheral`
+  global (mesmo truque do `fake-reactor.lua`) e monta alto-falante e monitor. O `find` dele devolve
+  **varargs**, como o do CC — o do `fake-reactor` devolve um só e não serve para multi-monitor.
 - **Descarte de face de costas é propriedade da malha** (`m.closed`), não bandeira global: `mesh.voxels` e
   `mesh.cube` se declaram fechados; `plane` e `grid` não, e com descarte sumiriam vistos por baixo.
 - **Não agrupe float por `string.format("%.0f")`.** O zero negativo vira `"-0"` em algumas
@@ -206,6 +212,24 @@ Fatos do kernel que não são óbvios:
   nada na direita: desenha fora da tela.
 - **O teste de fumaça de app olha a tela, não só se o processo morreu.** Com `holdOnError` o processo fica vivo
   mostrando o erro, então "não morreu" não prova nada.
+
+Som (`os/lib/audio.lua`, CC:T 1.100+):
+- **48 kHz, amostra de 8 bits com sinal, no máximo 128×1024 amostras por `playAudio`** (~2,7 s). O DFPWM
+  gasta 1 bit por amostra, então o bloco de 16×1024 bytes dá exatamente esse máximo. Essas três constantes
+  são a mesma conta vista de três lados; se uma mudar, as outras mudam junto.
+- **Decodificar um bloco custa 38 ms e rende 2,7 s de som** (CraftOS-PC). São ~1,4% de CPU: música toca
+  praticamente de graça, e não precisa picar o bloco. No computador do jogo é mais lento, mas o limite dos
+  7 s é por *resume*, não por segundo — o que pode aparecer é engasgo no primeiro bloco.
+- **O evento `speaker_audio_empty` diz QUAL alto-falante vagou.** O laço canônico da documentação
+  (`while not playAudio do pullEvent end`) ignora o nome e trava com mais de um alto-falante. Por isso
+  `audio.speakers()` devolve o nome junto, e `hal.findAll` não serve aqui: ele perde o nome.
+- **Um decodificador por fluxo.** Ele guarda estado; reaproveitar entre músicas sai com o som errado.
+- **`playNote` aceita 8 notas por tique e `playSound` um som por vez.** `false` de volta é fila cheia, não
+  erro. Instrumento que não existe **levanta erro** — por isso `audio.instruments` confere antes.
+- **Som do sistema nunca pode derrubar o compositor.** No `proc.lua` a chamada é `pcall`, o módulo é
+  carregado tarde, e computador sem alto-falante é o caso normal: vira silêncio, não erro.
+- **Um evento, um som.** Um crash chegou a tocar quatro (abrir, fechar, erro, abrir da janela de erro).
+  `spec.silent` no `proc.spawn` e `p.silent` existem para isso, e o teste conta os sons.
 
 ## Como testar
 

@@ -14,6 +14,8 @@ settings.define("mosaic.relay.events", { description = "Eventos do jogo encaminh
 settings.define("mosaic.net.enabled", { description = "Ativar rede rednet entre computadores Mosaic", type = "boolean", default = true })
 settings.define("mosaic.net.password", { description = "Senha para comandos remotos via rednet", type = "string" })
 settings.define("mosaic.net.name", { description = "Nome deste computador na rede", type = "string" })
+settings.define("mosaic.som.enabled", { description = "Sons do sistema (precisa de um alto-falante ao lado)", type = "boolean", default = true })
+settings.define("mosaic.som.volume", { description = "Volume geral, de 0 a 3", type = "number", default = 1 })
 settings.define("mosaic.autostart", { description = "Programas abertos ao ligar", type = "table", default = {} })
 settings.define("mosaic.wallpaper", { description = "Imagem .nfp de fundo", type = "string" })
 settings.load()
@@ -74,6 +76,9 @@ end
 for _, path in ipairs(settings.get("mosaic.autostart") or {}) do
     if fs.exists(path) then proc.launch(path) end
 end
+
+-- Ligou. Sem alto-falante ao lado isso e' silencio, nao erro.
+pcall(function() require("lib.audio").sfx("boot") end)
 
 proc.run()
 

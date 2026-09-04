@@ -73,6 +73,10 @@ function run(args, timeoutMs) {
 }
 
 const mounts = (rw) => [
+  // Os apoios de teste (perifericos falsos) vivem em tools/test e sao carregados por
+  // caminho de dentro do CC. O emulador proprio ja monta isso como /test; sem o mesmo
+  // aqui, o run.lua daria "File not found" so' no CraftOS.
+  '--mount-ro', `/test=${path.join(ROOT, 'tools', 'test')}`,
   rw ? '--mount-rw' : '--mount-ro', `/os=${path.join(ROOT, 'os')}`,
 ];
 
@@ -136,9 +140,13 @@ if (cmd === 'test') {
   const seen = new Set();
   const unique = [];
   for (const l of result.reverse()) if (!seen.has(l.trim())) { seen.add(l.trim()); unique.unshift(l.trim()); }
-  if (unique.length) console.log(unique.join('\n'));
-  else { console.log('(nao achei o resultado; tela final:)'); console.log(lastScreen(out)); }
-  process.exit(status || 0);
+  if (unique.length) { console.log(unique.join('\n')); process.exit(status || 0); }
+  // Sem a linha do self-check o teste abortou antes do fim (erro de sintaxe, arquivo que
+  // falta, computador travado). Isso NAO e' sucesso: sair com 0 aqui ja deixou passar um
+  // commit vermelho uma vez, porque o `&&` da linha de comando seguiu em frente.
+  console.log('(o teste nao chegou ao resultado; tela final:)');
+  console.log(lastScreen(out));
+  process.exit(1);
 }
 
 // Liga o OS e tira um print PNG de verdade (pixels, fonte e cores do CraftOS-PC).

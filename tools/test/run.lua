@@ -243,7 +243,7 @@ local okPowah, errPowah = pcall(require("lib.powah").demo)
 check(okPowah, "powah.demo falhou: " .. tostring(errPowah))
 -- As libs de arquivo: atalho, area de transferencia, propriedades e as operacoes.
 -- Cada uma traz o proprio self-check; aqui so' se cobra que ele passe.
-for _, nome in ipairs({ "shortcut", "clip", "props", "fileops", "expr", "mcmath", "plot", "create", "mesh", "three", "shade" }) do
+for _, nome in ipairs({ "shortcut", "clip", "props", "fileops", "expr", "mcmath", "plot", "create", "mesh", "three", "shade", "audio" }) do
     local okLib, errLib = pcall(require("lib." .. nome).demo)
     check(okLib, nome .. ".demo falhou: " .. tostring(errLib))
 end
@@ -533,6 +533,55 @@ check(hf.focused == escondivel, "nao consegui focar o primeiro widget")
 escondivel.visible = false
 hf:layout(30, 6)
 check(hf.focused == outro, "foco ficou no widget escondido: o teclado sumiria ali dentro")
+
+-- 20. Som: com um alto-falante ao lado, abrir e fechar janela tem que tocar.
+-- Sem periferico falso isto nao teria como ser testado fora do jogo: o `peripheral` do
+-- emulador devolve nil para tudo, e o CraftOS-PC headless nao cria monitor nem alto-falante.
+local fake = dofile("/test/fake-periph.lua")
+local spk = fake.speaker("speaker_0")
+fake.instalar()
+
+local audio = require("lib.audio")
+local achados = audio.speakers()
+check(#achados == 1 and achados[1].name == "speaker_0",
+    "audio.speakers nao achou o alto-falante pelo nome")
+check(audio.has(), "audio.has disse que nao tem alto-falante")
+
+check(audio.sfx("abrir") == true, "sfx nao tocou com alto-falante presente")
+check(#spk.notas == 1 and spk.notas[1][1] == "bell", "a nota que saiu nao e a de abrir")
+
+-- O volume das configuracoes multiplica, e 0 tem que calar de verdade.
+settings.set("mosaic.som.volume", 0)
+check(audio.sfx("abrir") == false, "volume 0 deveria calar")
+check(#spk.notas == 1, "tocou mesmo com volume 0")
+settings.set("mosaic.som.volume", 1)
+
+-- Integracao: o kernel toca sozinho ao abrir e ao fechar uma janela.
+local antes = #spk.notas
+local som = proc.launch("/os/apps/notes.lua", {}, { title = "Som", x = 2, y = 2, w = 20, h = 6 })
+pump()
+check(#spk.notas > antes, "abrir janela nao tocou nada")
+local depoisDeAbrir = #spk.notas
+proc.kill(som) pump()
+check(#spk.notas > depoisDeAbrir, "fechar janela nao tocou nada")
+
+-- Janela de servico (hidden) e menu nao podem tocar: seriam estalos sem motivo.
+local mudo = #spk.notas
+local oculto = proc.spawn { title = "oculto", hidden = true, fn = function() coroutine.yield() end }
+pump()
+check(#spk.notas == mudo, "processo escondido tocou som")
+proc.kill(oculto) pump()
+check(#spk.notas == mudo, "fechar processo escondido tocou som")
+
+-- Um crash toca abrir + erro, e mais nada. Sem o `silent` sairiam quatro sons no mesmo
+-- instante: abrir, fechar do que caiu, erro, e abrir da janela de erro.
+local mudo2 = #spk.notas
+local cai = proc.spawn { title = "Cai", fn = function() error("de proposito") end }
+pump()
+check(cai.dead == true, "o processo de teste nao morreu")
+check(#spk.notas - mudo2 == 2,
+    "crash tocou " .. (#spk.notas - mudo2) .. " sons em vez de 2 (abrir + erro)")
+check(spk.notas[#spk.notas][1] == "bass", "o ultimo som de um crash tem que ser o de erro")
 
 -- Resultado
 term.redirect(term.native())

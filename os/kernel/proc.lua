@@ -18,6 +18,18 @@ local RUNNER = "/os/kernel/runner.lua"
 
 local function pack(...) return { n = select("#", ...), ... } end
 
+-- Som do sistema. Carregado tarde e sempre dentro de pcall: computador sem alto-falante e'
+-- o caso normal, e nenhum barulho vale derrubar o compositor. O `false` marca "ja tentei e
+-- nao tem", para nao repetir o require a cada janela.
+local audio
+local function sfx(name)
+    if audio == nil then
+        local ok, mod = pcall(require, "lib.audio")
+        audio = ok and mod or false
+    end
+    if audio then pcall(audio.sfx, name) end
+end
+
 local function log(msg)
     local h = fs.open("/os/var/log/kernel.log", "a")
     if h then h.writeLine(os.date("%Y-%m-%d %H:%M:%S") .. " " .. tostring(msg)) h.close() end
@@ -60,6 +72,7 @@ function proc.exit(p)
     end
     byId[p.id] = nil
     if p.onExit then pcall(p.onExit, p) end
+    if not p.hidden and not p.popup and not p.silent then sfx("fechar") end
     os.queueEvent("proc_exit", p.id)
     if proc.focus == p then proc.focus = nil refocus() end
     dirty = true
@@ -83,6 +96,10 @@ function proc.crash(p, err)
     log("CRASH [" .. p.id .. " " .. tostring(p.title) .. "] " .. tb)
     local h = fs.open("/os/var/log/crash.log", "a")
     if h then h.writeLine(os.date() .. " " .. tostring(p.title) .. "\n" .. tb .. "\n") h.close() end
+    -- Um som so'. Sem o `silent`, sairiam tres: fechar do processo que caiu, erro, e abrir
+    -- da janela de erro.
+    p.silent = true
+    sfx("erro")
     proc.exit(p)
     if p.hidden then
         wm.toast("Servico " .. tostring(p.title) .. " caiu: " .. tostring(err):sub(1, 40), 6)
@@ -90,6 +107,7 @@ function proc.crash(p, err)
     end
     proc.spawn {
         title = "Erro: " .. tostring(p.title),
+        silent = true,
         w = math.min(wm.W - 2, 46), h = 8,
         fn = function()
             mosaic.ui.msgbox(tostring(err), "O programa fechou com erro")
@@ -154,7 +172,7 @@ function proc.spawn(spec)
         id = nextId, title = spec.title or "app", args = spec.args or {},
         hidden = spec.hidden, chrome = spec.chrome ~= false, bottom = spec.bottom,
         minimized = spec.minimized, noclose = spec.noclose, popup = spec.popup,
-        daemon = spec.daemon, holdOnError = spec.holdOnError,
+        daemon = spec.daemon, holdOnError = spec.holdOnError, silent = spec.silent,
         titleLocked = spec.titleLocked or spec.title ~= nil,
         onExit = spec.onExit, filter = nil,
     }
@@ -177,6 +195,7 @@ function proc.spawn(spec)
     end)
     if p.bottom then table.insert(procs, 1, p) else table.insert(procs, p) end
     byId[p.id] = p
+    if not p.hidden and not p.popup and not p.bottom and not spec.silent then sfx("abrir") end
     if not p.hidden and not p.minimized then proc.setFocus(p) end
     proc.resume(p)
     return p

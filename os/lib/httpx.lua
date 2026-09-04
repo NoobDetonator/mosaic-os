@@ -1,5 +1,7 @@
 -- HTTP pratico. `local httpx = mosaic.lib("httpx")`
--- Tudo aqui usa argumentos posicionais (a forma tabela do http so existe em CC:T 1.105+).
+-- Tudo aqui usa argumentos posicionais. O que e' 1.105 (novo demais para o nosso alvo) e' o
+-- campo `timeout` e a forma tabela do websocket; a forma tabela do get/post/request e' bem
+-- mais velha (1.80pr1.6) e seria permitida. Posicional em tudo, para nao ter que lembrar.
 local httpx = {}
 
 local function readBody(res)

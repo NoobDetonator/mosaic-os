@@ -204,6 +204,28 @@ do
     end)
 end
 
+-- ---------------------------------------------------------------- audio
+-- A pergunta que decide o desenho do player: cabe decodificar um bloco inteiro de uma vez,
+-- ou o daemon precisa picar em pedacos menores? Um bloco de 16 KiB e' ~2,7 s de som, entao
+-- so' passa a doer perto de 2700 ms - mas o limite de 7 s do CC e' por RESUME, e a propria
+-- documentacao avisa que a primeira fornada pode estourar. Acima de ~50 ms eu pico.
+do
+    local audio = require("lib.audio")
+    local dec = audio.decoder()
+    if dec then
+        -- O DFPWM gasta 1 bit por amostra e aceita qualquer entrada, entao bytes ao acaso
+        -- medem o mesmo que uma musica de verdade e nao precisam de arquivo.
+        local partes = {}
+        for i = 1, audio.CHUNK do partes[i] = string.char(math.random(0, 255)) end
+        local chunk = table.concat(partes)
+        nota(string.format("  (bloco de %d bytes = %d amostras = %.1f s de som)",
+            #chunk, #chunk * 8, (#chunk * 8) / audio.RATE))
+        bench("audio: decodificar um bloco DFPWM", 5, function() dec(chunk) end)
+    else
+        nota("  (sem cc.audio.dfpwm nesta ROM: decodificacao nao medida)")
+    end
+end
+
 -- ---------------------------------------------------------------- relatorio
 -- Vai para arquivo, nao so' para a tela: o relatorio ja passou das 19 linhas do terminal e as
 -- medidas de 3D rolavam para fora sem ninguem notar que faltavam.
