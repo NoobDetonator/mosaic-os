@@ -34,6 +34,13 @@ const files = ['startup.lua', ...walk(path.join(ROOT, 'os'), []).map((p) => path
   .sort()
   .map((rel) => {
     const buf = fs.readFileSync(path.join(ROOT, rel));
+    // CRLF aqui vira hash errado LA'. O .gitattributes guarda tudo em LF, entao o
+    // raw.githubusercontent serve LF - mas o manifest e' gerado do arquivo do disco, e um
+    // editor (ou um script em Windows) que grave CRLF produz um sha1 que nunca vai bater.
+    // No jogo isso aparecia como "Conteudo diverge do manifest" no meio da instalacao.
+    if (buf.includes('\r\n')) {
+      throw new Error(`${rel} esta com CRLF; o instalador vai recusar o hash. Converta para LF.`);
+    }
     const e = {
       path: rel,
       sha1: crypto.createHash('sha1').update(buf).digest('hex'),

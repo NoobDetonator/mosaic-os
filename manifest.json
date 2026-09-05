@@ -347,8 +347,8 @@
     },
     {
       "path": "os/net/musicd.lua",
-      "sha1": "554f7b4687ed4933686806222cbf8aef74d074c9",
-      "size": 11880
+      "sha1": "e25baa271c109f5adf5cf57088597eead0f5ff01",
+      "size": 11574
     },
     {
       "path": "os/net/netd.lua",
