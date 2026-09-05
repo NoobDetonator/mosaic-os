@@ -112,11 +112,37 @@ f:add(ui.button { x = INSET + 15, y = inner + 3, text = "&Testar", alt = true, o
     local url = relayBox.text
     if url == "" then ui.msgbox("Preencha a URL do relay primeiro.", "Relay") return end
     if not http then ui.msgbox("A API http esta desativada neste servidor.", "Relay") return end
-    -- O ping e publico e nao pede token: serve so para saber se o relay esta de pe.
-    local httpUrl = url:gsub("^ws", "http"):gsub("/ws/computer$", "/api/ping")
-    local body, err = mosaic.lib("httpx").get(httpUrl)
-    if body then ui.msgbox("Relay respondeu: " .. tostring(body):sub(1, 60), "Relay")
-    else ui.msgbox("Sem resposta: " .. tostring(err), "Relay") end
+    -- DUAS perguntas, e a resposta diz qual das duas falhou. Antes so' havia o ping, que e'
+    -- publico: token errado passava no teste e so' aparecia depois, como controle remoto e
+    -- musica que nao funcionam sem motivo visivel.
+    local httpx = mosaic.lib("httpx")
+    local base = url:gsub("^ws", "http"):gsub("/ws/computer$", "")
+    local linhas = {}
+    local body, err = httpx.get(base .. "/api/ping")
+    if not body then
+        ui.msgbox("Relay nao respondeu: " .. tostring(err), "Relay")
+        return
+    end
+    linhas[#linhas + 1] = "Conexao: ok"
+    local tok = tokenBox.text
+    if tok == "" then
+        linhas[#linhas + 1] = "Token: nao preenchido"
+    else
+        local corpo, code = httpx.get(base .. "/api/deps", { Authorization = "Bearer " .. tok })
+        if not corpo then linhas[#linhas + 1] = "Token: sem resposta (" .. tostring(code) .. ")"
+        elseif code == 200 then
+            linhas[#linhas + 1] = "Token: ok"
+            -- De brinde, porque e' a duvida seguinte de quem testa: da' para tocar musica?
+            local d = textutils.unserialiseJSON(corpo)
+            if type(d) == "table" then
+                linhas[#linhas + 1] = d.ok and "Musica: pronta"
+                    or ("Musica: falta " .. table.concat(d.falta or { "?" }, " e "))
+            end
+        else
+            linhas[#linhas + 1] = "Token: RECUSADO (" .. tostring(code) .. ")"
+        end
+    end
+    ui.msgbox(table.concat(linhas, "\n"), "Relay")
 end })
 y = y + 6
 

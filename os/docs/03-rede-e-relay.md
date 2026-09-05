@@ -10,9 +10,22 @@ no computador. Ligue em Config, na opcao Rede entre computadores.
 O app Rede procura os vizinhos e mostra ID, nome e versao de cada um.
 Com o Controle remoto voce roda codigo Lua num deles.
 
-Se voce definir uma senha em Config, os comandos remotos passam a
-exigir ela. Sem senha, qualquer computador Mosaic da rede pode mandar
-comando: so use assim numa base fechada.
+A senha fica em Config, em Rede entre computadores, e e' ela que libera
+comando remoto. SEM senha o computador so' responde consulta: ele diz
+quem e', qual versao tem e o que esta ligado nele, e recusa qualquer
+coisa que mude alguma coisa. Para mandar nele, os dois lados precisam
+ter a MESMA senha.
+
+A senha nunca viaja pela rede. O que vai junto do pedido e' uma
+assinatura (HMAC-SHA1) feita com ela: quem nao tem a senha nao consegue
+produzir a assinatura, e quem estiver escutando a rede nao aprende a
+senha ouvindo. O pedido tambem leva a hora e um numero unico, e o
+computador recusa pedido velho ou repetido - senao bastaria gravar uma
+mensagem da rede e reenviar depois para mandar no computador dos outros.
+
+Consequencia pratica: computador com Mosaic antigo nao conversa com um
+atualizado quando ha senha. O recado e' "pedido sem assinatura". Atualize
+os dois.
 
 ## Relay (fora do jogo)
 

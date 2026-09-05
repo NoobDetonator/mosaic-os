@@ -96,11 +96,113 @@ end
 
 -- ---------------------------------------------------------------- perguntar
 
--- Junta a senha no pedido quando ha uma. Comando que muda algo precisa dela; consulta nao.
-function netx.assina(msg)
-    local s = netx.password()
-    if s then msg.password = s end
+-- ---------------------------------------------------------------- assinatura
+--
+-- A senha NAO viaja. Antes ela ia dentro da mensagem, em texto claro, e a batida de ponto
+-- do cluster era por TRANSMISSAO quando nao havia mestre configurado - ou seja, a senha do
+-- computador saia difundida para a rede inteira, de cinco em cinco segundos. Qualquer
+-- computador com um modem aberto a recolhia e virava dono da frota.
+--
+-- Agora vai uma ASSINATURA: HMAC-SHA1 do conteudo, com a senha como chave. Quem nao tem a
+-- senha nao consegue produzir a assinatura, e quem escuta a rede nao aprende a senha.
+--
+-- Contra repeticao, duas travas, porque so' assinar nao basta: uma mensagem assinada
+-- capturada hoje continuaria valida amanha.
+--   * `t` - o relogio. Todo computador do mesmo servidor le' o mesmo os.epoch("utc"), entao
+--     a janela pode ser curta sem risco de desencontro.
+--   * `id` - o numero do pedido, guardado ate' sair da janela. Repetiu, recusa.
+--
+-- E a assinatura cobre `de`, conferido contra o remetente que o rednet informa: sem isso
+-- daria para pegar a mensagem de outro computador e reenviar como se fosse sua.
+--
+-- O sha1 mora no lib/update porque o instalador roda ANTES do sistema existir e precisa ser
+-- autossuficiente - ele nao pode dar require em nada. Melhor importar de la' do que ter uma
+-- segunda copia de 40 linhas de SHA-1 no repositorio.
+netx.JANELA = 60          -- segundos de tolerancia entre o relogio de quem manda e de quem le
+
+local BLOCO = 64          -- tamanho de bloco do SHA-1, para o HMAC
+
+local function bin(hex)
+    return (hex:gsub("%x%x", function(b) return string.char(tonumber(b, 16)) end))
+end
+
+local function almofada(chave, valor)
+    local out = {}
+    for i = 1, BLOCO do out[i] = string.char(bit32.bxor(chave:byte(i) or 0, valor)) end
+    return table.concat(out)
+end
+
+function netx.hmac(segredo, texto)
+    local sha1 = require("lib.update").sha1
+    local k = segredo
+    if #k > BLOCO then k = bin(sha1(k)) end
+    return sha1(almofada(k, 0x5c) .. bin(sha1(almofada(k, 0x36) .. texto)))
+end
+
+-- Texto deterministico da mensagem. `pairs` devolve ordem diferente a cada chamada, entao
+-- assinar o resultado de um serializador qualquer daria assinaturas diferentes para a MESMA
+-- mensagem. As chaves vao ordenadas, e o tipo entra junto do valor para que o numero 1 e a
+-- string "1" nao produzam o mesmo texto.
+local function canon(v)
+    if type(v) ~= "table" then return type(v) .. ":" .. tostring(v) end
+    local ks = {}
+    for k in pairs(v) do ks[#ks + 1] = k end
+    table.sort(ks, function(a, b) return tostring(a) < tostring(b) end)
+    local out = {}
+    for _, k in ipairs(ks) do
+        if k ~= "mac" then out[#out + 1] = tostring(k) .. "=" .. canon(v[k]) end
+    end
+    return "{" .. table.concat(out, ",") .. "}"
+end
+
+-- Pedidos ja aceitos, para recusar repeticao. Some sozinho ao sair da janela: guardar para
+-- sempre seria vazamento de memoria num servico que nao reinicia.
+local vistos = {}
+local function repetido(id, agora)
+    for k, t in pairs(vistos) do
+        if agora - t > netx.JANELA * 1000 then vistos[k] = nil end
+    end
+    if vistos[id] then return true end
+    vistos[id] = agora
+    return false
+end
+
+-- Assina o pedido. Sem senha configurada nao assina - e do outro lado o `confere` recusa,
+-- que e' o mesmo comportamento de antes: sem senha, o computador so' responde consulta.
+-- `segredo` opcional: o terminal remoto e o Centro de Rede pedem a senha DO OUTRO
+-- computador a quem esta usando, e e' com ela que o pedido tem de ser assinado - nao com a
+-- senha deste computador aqui, que o outro lado nem conhece.
+function netx.assina(msg, segredo)
+    msg.password = nil        -- nunca mais; se algo ainda puser, some aqui
+    msg.id = msg.id or netx.newId()
+    segredo = segredo or netx.password()
+    if not segredo then return msg end
+    msg.de = os.getComputerID()
+    msg.t = os.epoch("utc")
+    msg.mac = netx.hmac(segredo, canon(msg))
     return msg
+end
+
+-- Confere a assinatura. Devolve false e o motivo, para a mensagem chegar a quem pediu.
+function netx.confere(msg, from)
+    local segredo = netx.password()
+    if not segredo then
+        return false, "este computador nao aceita comandos remotos (sem senha configurada)"
+    end
+    if type(msg) ~= "table" or type(msg.mac) ~= "string" then
+        return false, "pedido sem assinatura (o outro computador esta com Mosaic antigo?)"
+    end
+    if msg.de ~= from then return false, "remetente nao confere" end
+    local t = tonumber(msg.t)
+    local agora = os.epoch("utc")
+    if not t or math.abs(agora - t) > netx.JANELA * 1000 then
+        return false, "pedido fora da janela de tempo"
+    end
+    -- Conferir a assinatura ANTES de anotar o id: senao qualquer um enche a lista de
+    -- repetidos com pedidos inventados e derruba os de verdade.
+    if netx.hmac(segredo, canon(msg)) ~= msg.mac then return false, "assinatura invalida" end
+    if repetido(msg.id, agora) then return false, "pedido repetido" end
+    return true
 end
 
 -- Pergunta a UM computador e espera a resposta dele.
@@ -195,8 +297,56 @@ function netx.demo()
     -- E a leitura e' na hora mesmo: trocar aqui vale na chamada seguinte, sem reiniciar.
     settings.set("mosaic.net.password", "xyz")
     assert(netx.password() == "xyz", "a senha ficou presa no valor antigo")
+    -- VALOR CONHECIDO, e nao so' coerencia interna. Uma implementacao errada de sha1 assina
+    -- e confere com ela mesma sem reclamar de nada - foi exatamente o que aconteceu no
+    -- emulador, cujo bit32.bxor aceitava dois argumentos e ignorava o resto calado. Estes
+    -- numeros vem do FIPS 180-1 e do RFC 2202; se um dia baterem diferente, o hash quebrou.
+    local sha1 = require("lib.update").sha1
+    assert(sha1("abc") == "a9993e364706816aba3e25717850c26c9cd0d89d", "sha1('abc') errado")
+    assert(sha1("") == "da39a3ee5e6b4b0d3255bfef95601890afd80709", "sha1('') errado")
+    assert(netx.hmac("Jefe", "what do ya want for nothing?")
+        == "effcdf6ae5eb2fa2d27416d5f184df9c259a7c79", "HMAC do RFC 2202 caso 2 errado")
+    assert(netx.hmac(string.rep(string.char(0x0b), 20), "Hi There")
+        == "b617318655057264e28bc0b6fb378c8ef146be00", "HMAC do RFC 2202 caso 1 errado")
+    -- Chave maior que o bloco de 64 tem de passar por sha1 antes; e' o ramo que costuma
+    -- ficar sem teste, e uma senha longa cai justamente nele.
+    assert(netx.hmac(string.rep("k", 80), "teste")
+        == "c2864c16a0b76b76004c55a4d5b84e01a8ce1d79", "HMAC com chave longa errado")
+
+    -- A SENHA NAO PODE SAIR NA MENSAGEM. Este era o buraco: ela ia em texto claro, e a
+    -- batida do cluster saia por transmissao para a rede inteira levando ela junto.
+    local eu0 = os.getComputerID()
     local assinado = netx.assina({ type = "exec" })
-    assert(assinado.password == "xyz", "assina() nao pos a senha no pedido")
+    assert(assinado.password == nil, "a senha vazou dentro do pedido")
+    assert(type(assinado.mac) == "string" and #assinado.mac == 40, "faltou a assinatura")
+    assert(netx.confere(assinado, eu0) == true, "a propria assinatura nao foi aceita")
+
+    -- Mexeu no conteudo, a assinatura cai.
+    local mexido = {}
+    for k, v in pairs(assinado) do mexido[k] = v end
+    mexido.type = "shutdown"
+    mexido.id = netx.newId()
+    assert(netx.confere(mexido, eu0) == false, "aceitou pedido adulterado")
+
+    -- Repetir o MESMO pedido nao vale duas vezes: sem isto, gravar uma mensagem da rede e
+    -- reenviar depois seria suficiente para mandar no computador dos outros.
+    assert(netx.confere(assinado, eu0) == false, "aceitou o mesmo pedido duas vezes")
+
+    -- Fingir ser outro remetente nao cola: o `de` entra na assinatura.
+    local outro = netx.assina({ type = "exec" })
+    assert(netx.confere(outro, eu0 + 1) == false, "aceitou pedido de remetente trocado")
+
+    -- Pedido velho nao vale: assinatura capturada hoje nao serve amanha.
+    local velhoPedido = netx.assina({ type = "exec" })
+    velhoPedido.t = velhoPedido.t - (netx.JANELA + 5) * 1000
+    assert(netx.confere(velhoPedido, eu0) == false, "aceitou pedido fora da janela de tempo")
+
+    -- Segredo diferente, assinatura diferente: e' o caso do terminal remoto, que assina com
+    -- a senha do computador de destino.
+    local comOutroSegredo = netx.assina({ type = "exec" }, "senha-do-outro")
+    assert(netx.confere(comOutroSegredo, eu0) == false, "assinatura com outra senha foi aceita")
+    assert(netx.hmac("chave", "abc") ~= netx.hmac("chave2", "abc"), "hmac ignorou a chave")
+    assert(#netx.hmac("chave", "abc") == 40, "hmac devia sair em 40 hex")
     if antes == nil then settings.unset("mosaic.net.password")
     else settings.set("mosaic.net.password", antes) end
 

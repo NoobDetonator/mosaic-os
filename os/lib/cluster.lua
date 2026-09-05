@@ -115,9 +115,20 @@ function Tabela:registra(id, batida, agora)
     local n = self.nos[id] or { id = id, desde = agora }
     n.id = id
     n.visto = agora
-    for k, v in pairs(batida or {}) do
-        if k ~= "id" and k ~= "visto" and k ~= "desde" then n[k] = v end
+    -- So' o que a gente sabe desenhar, e so' no tipo certo. A batida vem da rede: um campo
+    -- com tipo inesperado (group virando tabela, por exemplo) derruba a ordenacao da lista e
+    -- leva o painel junto. Campo ausente NAO apaga o que ja se sabia - excecao para o que a
+    -- turtle largou da mao, que precisa poder virar "nada".
+    local ESPERADO = {
+        name = "string", group = "string", kind = "string", version = "string",
+        free = "number", uptime = "number", fuel = "number", slot = "number",
+        holding = "string", peripherals = "table",
+    }
+    for k, tipo in pairs(ESPERADO) do
+        local v = (batida or {})[k]
+        if type(v) == tipo then n[k] = v end
     end
+    if type(batida) == "table" and batida.holding == nil then n.holding = nil end
     local novo = self.nos[id] == nil
     self.nos[id] = n
     return n, novo

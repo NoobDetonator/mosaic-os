@@ -65,8 +65,12 @@ end
 -- sem configurar nada. Se o mestre tiver senha, a batida passa a exigi-la como qualquer
 -- outro pedido — e ai ninguem enche a lista de no inventado.
 local function recebeBatida(msg, from)
-    if netx.password() and msg.password ~= netx.password() then
-        return nil, "senha incorreta"
+    -- Com senha configurada a batida precisa estar assinada como qualquer outro pedido:
+    -- senao qualquer computador enche a lista da frota de no inventado. Sem senha, entra -
+    -- e' o que deixa um no novo aparecer sem configurar nada.
+    if netx.password() then
+        local ok, err = netx.confere(msg, from)
+        if not ok then return nil, err end
     end
     anota(from, msg.node or {})
     return { ok = true }
@@ -75,13 +79,8 @@ end
 -- A senha e' lida AGORA, a cada pedido, e nao guardada numa variavel no comeco do servico.
 -- Antes ela vinha de um `settings.get` no topo do arquivo: trocar a senha em Configuracoes
 -- nao valia nada ate' reiniciar o computador, e nenhuma tela dizia isso.
-local function autorizado(msg)
-    local senha = netx.password()
-    if not senha then
-        return false, "este computador nao aceita comandos remotos (sem senha configurada)"
-    end
-    if msg.password ~= senha then return false, "senha incorreta" end
-    return true
+local function autorizado(msg, from)
+    return netx.confere(msg, from)
 end
 
 local handlers = {}
@@ -102,8 +101,8 @@ function handlers.chat(msg, from)
     return { received = true }
 end
 
-function handlers.exec(msg)
-    local ok, err = autorizado(msg)
+function handlers.exec(msg, from)
+    local ok, err = autorizado(msg, from)
     if not ok then return nil, err end
     local env = setmetatable({}, { __index = _G })
     local buffer = {}
@@ -121,8 +120,8 @@ function handlers.exec(msg)
     return { output = table.concat(buffer, "\n"), returns = values }
 end
 
-function handlers.launch(msg)
-    local ok, err = autorizado(msg)
+function handlers.launch(msg, from)
+    local ok, err = autorizado(msg, from)
     if not ok then return nil, err end
     if not fs.exists(msg.path) then return nil, "arquivo nao encontrado" end
     return { pid = mosaic.launch(msg.path) }
@@ -133,8 +132,8 @@ function handlers.notify(msg)
     return { shown = true }
 end
 
-function handlers.sendFile(msg)
-    local ok, err = autorizado(msg)
+function handlers.sendFile(msg, from)
+    local ok, err = autorizado(msg, from)
     if not ok then return nil, err end
     local path = msg.path or ("/home/recebido_" .. os.epoch("utc") .. ".txt")
     local dir = fs.getDir(path)
@@ -147,8 +146,8 @@ function handlers.sendFile(msg)
     return { path = path, size = #(msg.content or "") }
 end
 
-function handlers.getFile(msg)
-    local ok, err = autorizado(msg)
+function handlers.getFile(msg, from)
+    local ok, err = autorizado(msg, from)
     if not ok then return nil, err end
     local h = fs.open(msg.path, "r")
     if not h then return nil, "nao consegui ler " .. tostring(msg.path) end
@@ -167,8 +166,8 @@ function handlers.whoami()
     return { role = cluster.role(), group = cluster.group(), node = cluster.batida() }
 end
 
-function handlers.shutdown(msg)
-    local ok, err = autorizado(msg)
+function handlers.shutdown(msg, from)
+    local ok, err = autorizado(msg, from)
     if not ok then return nil, err end
     os.queueEvent("netd_shutdown")
     return { ok = true }
@@ -180,8 +179,9 @@ end
 -- um no funciona sem configurar nada, e quem quiser cravar o mestre, crava.
 local function bate()
     if not side then return end
+    -- Sem mexer no id depois de assinar: o id entra na assinatura, e troca-lo aqui faria
+    -- toda batida chegar com assinatura invalida.
     local corpo = netx.assina({ type = "beat", node = cluster.batida() })
-    corpo.id = netx.newId()
     if cluster.isMestre() then
         -- O mestre tambem entra na propria lista: sem isso ele nao aparece no painel dele
         -- mesmo, e quem olha a tela fica sem saber onde esta.
@@ -228,12 +228,15 @@ while true do
         end
 
     elseif name == "peripheral" or name == "peripheral_detach" then
-        if not side or not rednet.isOpen(side) then
-            side = netx.open()
-            if side then
-                rednet.host(PROTOCOL, nome)
-                log:info("modem reconectado em", side)
-            end
+        -- Chamar netx.open() SEMPRE. Antes so' reabria quando o modem conhecido tinha
+        -- sumido, entao grudar um segundo modem com o primeiro ainda aberto nao passava por
+        -- aqui: o modem novo ficava fechado e metade da rede invisivel, sem erro nenhum.
+        -- netx.open() abre todos e ignora os que ja estao abertos, entao repetir nao custa.
+        local antes = side
+        side = netx.open()
+        if side and not antes then
+            rednet.host(PROTOCOL, nome)
+            log:info("modem reconectado em", side)
         end
 
     elseif name == "timer" and ev[2] == batidaTimer then

@@ -799,9 +799,66 @@ paintutils.drawFilledBox = function() end
 gps = { locate = function() return nil end }
 help = { path = function() return "/rom/help" end, lookup = function() return nil end, topics = function() return {} end }
 disk = { isPresent = function() return false end }
-bit32 = bit32 or { band = function(a, b) return a & b end, bor = function(a, b) return a | b end, bxor = function(a, b) return a ~ b end,
-    bnot = function(a) return ~a & 0xffffffff end, lshift = function(a, n) return (a << n) & 0xffffffff end,
-    rshift = function(a, n) return (a & 0xffffffff) >> n end, arshift = function(a, n) return a >> n end }
+-- bit32 do Lua 5.2, que e' o que o CC:Tweaked oferece. As tres primeiras sao VARIADICAS la',
+-- e antes aqui elas aceitavam dois argumentos e ignoravam o resto em silencio: um sha1, que
+-- faz bxor(a,b,c,d), calculava errado sem erro nenhum e o teste passava assim mesmo.
+-- Faltavam tambem lrotate e extract, que o CC tem.
+-- bit32 do Lua 5.2, que e' o que o CC:Tweaked oferece.
+--
+-- Duas armadilhas moraram aqui. A primeira: band/bor/bxor sao VARIADICAS no CC, e a versao
+-- antiga aceitava dois argumentos e ignorava o resto CALADA - um sha1 que faz
+-- bxor(a,b,c,d) calculava errado e nenhum teste reclamava. A segunda: o Lua daqui recusa
+-- operador de bit em float ("no integer representation"), enquanto no CC todo numero e'
+-- double e o bit32 converte sozinho.
+--
+-- Por isso tudo abaixo e' ARITMETICA pura, sem operador de bit: assim funciona com float,
+-- que e' exatamente o que o codigo do jogo passa. E' mais lento e nao importa - isto roda
+-- so' no self-check.
+local P = {}
+for i = 0, 32 do P[i] = 2 ^ i end
+local function u32(x) return math.floor(x) % P[32] end
+local function porBit(f)
+    return function(...)
+        local n = select("#", ...)
+        if n == 0 then return f(1, 1) == 1 and P[32] - 1 or 0 end
+        local acc = u32((select(1, ...)))
+        for i = 2, n do
+            local b, r, p = u32((select(i, ...))), 0, 1
+            local a = acc
+            for _ = 1, 32 do
+                local x, y = a % 2, b % 2
+                if f(x, y) == 1 then r = r + p end
+                a, b, p = (a - x) / 2, (b - y) / 2, p * 2
+            end
+            acc = r
+        end
+        return acc
+    end
+end
+bit32 = bit32 or {
+    band = porBit(function(a, b) return (a == 1 and b == 1) and 1 or 0 end),
+    bor = porBit(function(a, b) return (a == 1 or b == 1) and 1 or 0 end),
+    bxor = porBit(function(a, b) return (a ~= b) and 1 or 0 end),
+    bnot = function(a) return P[32] - 1 - u32(a) end,
+    lshift = function(a, n) return (u32(a) * P[n % 32]) % P[32] end,
+    rshift = function(a, n) return math.floor(u32(a) / P[n % 32]) end,
+    arshift = function(a, n) return math.floor(u32(a) / P[n % 32]) end,
+    lrotate = function(a, n)
+        n = n % 32
+        a = u32(a)
+        if n == 0 then return a end
+        return (a * P[n]) % P[32] + math.floor(a / P[32 - n])
+    end,
+    rrotate = function(a, n)
+        n = (32 - n % 32) % 32
+        a = u32(a)
+        if n == 0 then return a end
+        return (a * P[n]) % P[32] + math.floor(a / P[32 - n])
+    end,
+    extract = function(a, campo, largura)
+        return math.floor(u32(a) / P[campo]) % P[largura or 1]
+    end,
+}
 
 -- ---------------------------------------------------------------- loop principal
 local main = coroutine.create(function()

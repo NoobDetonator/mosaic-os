@@ -101,7 +101,7 @@ list.onActivate = function(_, peer)
             if not code then return end
             local pass = ui.prompt("Senha do computador remoto:", "", "Senha", { mask = "*" })
             if not pass then return end
-            local res, err = ask(peer, { type = "exec", code = code, password = pass })
+            local res, err = ask(peer, netx.assina({ type = "exec", code = code }, pass))
             if not res then ui.msgbox(tostring(err), "Erro") return end
             ui.msgbox((res.output ~= "" and res.output .. "\n" or "") ..
                 table.concat(res.returns or {}, "\n"), "Resultado")

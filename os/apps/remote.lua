@@ -45,10 +45,12 @@ local function send()
         senha = ui.prompt("Senha do computador #" .. peerId .. ":", "", "Senha", { mask = "*" })
         if not senha then log("(cancelado)") return end
     end
-    local res, err = ask({ type = "exec", code = code, password = senha })
+    local res, err = ask(netx.assina({ type = "exec", code = code }, senha))
     if not res then
         log("erro: " .. tostring(err))
-        if tostring(err):find("senha") then senha = nil end
+        -- Senha errada agora chega como "assinatura invalida": e' o que o outro lado
+        -- consegue dizer sem confirmar qual senha seria a certa.
+        if tostring(err):find("senha") or tostring(err):find("assinatura") then senha = nil end
         return
     end
     if res.output and res.output ~= "" then log(res.output) end

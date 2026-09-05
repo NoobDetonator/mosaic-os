@@ -59,8 +59,8 @@
     },
     {
       "path": "os/apps/netcenter.lua",
-      "sha1": "f62700624f600d1d333b6d6a92f07d7cfe09af20",
-      "size": 5131
+      "sha1": "b4e2f789ec0c72589532f986db4d8f9defe9a87d",
+      "size": 5133
     },
     {
       "path": "os/apps/notes.lua",
@@ -89,13 +89,13 @@
     },
     {
       "path": "os/apps/remote.lua",
-      "sha1": "d358d29646f248434440167a45ed7dbb62bc3cc0",
-      "size": 2385
+      "sha1": "31c86c3bdf4b01ccb53887e0efa2ee6ce513474e",
+      "size": 2575
     },
     {
       "path": "os/apps/settings.lua",
-      "sha1": "8a702fb48a4c5b7b1d9664f45c1b2c15e912a58d",
-      "size": 8881
+      "sha1": "360f63ac4e5bfc93a7f4f5899623abdc2b31808c",
+      "size": 9980
     },
     {
       "path": "os/apps/taskman.lua",
@@ -137,8 +137,8 @@
     },
     {
       "path": "os/docs/03-rede-e-relay.md",
-      "sha1": "64e67669e9596799e6fa17f84ac3b2f8b1f546ca",
-      "size": 2055
+      "sha1": "ed0521396860bfab4112469f126446a0cc3d89b5",
+      "size": 2749
     },
     {
       "path": "os/docs/04-seus-programas.md",
@@ -237,8 +237,8 @@
     },
     {
       "path": "os/lib/cluster.lua",
-      "sha1": "a75be2be490c26066edb908106c3cf15c66f4f29",
-      "size": 11157
+      "sha1": "bceb16d0b9b984103e1923b7b4f00a235d0ca117",
+      "size": 11824
     },
     {
       "path": "os/lib/create.lua",
@@ -292,8 +292,8 @@
     },
     {
       "path": "os/lib/netx.lua",
-      "sha1": "9ecfe5db48a77e5422f6aebb92521e08a3acf8e1",
-      "size": 13140
+      "sha1": "f6b8ed3e18e1926ccd6b67197658770994ad7600",
+      "size": 20999
     },
     {
       "path": "os/lib/pixel.lua",
@@ -352,8 +352,8 @@
     },
     {
       "path": "os/net/netd.lua",
-      "sha1": "10a08183d60b6d438789a965acf055b8fc0d8652",
-      "size": 9553
+      "sha1": "31bba38f429177382f8c296415549163acd659e1",
+      "size": 10106
     },
     {
       "path": "os/net/relay.lua",

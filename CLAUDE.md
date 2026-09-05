@@ -343,10 +343,42 @@ Navegador (`os/apps/browser.lua`):
   passo custa nada; no CraftOS ele espera evento de verdade. Um laço de 80 passava num e estourava o
   tempo no outro — espere pela **condição**.
 
+### Rede entre computadores
+
+- **A senha do rednet NÃO viaja: ela assina.** `netx.assina` põe um HMAC-SHA1 do conteúdo, e
+  `netx.confere` valida contra o remetente que o rednet informa. Antes a senha ia em texto claro
+  dentro da mensagem, e a batida do cluster era **transmissão** quando não havia mestre configurado —
+  ou seja, a senha saía difundida para a rede inteira de 5 em 5 segundos. Quem quiser trocar algo
+  aqui: assinar sozinho não basta, porque mensagem assinada capturada hoje vale amanhã; por isso vão
+  junto a hora (`t`, janela de 60 s) e o número do pedido (`id`, guardado até sair da janela).
+- **Não mexa no `id` depois de assinar.** Ele entra na assinatura. O `bate()` do netd fazia
+  `corpo.id = netx.newId()` depois do `assina`, e isso faria toda batida chegar inválida.
+- **O SHA-1 mora em `os/lib/update.lua` de propósito.** O instalador baixa esse arquivo cru e o roda
+  com `load(..., _G)` **antes de o sistema existir**, então ele não pode dar `require` em nada. O
+  `netx` importa de lá em vez de ter uma segunda cópia de 40 linhas de SHA-1.
+- **`netx.open()` a cada evento de periférico, sempre.** O netd só reabria quando o modem conhecido
+  tinha sumido, então grudar um **segundo** modem com o primeiro ainda aberto não abria o novo:
+  metade da rede ficava invisível sem erro nenhum.
+
+### Medido, não suposto (rede)
+
+- **rednet entre computadores do mesmo servidor não é rede.** Medido no jogo: 1,4 MB de ida e volta
+  em **14 ms** (~98 MB/s), leitura de 1,4 MB do disco em 21 ms. DFPWM precisa de 6 KB/s. Ou seja,
+  transmitir áudio entre computadores é de graça — o alcance do modem é regra de jogo, não banda.
+- **`os.clock()` não serve para medir tempo de parede no CC**: ele conta tempo de CPU do computador e
+  **não anda enquanto o processo espera**. A primeira medição deu "0,000 s" e "5333 KB/s". Use
+  `os.epoch("utc")`.
+
 ## Como testar
 
 - `node tools/lint.js` — sintaxe Lua 5.1 (luaparse) + grep de APIs proibidas. Rode antes de dizer que terminou.
 - `node tools/test.js` — self-check do kernel no emulador embutido (`tools/emu`, fengari). Não precisa do CraftOS-PC.
+  - **O `bit32` de `tools/emu/bios.lua` é aritmético de propósito.** Duas armadilhas já moraram ali:
+    `band`/`bor`/`bxor` são **variádicas** no CC e a versão antiga aceitava dois argumentos ignorando o
+    resto **calada** (um SHA-1 que faz `bxor(a,b,c,d)` calculava errado e nenhum teste reclamava); e o
+    Lua do emulador recusa operador de bit em float, enquanto no CC todo número é double. Por isso o
+    self-check do `netx` confere SHA-1 e HMAC contra **valor conhecido** (FIPS 180-1 e RFC 2202), não
+    contra si mesmo: implementação errada assina e confere com ela própria sem reclamar de nada.
 - `node tools/debug.js os/apps/files.lua [36x10] [12,18] [fake]` — abre um app no emulador: tamanho de tela, cliques, e `fake` instala um reator do Powah de mentira (`tools/test/fake-reactor.lua`) para conferir o painel com dados variando.
 - `node tools/emu/emu.js --show` — boota o OS de verdade e imprime a tela final; bom para conferir layout.
 - `node tools/svg.js <arquivo.svg>` — converte SVG para o formato vetorial de `os/lib/vector` em `os/share/vectors/`. Le viewBox, rect, circle, polygon e path com M/L/H/V/Z; **nao le** transform, curva nem grupo (achate no editor antes).
