@@ -3,22 +3,12 @@
 -- descobrir quem esta na rede. Comandos que mudam algo exigem a senha
 -- (mosaic.net.password); sem senha configurada, so respondemos consultas.
 local log = mosaic.lib("log").open("netd")
+local netx = mosaic.lib("netx")
 
-local PROTOCOL = "mosaic"
-local nome = settings.get("mosaic.net.name") or os.getComputerLabel() or ("pc" .. os.getComputerID())
-local senha = settings.get("mosaic.net.password")
+local PROTOCOL = netx.PROTOCOL
+local nome = netx.name()
 
-local function openModem()
-    for _, side in ipairs(peripheral.getNames()) do
-        if peripheral.getType(side) == "modem" then
-            if not rednet.isOpen(side) then rednet.open(side) end
-            return side
-        end
-    end
-    return nil
-end
-
-local side = openModem()
+local side = netx.open()
 if not side then
     log:warn("nenhum modem conectado; servico em espera")
 end
@@ -30,22 +20,25 @@ end
 -- Estado exposto para o app Rede.
 local peers = {}
 mosaic.netStatus = function()
-    return { side = side, name = nome, protected = senha ~= nil and senha ~= "", peers = peers }
+    return { side = side, name = nome, protected = netx.password() ~= nil, peers = peers }
 end
 
--- Procura outros computadores Mosaic. Bloqueia por ate 1s.
-mosaic.netScan = function()
+-- Procura outros computadores Mosaic: UMA transmissao e um prazo so' para todo mundo
+-- responder, em vez de um `lookup` seguido de uma pergunta por vizinho.
+mosaic.netScan = function(prazo)
     if not side then return {} end
-    local found = { rednet.lookup(PROTOCOL) }
-    peers = {}
-    for _, id in ipairs(found) do
-        if type(id) == "number" and id ~= os.getComputerID() then peers[#peers + 1] = { id = id } end
-    end
+    peers = netx.peers(prazo)
     return peers
 end
 
+-- A senha e' lida AGORA, a cada pedido, e nao guardada numa variavel no comeco do servico.
+-- Antes ela vinha de um `settings.get` no topo do arquivo: trocar a senha em Configuracoes
+-- nao valia nada ate' reiniciar o computador, e nenhuma tela dizia isso.
 local function autorizado(msg)
-    if not senha or senha == "" then return false, "este computador nao aceita comandos remotos (sem senha configurada)" end
+    local senha = netx.password()
+    if not senha then
+        return false, "este computador nao aceita comandos remotos (sem senha configurada)"
+    end
     if msg.password ~= senha then return false, "senha incorreta" end
     return true
 end
@@ -135,6 +128,18 @@ while true do
     local ev = table.pack(os.pullEventRaw())
     local name = ev[1]
 
+    -- Nome trocado em Configuracoes vale sem reiniciar: reanuncia com o nome novo.
+    -- `settings.get` e' consulta a uma tabela, entao conferir a cada evento nao custa nada.
+    if side then
+        local atual = netx.name()
+        if atual ~= nome then
+            pcall(rednet.unhost, PROTOCOL)
+            nome = atual
+            rednet.host(PROTOCOL, nome)
+            log:info("renomeado para", nome)
+        end
+    end
+
     if name == "rednet_message" then
         local from, msg, protocol = ev[2], ev[3], ev[4]
         if protocol == PROTOCOL and type(msg) == "table" and msg.type then
@@ -153,7 +158,7 @@ while true do
 
     elseif name == "peripheral" or name == "peripheral_detach" then
         if not side or not rednet.isOpen(side) then
-            side = openModem()
+            side = netx.open()
             if side then
                 rednet.host(PROTOCOL, nome)
                 log:info("modem reconectado em", side)

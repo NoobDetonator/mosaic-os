@@ -120,15 +120,60 @@ f:add(ui.button { x = INSET + 15, y = inner + 3, text = "&Testar", alt = true, o
 end })
 y = y + 6
 
--- ---------------------------------------------------------------- sistema
-inner = group(y, 2, "Sistema")
+-- ---------------------------------------------------------------- rede local
+--
+-- Estes dois campos nao existiam, apesar de os/docs/03-rede-e-relay.md mandar configurar
+-- os dois "em Configuracoes". Sem senha um computador SO' RESPONDE CONSULTA: ele recusa
+-- qualquer comando, e a mensagem de recusa nao dizia onde arrumar isso. Era o buraco que
+-- impedia qualquer coisa entre computadores de funcionar.
+inner = group(y, 5, "Rede entre computadores")
 f:add(ui.checkbox {
-    x = INSET, y = inner, text = "&Rede entre computadores",
+    x = INSET, y = inner, text = "&Ligada",
     checked = settings.get("mosaic.net.enabled") ~= false,
     onChange = function(_, v) settings.set("mosaic.net.enabled", v) save() end,
 })
+f:add(ui.label { x = INSET, y = inner + 1, text = "Nome na rede:" })
+f:add(ui.textbox {
+    x = INSET + 14, y = inner + 1, w = -INSET - 1,
+    text = settings.get("mosaic.net.name") or "",
+    onChange = function(_, v)
+        -- Nome vazio nao vira nome vazio: o netx cai no rotulo do computador, e o netd
+        -- reanuncia sozinho no evento seguinte, sem precisar reiniciar.
+        settings.set("mosaic.net.name", v ~= "" and v or nil)
+        save()
+    end,
+})
+f:add(ui.label { x = INSET, y = inner + 2, text = "Senha:" })
+local netHint = f:add(ui.label { x = INSET, y = inner + 3, w = -INSET - 1, text = "" })
+-- A dica diz, em palavras, o que a falta de senha significa. Era a informacao que faltava:
+-- a recusa chegava como "este computador nao aceita comandos remotos" e ninguem ligava isso
+-- a um campo que nem existia na tela.
+local function atualizaDicaRede(v)
+    if (v or "") == "" then
+        netHint.text = "Sem senha: so responde consulta"
+        netHint.fg = colors.orange
+    else
+        netHint.text = "Com senha: aceita comando remoto"
+        netHint.fg = theme.mutedFg
+    end
+end
+f:add(ui.textbox {
+    x = INSET + 14, y = inner + 2, w = -INSET - 1, mask = "*",
+    text = settings.get("mosaic.net.password") or "",
+    onChange = function(_, v)
+        settings.set("mosaic.net.password", v ~= "" and v or nil)
+        save()
+        atualizaDicaRede(v)
+        f.dirty = true
+    end,
+})
+atualizaDicaRede(settings.get("mosaic.net.password"))
+y = y + 7
+
+-- ---------------------------------------------------------------- sistema
+inner = group(y, 1, "Sistema")
 f:add(ui.checkbox {
-    x = INSET, y = inner + 1, text = "&Papel de parede",
+    x = INSET, y = inner, text = "&Papel de parede",
     checked = settings.get("mosaic.wallpaper") ~= nil,
     onChange = function(_, v)
         settings.set("mosaic.wallpaper", v and "/home/wallpaper.nfp" or nil)
@@ -136,7 +181,7 @@ f:add(ui.checkbox {
         mosaic.emit("apps_changed")
     end,
 })
-y = y + 4
+y = y + 3
 
 f:add(ui.button { x = 1, y = y, text = "Ver &todas as opcoes", alt = true, onClick = function()
     local W, H = term.getSize()

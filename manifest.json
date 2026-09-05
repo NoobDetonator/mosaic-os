@@ -59,8 +59,8 @@
     },
     {
       "path": "os/apps/netcenter.lua",
-      "sha1": "1f179dfd7caaa0043e98d7ca61b33c922b3ed4e2",
-      "size": 5745
+      "sha1": "f62700624f600d1d333b6d6a92f07d7cfe09af20",
+      "size": 5131
     },
     {
       "path": "os/apps/notes.lua",
@@ -89,13 +89,13 @@
     },
     {
       "path": "os/apps/remote.lua",
-      "sha1": "6a3306737666b746df54278e4dd788ab5d3a2ee6",
-      "size": 2757
+      "sha1": "d358d29646f248434440167a45ed7dbb62bc3cc0",
+      "size": 2385
     },
     {
       "path": "os/apps/settings.lua",
-      "sha1": "ea395c566ee7592b6803508316bfc23c69196e98",
-      "size": 6687
+      "sha1": "51d1357c5d53e54d923b3b1547e060c795f5e08d",
+      "size": 8610
     },
     {
       "path": "os/apps/taskman.lua",
@@ -286,6 +286,11 @@
       "size": 17033
     },
     {
+      "path": "os/lib/netx.lua",
+      "sha1": "9ecfe5db48a77e5422f6aebb92521e08a3acf8e1",
+      "size": 13140
+    },
+    {
       "path": "os/lib/pixel.lua",
       "sha1": "e5bb4fadec51108317bf9c27913cb5e207e94f24",
       "size": 13110
@@ -337,8 +342,8 @@
     },
     {
       "path": "os/net/netd.lua",
-      "sha1": "0d9f2497dc72f4ff95fb8a4c4cdfe4d7c36810f1",
-      "size": 5904
+      "sha1": "d5e5436c125bba39de497be6d02890ff2272d3ad",
+      "size": 6197
     },
     {
       "path": "os/net/relay.lua",

@@ -251,7 +251,7 @@ local okPowah, errPowah = pcall(require("lib.powah").demo)
 check(okPowah, "powah.demo falhou: " .. tostring(errPowah))
 -- As libs de arquivo: atalho, area de transferencia, propriedades e as operacoes.
 -- Cada uma traz o proprio self-check; aqui so' se cobra que ele passe.
-for _, nome in ipairs({ "shortcut", "clip", "props", "fileops", "expr", "mcmath", "plot", "create", "mesh", "three", "shade", "audio" }) do
+for _, nome in ipairs({ "shortcut", "clip", "props", "fileops", "expr", "mcmath", "plot", "create", "mesh", "three", "shade", "audio", "netx" }) do
     local okLib, errLib = pcall(require("lib." .. nome).demo)
     check(okLib, nome .. ".demo falhou: " .. tostring(errLib))
 end

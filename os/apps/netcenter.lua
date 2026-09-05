@@ -2,8 +2,9 @@
 local ui = mosaic.ui
 local theme = mosaic.theme
 local strutil = mosaic.lib("strutil")
+local netx = mosaic.lib("netx")
 
-local PROTOCOL = "mosaic"
+local PROTOCOL = netx.PROTOCOL
 local w, h = term.getSize()
 local f = ui.form()
 local peers = {}
@@ -44,16 +45,10 @@ function scan()
         f.dirty = true
         return
     end
-    local found = { rednet.lookup(PROTOCOL) }
-    peers = {}
-    for _, id in ipairs(found) do
-        if type(id) == "number" and id ~= os.getComputerID() then
-            rednet.send(id, { type = "ping", id = os.epoch("utc") }, PROTOCOL)
-            local _, reply = rednet.receive(PROTOCOL, 1)
-            local info = (type(reply) == "table" and reply.ok and reply.result) or {}
-            peers[#peers + 1] = { id = id, name = info.name, os = info.os, label = info.label }
-        end
-    end
+    -- Uma transmissao e um prazo so' para a rede inteira. Antes era `rednet.lookup` e
+    -- depois uma pergunta por vizinho, esperando um segundo em cada: com dez computadores
+    -- a tela ficava dez segundos congelada.
+    peers = netx.peers()
     list:setItems(peers)
     status.text = string.format(" %d computador(es) | modem em %s | eu: #%d %s",
         #peers, st.side, os.getComputerID(), st.name)
@@ -61,16 +56,7 @@ function scan()
 end
 
 local function ask(peer, msg)
-    msg.id = os.epoch("utc")
-    rednet.send(peer.id, msg, PROTOCOL)
-    local from, reply
-    local deadline = os.clock() + 3
-    repeat
-        from, reply = rednet.receive(PROTOCOL, 1)
-    until (from == peer.id and type(reply) == "table" and reply.id == msg.id) or os.clock() > deadline
-    if type(reply) ~= "table" then return nil, "sem resposta" end
-    if not reply.ok then return nil, reply.error end
-    return reply.result
+    return netx.ask(peer.id, msg)
 end
 
 -- Ordem: a fila mede a propria altura, o rodape se ancora acima dela, a lista preenche o resto.

@@ -2,7 +2,8 @@
 local ui = mosaic.ui
 local theme = mosaic.theme
 
-local PROTOCOL = "mosaic"
+local netx = mosaic.lib("netx")
+local PROTOCOL = netx.PROTOCOL
 local args = { ... }
 local peerId = tonumber(args[1])
 local w, h = term.getSize()
@@ -32,17 +33,7 @@ local function log(line)
 end
 
 local function ask(msg)
-    msg.id = os.epoch("utc")
-    rednet.send(peerId, msg, PROTOCOL)
-    local deadline = os.clock() + 5
-    while os.clock() < deadline do
-        local from, reply = rednet.receive(PROTOCOL, 1)
-        if from == peerId and type(reply) == "table" and reply.id == msg.id then
-            if reply.ok then return reply.result end
-            return nil, reply.error
-        end
-    end
-    return nil, "sem resposta do computador #" .. peerId
+    return netx.ask(peerId, msg)
 end
 
 local function send()
