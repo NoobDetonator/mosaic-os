@@ -222,8 +222,8 @@
     },
     {
       "path": "os/lib/audio.lua",
-      "sha1": "5b96d25daff27f34164eea7188a62d01de4de06a",
-      "size": 11248
+      "sha1": "09694494d3df74171d529d15c66072faaae32355",
+      "size": 12603
     },
     {
       "path": "os/lib/chart.lua",

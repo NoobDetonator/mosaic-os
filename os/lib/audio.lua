@@ -181,7 +181,12 @@ function Stream:owns(name) return name == nil or name == self.name end
 function Stream:retry()
     if not self.pending then return true end
     if not self:ok() then return false end
-    local vol = self.volume and (self.volume * audio.volume()) or nil
+    -- `or 1` e nao `and ... or nil`: sem isto, um fluxo criado sem volume proprio - que e'
+    -- exatamente como o musicd cria o da musica - mandava nil para o playAudio, o jogo
+    -- assumia 1.0, e o seletor de volume das Configuracoes nao valia NADA para a musica.
+    -- Os bipes obedeciam (passam por audio.note/sound), e por isso parecia que funcionava.
+    local vol = (self.volume or 1) * audio.volume()
+    if vol > 3 then vol = 3 end
     local ok, accepted = pcall(self.spk.p.playAudio, self.pending, vol)
     if not ok then self.err = tostring(accepted) return false end
     if not accepted then return false end
@@ -240,9 +245,14 @@ function audio.demo()
 
     -- A fila, com alto-falante e decodificador falsos: e a logica que o emulador consegue
     -- cobrir. O decodificador de verdade so' existe na ROM, e quem o exercita e o CraftOS.
-    local aceitos, cheio = {}, true
+    local aceitos, volumes, cheio = {}, {}, true
     local fake = { name = "speaker_7", p = {
-        playAudio = function(buf) if cheio then return false end aceitos[#aceitos + 1] = #buf return true end,
+        playAudio = function(buf, vol)
+            if cheio then return false end
+            aceitos[#aceitos + 1] = #buf
+            volumes[#volumes + 1] = vol
+            return true
+        end,
         stop = function() end,
     } }
     local st = audio.stream(fake, { decoder = function(s) return { #s } end })
@@ -261,6 +271,22 @@ function audio.demo()
     assert(#aceitos == 1 and aceitos[1] == 1, "o buffer que entrou nao e o que estava preso")
     assert(st.pending == nil, "pendente nao foi limpo depois de tocar")
     assert(st.samples == 1, "contagem de amostras errada: " .. st.samples)
+
+    -- O VOLUME DAS CONFIGURACOES TEM DE CHEGAR AO ALTO-FALANTE. Um fluxo sem volume proprio
+    -- e' o caso da musica, e era justamente ele que mandava nil e ignorava o seletor.
+    assert(volumes[1] ~= nil, "o fluxo mandou nil de volume; o seletor das Configuracoes nao vale nada")
+    local volAntes = settings and settings.get("mosaic.som.volume")
+    if settings then
+        settings.set("mosaic.som.volume", 2)
+        cheio = false
+        st:offer("q")
+        assert(volumes[#volumes] == 2, "volume 2 nao chegou ao playAudio: " .. tostring(volumes[#volumes]))
+        settings.set("mosaic.som.volume", 0)
+        st:offer("w")
+        assert(volumes[#volumes] == 0, "volume 0 nao chegou ao playAudio: " .. tostring(volumes[#volumes]))
+        if volAntes then settings.set("mosaic.som.volume", volAntes)
+        else settings.unset("mosaic.som.volume") end
+    end
 
     -- Oferecer com algo preso e erro de programacao, nao silencio.
     cheio = true
