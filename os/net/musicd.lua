@@ -273,7 +273,15 @@ while true do
 
     elseif nome == "http_failure" and ev[2] == pedindoMeta then
         pedindoMeta = nil
-        ultimoErro = "o relay nao respondeu: " .. tostring(ev[3])
+        -- O CC entrega a RESPOSTA que falhou no quarto argumento, e o relay poe o motivo de
+        -- verdade no corpo do 502 ("falta instalar yt-dlp e ffmpeg"). Sem ler isso, a tela
+        -- mostrava so' "Bad Gateway" e nao havia como a pessoa descobrir o que fazer.
+        local h = ev[4]
+        local corpo = h and h.readAll()
+        if h then pcall(h.close) end
+        local ok, doc = pcall(textutils.unserialiseJSON, corpo or "")
+        ultimoErro = (ok and type(doc) == "table" and doc.erro)
+            or ("o relay nao respondeu: " .. tostring(ev[3]))
         termoPendente, preparando = nil, nil
         publica()
 

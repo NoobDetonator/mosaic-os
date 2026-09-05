@@ -804,6 +804,25 @@ if audioLib.decoder() then
         .. tostring(mosaic.musicStatus().erro))
 end
 
+-- 502 do relay: o motivo esta no CORPO, nao na mensagem do evento. O CC manda a resposta
+-- que falhou no quarto argumento do http_failure; ignorar isso mostrava "Bad Gateway" na
+-- tela enquanto o relay dizia exatamente o que faltava instalar.
+fh.responde("/api/musica", '{"erro":"falta instalar yt-dlp e ffmpeg no computador que roda o relay"}', 502)
+os.queueEvent("mosaic:music_cmd", "add", "qualquer coisa")
+-- proc.step() cru: o relogio do emulador so' anda quando um timer dispara.
+for _ = 1, 80 do proc.step() if mosaic.musicStatus().erro then break end end
+local sErr = mosaic.musicStatus()
+check(sErr.erro == "falta instalar yt-dlp e ffmpeg no computador que roda o relay",
+    "o motivo do 502 nao chegou na tela: " .. tostring(sErr.erro))
+check(sErr.preparando == nil, "erro tem que limpar o estado de preparo")
+
+-- Falha sem corpo continua dizendo alguma coisa, em vez de ficar calada.
+fh.responde("/api/musica", "", 503)
+os.queueEvent("mosaic:music_cmd", "add", "outra")
+for _ = 1, 80 do proc.step() if (mosaic.musicStatus().erro or ""):find("respondeu", 1, true) then break end end
+check((mosaic.musicStatus().erro or ""):find("relay nao respondeu", 1, true) ~= nil,
+    "falha sem corpo perdeu a mensagem: " .. tostring(mosaic.musicStatus().erro))
+
 -- Tirar da fila e limpar.
 os.queueEvent("mosaic:music_cmd", "remove", 1)
 pump() pump()

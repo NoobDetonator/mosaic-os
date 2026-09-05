@@ -125,8 +125,10 @@ end
 function M.http()
     local h = { pedidos = {}, respostas = {} }
 
-    function h.responde(padrao, corpo)
-        h.respostas[#h.respostas + 1] = { padrao = padrao, corpo = corpo }
+    -- `codigo` >= 400 faz o pedido virar http_failure COM corpo, que e' como o CC entrega
+    -- um 502: o motivo de verdade vem no corpo, nao na mensagem do evento.
+    function h.responde(padrao, corpo, codigo)
+        h.respostas[#h.respostas + 1] = { padrao = padrao, corpo = corpo, codigo = codigo }
     end
 
     local function acha(url)
@@ -137,18 +139,18 @@ function M.http()
             if url:find(r.padrao, 1, true) then
                 local c = r.corpo
                 if type(c) == "function" then c = c(url) end
-                return c
+                return c, r.codigo
             end
         end
     end
 
-    local function handle(corpo)
+    local function handle(corpo, codigo)
         return {
             readAll = function() return corpo end,
             readLine = function() return (corpo:gmatch("[^\n]*")()) end,
             read = function(n) return corpo:sub(1, n or 1) end,
             close = function() end,
-            getResponseCode = function() return 200 end,
+            getResponseCode = function() return codigo or 200 end,
             getResponseHeaders = function() return {} end,
         }
     end
@@ -158,15 +160,17 @@ function M.http()
         checkURLAsync = function() return true end,
         get = function(url)
             h.pedidos[#h.pedidos + 1] = url
-            local c = acha(url)
-            if c then return handle(c) end
+            local c, cod = acha(url)
+            if c then return handle(c, cod) end
             return nil, "sem resposta falsa para " .. url
         end,
         post = function(url) return nil, "post nao previsto no teste: " .. url end,
         request = function(url)
             h.pedidos[#h.pedidos + 1] = url
-            local c = acha(url)
-            if c then
+            local c, cod = acha(url)
+            if c and cod and cod >= 400 then
+                os.queueEvent("http_failure", url, "Bad Gateway", handle(c, cod))
+            elseif c then
                 os.queueEvent("http_success", url, handle(c))
             else
                 os.queueEvent("http_failure", url, "sem resposta falsa")
