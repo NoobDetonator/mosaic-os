@@ -63,6 +63,18 @@ function erroDeps(d) {
 const YT_CLIENTS = (process.env.MOSAIC_YT_CLIENTS || 'web_safari,mweb,default').split(',');
 const argsCliente = (cli) => ['--extractor-args', 'youtube:player_client=' + cli];
 
+// O YouTube esconde o endereco do audio atras de um desafio em JavaScript, e o yt-dlp
+// precisa de um interpretador para resolver. Sem um, a BUSCA funciona e o titulo aparece -
+// so' o download falha, com HTTP 403. O erro aponta para o lugar errado: a caca vai parar
+// nos player_client, que nao tem nada a ver.
+//
+// O yt-dlp so' liga o deno sozinho, e mandar instalar deno seria pedir um programa a mais
+// para cada pessoa que for rodar o relay. Mas o relay JA' e' node - e node serve de runtime.
+// process.execPath e' o node que esta rodando isto agora, entao nao ha o que instalar nem
+// PATH para acertar. Conferido em 05/09/2026, inclusive com o caminho do Windows: o yt-dlp
+// corta o RUNTIME:PATH no primeiro dois-pontos, e "C:\..." passa inteiro.
+const ARGS_JS = ['--js-runtimes', 'node:' + process.execPath];
+
 function idDe(q) { return crypto.createHash('sha1').update(q).digest('hex').slice(0, 16); }
 function arquivoDe(id) { return path.join(CACHE_DIR, id + '.dfpwm'); }
 function metaDe(id) { return path.join(CACHE_DIR, id + '.json'); }
@@ -123,7 +135,7 @@ async function prepara(id, alvo) {
     // format is not available": nem todo cliente enxerga todos os formatos, e para achar o
     // video e ler titulo e duracao o padrao e' o que ve mais. Quem varia e' o download.
     const bruto = await corre('yt-dlp',
-      ['--dump-single-json', '--no-playlist', '--no-warnings', alvo]);
+      ['--dump-single-json', '--no-playlist', '--no-warnings', ...ARGS_JS, alvo]);
     info = JSON.parse(bruto);
     if (info.entries && info.entries.length) info = info.entries[0];
   } catch (e) {
@@ -156,7 +168,7 @@ async function prepara(id, alvo) {
     for (const cli of YT_CLIENTS) {
       try {
         await corre('yt-dlp', ['-f', 'bestaudio/best', '--no-playlist', '--no-warnings', '--quiet',
-          '-o', path.join(CACHE_DIR, id + '.dl.%(ext)s'), ...argsCliente(cli), concreto]);
+          '-o', path.join(CACHE_DIR, id + '.dl.%(ext)s'), ...ARGS_JS, ...argsCliente(cli), concreto]);
         baixado = achaBaixado(id);
         if (baixado) break;
         ultimo = new Error('o yt-dlp nao deixou arquivo (cliente ' + cli + ')');
