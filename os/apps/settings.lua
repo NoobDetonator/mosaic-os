@@ -130,11 +130,16 @@ inner = group(y, 5, "Rede entre computadores")
 f:add(ui.checkbox {
     x = INSET, y = inner, text = "&Ligada",
     checked = settings.get("mosaic.net.enabled") ~= false,
-    onChange = function(_, v) settings.set("mosaic.net.enabled", v) save() end,
+    onChange = function(_, v)
+        settings.set("mosaic.net.enabled", v)
+        save()
+        ui.msgbox("A mudanca da rede vale apos reiniciar o computador.", "Rede")
+        if ui.confirm("Reiniciar agora?", "Rede") then mosaic.reboot() end
+    end,
 })
 f:add(ui.label { x = INSET, y = inner + 1, text = "Nome na rede:" })
 f:add(ui.textbox {
-    x = INSET + 14, y = inner + 1, w = -INSET - 1,
+    x = INSET + 14, y = inner + 1, w = -(INSET + 16),
     text = settings.get("mosaic.net.name") or "",
     onChange = function(_, v)
         -- Nome vazio nao vira nome vazio: o netx cai no rotulo do computador, e o netd
@@ -158,7 +163,7 @@ local function atualizaDicaRede(v)
     end
 end
 f:add(ui.textbox {
-    x = INSET + 14, y = inner + 2, w = -INSET - 1, mask = "*",
+    x = INSET + 14, y = inner + 2, w = -(INSET + 16), mask = "*",
     text = settings.get("mosaic.net.password") or "",
     onChange = function(_, v)
         settings.set("mosaic.net.password", v ~= "" and v or nil)
@@ -189,12 +194,13 @@ f:add(ui.button { x = 1, y = y, text = "Ver &todas as opcoes", alt = true, onCli
     local items = {}
     for _, n in ipairs(names) do
         if n:match("^mosaic%.") then
-            items[#items + 1] = { text = n .. " = " .. textutils.serialise(settings.get(n)):gsub("\n", " ") }
+            items[#items + 1] = { key = n, text = n .. " = " .. ((n:find("token") or n:find("password"))
+                and "********" or textutils.serialise(settings.get(n)):gsub("\n", " ")) }
         end
     end
     local idx = ui.menu(items, 2, 3, W - 4, { maxH = H - 6 })
     if idx then
-        local key = names[idx]
+        local key = items[idx].key
         local novo = ui.prompt(key .. ":", tostring(settings.get(key) or ""), "Editar opcao")
         if novo then
             if novo == "true" then settings.set(key, true)

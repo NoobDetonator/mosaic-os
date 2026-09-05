@@ -1,89 +1,44 @@
--- Atualizador: compara os arquivos locais com o manifest do repositorio e baixa o que mudou.
-local ui = mosaic.ui
-local theme = mosaic.theme
-local fsx = mosaic.lib("fsx")
-local httpx = mosaic.lib("httpx")
-local strutil = mosaic.lib("strutil")
-
-local w, h = term.getSize()
-local f = ui.form()
-local installed = fsx.readJSON("/os/var/installed.json", {}) or {}
-local base = installed.base or mosaic.version.repo
-
-local infoLabel = f:add(ui.label { x = 2, y = 1, w = -2,
-    text = "Instalado: " .. mosaic.version.version .. (installed.version and (" (pacote " .. installed.version .. ")") or "") })
-f:add(ui.label { x = 2, y = 2, text = "Repositorio (raw do GitHub):", fg = theme.mutedFg })
-local urlBox = f:add(ui.textbox { x = 2, y = 3, w = -3, text = base })
-local list, status, verify, apply
-
-local pending = {}
-
-function verify()
-    status.text = " Baixando manifest..."
-    f:draw()
-    local manifest, err = httpx.getJSON(urlBox.text .. "/manifest.json")
-    if not manifest or not manifest.files then
-        status.text = " Falhou: " .. tostring(err)
-        f.dirty = true
-        return
-    end
-    pending = {}
-    local items = {}
-    for i, entry in ipairs(manifest.files) do
-        status.text = string.format(" Verificando %d/%d...", i, #manifest.files)
-        f:draw()
-        local target = entry.path == "startup.lua" and "/startup.lua" or ("/" .. entry.path)
-        local remote = httpx.get(urlBox.text .. "/" .. entry.path)
-        local localData = fsx.read(target)
-        local mark
-        if not remote then mark = "!"
-        elseif localData == nil then mark = "+" pending[#pending + 1] = { path = entry.path, target = target, data = remote }
-        elseif localData ~= remote then mark = "~" pending[#pending + 1] = { path = entry.path, target = target, data = remote }
-        else mark = "=" end
-        items[#items + 1] = { path = entry.path, mark = mark }
-    end
-    list:setItems(items)
-    status.text = string.format(" versao %s | %d arquivo(s) para atualizar (+ novo, ~ mudou, = igual)",
-        tostring(manifest.version), #pending)
-    infoLabel.text = "Instalado: " .. mosaic.version.version .. " | disponivel: " .. tostring(manifest.version)
-    f.newVersion = manifest.version
-    f.dirty = true
-end
-
-function apply()
-    if #pending == 0 then
-        ui.msgbox("Nada para atualizar.", "Atualizador")
-        return
-    end
-    if not ui.confirm("Atualizar " .. #pending .. " arquivo(s)?", "Confirmar") then return end
-    local busy = ui.busy("Atualizando", "")
-    for i, item in ipairs(pending) do
-        busy.set(i / #pending, item.path)
-        fsx.write(item.target, item.data)
-    end
-    busy.close()
-    fsx.writeJSON("/os/var/installed.json", { version = f.newVersion, base = urlBox.text, at = os.epoch("utc") })
-    if ui.confirm("Pronto. Reiniciar agora para aplicar?", "Atualizado") then mosaic.reboot() end
-    pending = {}
-    f.dirty = true
-end
-
--- Ordem: a fila mede a propria altura, o rodape se ancora acima dela, a lista preenche o resto.
-local bar = ui.row(f, { bottom = 0, items = {
-    { text = "&Verificar", onClick = function() verify() end },
-    { text = "&Atualizar", onClick = function() apply() end },
-    { text = "&Espaco", alt = true, onClick = function()
-        ui.msgbox(string.format("Livre: %s\nMosaic OS ocupa: %s",
-            strutil.bytes(fs.getFreeSpace("/")), strutil.bytes(fsx.treeSize("/os"))), "Disco")
-    end },
-} })
-status = f:add(ui.label { x = 1, above = bar, w = "fill",
-    text = " Clique em Verificar para comecar.", bg = theme.taskbarBg, fg = theme.taskbarFg })
-list = f:add(ui.list { x = 1, y = 5, w = "fill", fillTo = status,
-    render = function(it) return " " .. it.mark .. " " .. it.path end })
-
-f.onEvent = function(_, ev)
-    -- Sem term_resize: as ancoras do form cuidam do reposicionamento.
-end
-
+local ui,theme=mosaic.ui,mosaic.theme
+local fsx,update=mosaic.lib("fsx"),mosaic.lib("update")
+local f=ui.form()
+local installed=fsx.readJSON("/os/var/installed.json",{})
+local plan,list,status
+f:add(ui.label{x=2,y=1,w=-2,text="Instalado: "..mosaic.version.version})
+f:add(ui.label{x=2,y=2,text="Repositorio (raw do GitHub):"})
+local url=f:add(ui.textbox{x=2,y=3,w=-3,text=installed.base or mosaic.version.repo})
+local bar=ui.row(f,{bottom=0,items={
+    {text="&Verificar",onClick=function()
+        plan=nil
+        list:setItems({})
+        local ok,result=pcall(update.prepare,url.text,false,function(i,n,path)
+            status.text=string.format(" Verificando %d/%d: %s",i,n,path)
+            f:draw()
+        end)
+        if ok then
+            plan=result
+            list:setItems(plan.files)
+            status.text=" "..#plan.files.." arquivos; hashes conferidos."
+        else status.text=" Falhou: "..tostring(result) end
+        f.dirty=true
+    end},
+    {text="&Atualizar",onClick=function()
+        if not plan then ui.msgbox("Verifique os arquivos primeiro.","Atualizador") return end
+        if url.text~=plan.base then plan=nil;ui.msgbox("Repositorio mudou. Verifique novamente.","Atualizador") return end
+        if not ui.confirm("Aplicar "..#plan.files.." arquivos com backup?","Atualizador") then return end
+        local busy=ui.busy("Atualizando","")
+        local called,ok,err=pcall(update.apply,plan,function(i,n,path) busy.set(i/n,path) end)
+        busy.close()
+        plan=nil
+        if not called or not ok then
+            ui.msgbox(tostring(called and err or ok),"Atualizacao nao concluida")
+            status.text=" Falhou. Verifique novamente antes de tentar."
+        else
+            status.text=" Atualizacao concluida. Reinicie para aplicar."
+            if ui.confirm("Reiniciar agora?","Atualizado") then mosaic.reboot() end
+        end
+        f.dirty=true
+    end},
+}})
+status=f:add(ui.label{x=1,above=bar,w="fill",text=" Clique em Verificar para comecar.",bg=theme.taskbarBg,fg=theme.taskbarFg})
+list=f:add(ui.list{x=1,y=5,w="fill",fillTo=status,render=function(it) return it.target end})
 f:run()

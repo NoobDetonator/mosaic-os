@@ -91,6 +91,8 @@ function wm.resize()
     local nw, nh = root.getSize()
     if nw == wm.W and nh == wm.H then return false end
     wm.W, wm.H = nw, nh
+    wm.tiny = nw < 40 or nh < 15 or pocket ~= nil
+    wm.pointer.x, wm.pointer.y = math.min(wm.pointer.x, nw), math.min(wm.pointer.y, nh)
     canvas.reposition(1, 1, nw, nh)
     wm.last = {}       -- sem isso a tela guarda linhas velhas depois do resize
     return true
@@ -108,7 +110,7 @@ function wm.hitTest(procs, x, y)
     end
     for i = #procs, 1, -1 do
         local p = procs[i]
-        if p.win and not p.minimized and not p.hidden then
+        if p.win and not p.minimized and not p.hidden and not p.monitor then
             local top = clientTop(p)
             if x >= p.x and x <= p.x + p.w - 1 then
                 if p.chrome and y == p.y then
@@ -130,7 +132,7 @@ end
 function wm.topAt(procs, x, y)
     for i = #procs, 1, -1 do
         local p = procs[i]
-        if p.win and not p.minimized and not p.hidden then
+        if p.win and not p.minimized and not p.hidden and not p.monitor then
             local top = clientTop(p)
             local y1 = p.chrome and p.y or top
             if x >= p.x and x <= p.x + p.w - 1 and y >= y1 and y <= top + p.h - 1 then return p end
@@ -370,7 +372,7 @@ function wm.render(procs, focus)
     end
     -- Cursor: so da janela focada, e so se a celula nao estiver coberta.
     local blink = false
-    if not wm.pointer.on and focus and focus.win and not focus.minimized and not focus.hidden then
+    if not wm.pointer.on and focus and focus.win and not focus.minimized and not focus.hidden and not focus.monitor then
         local cx, cy = focus.win.getCursorPos()
         local ax, ay = focus.x + cx - 1, clientTop(focus) + cy - 1
         if cx >= 1 and cx <= focus.w and cy >= 1 and cy <= focus.h

@@ -57,7 +57,7 @@ function ask(id, message, timeoutMs) {
       pending.delete(reqId);
       reject(new Error('o computador nao respondeu a tempo'));
     }, timeoutMs || TIMEOUT);
-    pending.set(reqId, { resolve, reject, timer });
+    pending.set(reqId, { resolve, reject, timer, ws: computer.ws });
     computer.ws.send(JSON.stringify({ ...message, id: reqId }));
   });
 }
@@ -77,9 +77,15 @@ function authorized(req) {
 }
 
 function readBody(req) {
-  return new Promise((resolve) => {
-    let data = '';
-    req.on('data', (c) => { data += c; });
+  return new Promise((resolve, reject) => {
+    let data = '', size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > 1024 * 1024) { reject(new Error('corpo grande demais')); return; }
+      data += c;
+    });
+    req.on('error', reject);
+    req.on('aborted', () => reject(new Error('requisicao interrompida')));
     req.on('end', () => resolve(data));
   });
 }
@@ -131,6 +137,7 @@ const server = http.createServer(async (req, res) => {
     if (!file.startsWith(base + path.sep) || !fs.existsSync(file)) {
       return json(res, 404, { error: 'nao encontrado' });
     }
+    if (!fs.statSync(file).isFile()) return json(res, 404, { error: 'nao encontrado' });
     res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
     return res.end(fs.readFileSync(file));
   }
@@ -232,7 +239,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 // ---------------------------------------------------------------- WebSocket
-const wss = new WebSocketServer({ server, path: '/ws/computer' });
+const wss = new WebSocketServer({ server, path: '/ws/computer', maxPayload: 1024 * 1024 });
 
 wss.on('connection', (ws, req) => {
   const header = req.headers.authorization || '';
@@ -248,7 +255,13 @@ wss.on('connection', (ws, req) => {
     let msg;
     try { msg = JSON.parse(raw.toString()); } catch (e) { return; }
 
+    if (!msg || typeof msg !== 'object' || Array.isArray(msg)) return;
     if (msg.type === 'hello') {
+      if (id !== null || !Number.isSafeInteger(msg.id) || msg.id < 0) {
+        ws.close(1008, 'identidade invalida'); return;
+      }
+      const previous = computers.get(String(msg.id));
+      if (previous) previous.ws.close(1008, 'conexao substituida');
       id = String(msg.id);
       computers.set(id, { ws, info: msg, connectedAt: Date.now(), lastSeen: Date.now(), address });
       console.log(`[relay] computador #${id} (${msg.label || 'sem nome'}) conectado de ${address}`);
@@ -256,7 +269,8 @@ wss.on('connection', (ws, req) => {
       return;
     }
 
-    if (id) computers.get(id).lastSeen = Date.now();
+    if (id === null || computers.get(id)?.ws !== ws) return;
+    computers.get(id).lastSeen = Date.now();
 
     if (msg.type === 'event') {
       broadcast('game_event', { computer: Number(id), name: msg.name, args: msg.args });
@@ -264,7 +278,7 @@ wss.on('connection', (ws, req) => {
     }
 
     const wait = pending.get(msg.id);
-    if (!wait) return;
+    if (!wait || wait.ws !== ws) return;
     clearTimeout(wait.timer);
     pending.delete(msg.id);
     if (msg.ok) wait.resolve(msg.result === undefined ? true : msg.result);
@@ -272,6 +286,12 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
+    for (const [requestId, wait] of pending) {
+      if (wait.ws === ws) {
+        clearTimeout(wait.timer); pending.delete(requestId);
+        wait.reject(new Error('computador desconectou'));
+      }
+    }
     if (id && computers.get(id) && computers.get(id).ws === ws) {
       computers.delete(id);
       console.log(`[relay] computador #${id} desconectou`);

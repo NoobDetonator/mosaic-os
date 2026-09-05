@@ -31,59 +31,65 @@ function poeCache(chave, valor) {
 
 function limpaCache() { cache.clear(); }
 
-// Faixas que nao podem ser alcancadas de dentro do jogo.
-//
-// O relay roda na maquina de quem joga, e o token o protege de fora - mas um computador do
-// servidor pedindo http://192.168.0.1/ transformaria o relay num tunel para a rede de casa.
-// Isto e' bloqueio por IP literal; um nome que RESOLVE para endereco privado passa, e por
-// isso o relay nao deve ser exposto a quem voce nao conhece.
-const PRIVADOS = [
-  /^127\./, /^10\./, /^192\.168\./, /^169\.254\./, /^0\./,
-  /^172\.(1[6-9]|2\d|3[01])\./,
-];
-
+// A politica e' conferida no IP usado pelo socket, inclusive apos cada redirect.
+const dns = require('dns');
+const net = require('net');
+const http = require('http');
+const https = require('https');
+function ipPublico(ip) {
+  if (net.isIP(ip) === 6) return /^[23][0-9a-f]{3}:/i.test(ip) && !/^200[12]:/i.test(ip);
+  if (net.isIP(ip) !== 4) return false;
+  const [a,b] = ip.split('.').map(Number);
+  return !(a === 0 || a === 10 || a === 127 || a >= 224 ||
+    (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) || (a === 192 && [0,168].includes(b)) ||
+    (a === 198 && [18,19].includes(b)));
+}
 function urlPermitida(bruta) {
   let u;
-  try { u = new URL(bruta); } catch (_) { return { ok: false, erro: 'endereco invalido' }; }
-  if (u.protocol !== 'http:' && u.protocol !== 'https:') {
-    return { ok: false, erro: 'so http e https' };
-  }
-  const h = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
-  if (h === 'localhost' || h === '::1' || h.endsWith('.localhost')) {
-    return { ok: false, erro: 'endereco local bloqueado' };
-  }
-  if (/^\d+\.\d+\.\d+\.\d+$/.test(h) && PRIVADOS.some((re) => re.test(h))) {
-    return { ok: false, erro: 'endereco de rede local bloqueado' };
-  }
-  return { ok: true, url: u.toString() };
+  try { u = new URL(bruta); } catch (_) { return { ok:false, erro:'endereco invalido' }; }
+  if (!['http:','https:'].includes(u.protocol)) return { ok:false, erro:'so http e https' };
+  const h = u.hostname.toLowerCase().replace(/^\[|\]$/g,'');
+  if (u.username || u.password || h === 'localhost' || h.endsWith('.localhost') ||
+      (net.isIP(h) && !ipPublico(h))) return { ok:false, erro:'endereco local bloqueado' };
+  return { ok:true, url:u.toString() };
 }
-
-// Baixa com teto de tamanho de verdade: `await r.text()` leria os 300 MB de um arquivo que
-// se diz HTML antes de alguem reclamar.
+function lookupPublico(host, options, callback) {
+  dns.lookup(host, {all:true}, (err, addresses) => {
+    if (err) return callback(err);
+    if (!addresses.length || addresses.some(a => !ipPublico(a.address)))
+      return callback(new Error('endereco de rede local bloqueado'));
+    if (options.all) callback(null, addresses);
+    else callback(null, addresses[0].address, addresses[0].family);
+  });
+}
 async function baixa(url, aceita) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
-    const r = await fetch(url, {
-      redirect: 'follow',
-      signal: ctrl.signal,
-      headers: { 'User-Agent': UA, Accept: aceita || 'text/html,*/*' },
-    });
-    const tipo = (r.headers.get('content-type') || '').toLowerCase();
-    const partes = [];
-    let total = 0;
-    let cortado = false;
-    if (r.body) {
-      for await (const pedaco of r.body) {
+    for (let hop=0; hop<6; hop++) {
+      const valid = urlPermitida(url);
+      if (!valid.ok) throw new Error(valid.erro);
+      const r = await new Promise((resolve,reject) => {
+        const transport = url.startsWith('https:') ? https : http;
+        const req = transport.get(url, {signal:ctrl.signal, lookup:lookupPublico, agent:false,
+          headers:{'User-Agent':UA, Accept:aceita || 'text/html,*/*', 'Accept-Encoding':'identity'}},resolve);
+        req.on('error',reject);
+      });
+      if ([301,302,303,307,308].includes(r.statusCode) && r.headers.location) {
+        r.destroy(); url = new URL(r.headers.location,url).toString(); continue;
+      }
+      const partes=[]; let total=0, cortado=false;
+      for await (const pedaco of r) {
         total += pedaco.length;
-        if (total > MAX_BYTES) { cortado = true; break; }
+        if (total > MAX_BYTES) { cortado=true; break; }
         partes.push(pedaco);
       }
+      return {status:r.statusCode,url,tipo:(r.headers['content-type'] || '').toLowerCase(),
+        corpo:Buffer.concat(partes),cortado};
     }
-    return { status: r.status, url: r.url, tipo, corpo: Buffer.concat(partes), cortado };
-  } finally {
-    clearTimeout(t);
-  }
+    throw new Error('redirecionamentos demais');
+  } finally { clearTimeout(timer); }
 }
 
 async function pagina(bruta) {

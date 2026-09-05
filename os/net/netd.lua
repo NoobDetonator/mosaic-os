@@ -4,6 +4,7 @@
 -- (mosaic.net.password); sem senha configurada, so respondemos consultas.
 local log = mosaic.lib("log").open("netd")
 local netx = mosaic.lib("netx")
+local cluster = mosaic.lib("cluster")
 
 local PROTOCOL = netx.PROTOCOL
 local nome = netx.name()
@@ -29,6 +30,46 @@ mosaic.netScan = function(prazo)
     if not side then return {} end
     peers = netx.peers(prazo)
     return peers
+end
+
+-- ---------------------------------------------------------------- cluster
+--
+-- UM daemon, nao dois. O `rednet_message` chega por difusao para todos os processos, entao
+-- um segundo servico ouvindo o mesmo protocolo responderia o mesmo pedido duas vezes.
+--
+-- O no EMPURRA e o mestre nao pergunta. E' consequencia direta do chunk descarregado: no
+-- que sai do ar nao avisa e nao pausa, ele simplesmente para; quando volta, volta batendo
+-- ponto sozinho, e ninguem precisa ter percebido a ausencia.
+local tabela = cluster.isMestre() and cluster.carrega() or cluster.tabela()
+local mudouTabela = false
+
+-- A frota, para o app do cluster desenhar. Calculada na hora, nunca guardada: "quem esta no
+-- ar" depende do relogio, e um valor guardado envelhece calado.
+mosaic.clusterNodes = function()
+    local agora = os.epoch("utc")
+    return tabela:lista(agora), cluster.role()
+end
+
+local function anota(id, batida)
+    local agora = os.epoch("utc")
+    local antes = tabela.nos[id]
+    local eraNoAr = antes and tabela:noAr(antes, agora) or false
+    local _, novo = tabela:registra(id, batida, agora)
+    -- Grava em disco so' quando a FROTA muda, nao a cada batida: combustivel e tempo de
+    -- atividade mudam toda vez, e escrever no disco a cada cinco segundos por no seria
+    -- desgaste sem serventia. O que precisa sobreviver a um reinicio e' quem existe.
+    if novo or not eraNoAr then mudouTabela = true end
+end
+
+-- A batida NAO pede senha quando o mestre nao tem uma: assim um no novo aparece na lista
+-- sem configurar nada. Se o mestre tiver senha, a batida passa a exigi-la como qualquer
+-- outro pedido — e ai ninguem enche a lista de no inventado.
+local function recebeBatida(msg, from)
+    if netx.password() and msg.password ~= netx.password() then
+        return nil, "senha incorreta"
+    end
+    anota(from, msg.node or {})
+    return { ok = true }
 end
 
 -- A senha e' lida AGORA, a cada pedido, e nao guardada numa variavel no comeco do servico.
@@ -116,6 +157,16 @@ function handlers.getFile(msg)
     return { path = msg.path, content = content }
 end
 
+function handlers.beat(msg, from)
+    if not cluster.isMestre() then return nil, "este computador nao e' o mestre" end
+    return recebeBatida(msg, from)
+end
+
+-- Quem sou eu no cluster. Serve para o app perguntar a um no sem depender do mestre.
+function handlers.whoami()
+    return { role = cluster.role(), group = cluster.group(), node = cluster.batida() }
+end
+
 function handlers.shutdown(msg)
     local ok, err = autorizado(msg)
     if not ok then return nil, err end
@@ -124,6 +175,26 @@ function handlers.shutdown(msg)
 end
 
 -- ---------------------------------------------------------------- loop
+
+-- A batida sai por transmissao quando nao ha mestre configurado, e direto quando ha. Assim
+-- um no funciona sem configurar nada, e quem quiser cravar o mestre, crava.
+local function bate()
+    if not side then return end
+    local corpo = netx.assina({ type = "beat", node = cluster.batida() })
+    corpo.id = netx.newId()
+    if cluster.isMestre() then
+        -- O mestre tambem entra na propria lista: sem isso ele nao aparece no painel dele
+        -- mesmo, e quem olha a tela fica sem saber onde esta.
+        anota(os.getComputerID(), corpo.node)
+    end
+    local alvo = cluster.masterId()
+    if alvo then rednet.send(alvo, corpo, PROTOCOL)
+    elseif not cluster.isMestre() then rednet.broadcast(corpo, PROTOCOL) end
+end
+
+local batidaTimer = os.startTimer(cluster.INTERVALO)
+bate()
+
 while true do
     local ev = table.pack(os.pullEventRaw())
     local name = ev[1]
@@ -163,6 +234,14 @@ while true do
                 rednet.host(PROTOCOL, nome)
                 log:info("modem reconectado em", side)
             end
+        end
+
+    elseif name == "timer" and ev[2] == batidaTimer then
+        batidaTimer = os.startTimer(cluster.INTERVALO)
+        pcall(bate)
+        if mudouTabela and cluster.isMestre() then
+            mudouTabela = false
+            pcall(function() tabela:salva() end)
         end
 
     elseif name == "netd_shutdown" then

@@ -39,8 +39,8 @@
     },
     {
       "path": "os/apps/help.lua",
-      "sha1": "4ee11f49e34ef89cb181edb4220bb275de10660d",
-      "size": 3828
+      "sha1": "8677a509c660d8f99520ce8d6f919e6b5dfff7c6",
+      "size": 3856
     },
     {
       "path": "os/apps/launcher.lua",
@@ -74,8 +74,8 @@
     },
     {
       "path": "os/apps/pkg.lua",
-      "sha1": "1e1fe03d610052401e3ec4213f4584230ee61519",
-      "size": 3820
+      "sha1": "6bab13598abfd5d829ee1d7227a284545e160856",
+      "size": 2145
     },
     {
       "path": "os/apps/reactor.lua",
@@ -94,8 +94,8 @@
     },
     {
       "path": "os/apps/settings.lua",
-      "sha1": "51d1357c5d53e54d923b3b1547e060c795f5e08d",
-      "size": 8610
+      "sha1": "8a702fb48a4c5b7b1d9664f45c1b2c15e912a58d",
+      "size": 8881
     },
     {
       "path": "os/apps/taskman.lua",
@@ -197,8 +197,8 @@
     },
     {
       "path": "os/kernel/proc.lua",
-      "sha1": "72b14ce00667c4d1c27b9b3bc04b8cade5078e1f",
-      "size": 27299
+      "sha1": "d589cf5557fe4dd380fc9fc401aeb6a14a5a3219",
+      "size": 27652
     },
     {
       "path": "os/kernel/runner.lua",
@@ -217,8 +217,8 @@
     },
     {
       "path": "os/kernel/wm.lua",
-      "sha1": "94fd159d53ffb03c431efd9a68997a0b0edc88cd",
-      "size": 15301
+      "sha1": "d5c6c458599e8433594f78e1d81803a1eb48b2d5",
+      "size": 15497
     },
     {
       "path": "os/lib/audio.lua",
@@ -234,6 +234,11 @@
       "path": "os/lib/clip.lua",
       "sha1": "c69862fa1502b00fd9c78ee80157426e94e67caa",
       "size": 5810
+    },
+    {
+      "path": "os/lib/cluster.lua",
+      "sha1": "a75be2be490c26066edb908106c3cf15c66f4f29",
+      "size": 11157
     },
     {
       "path": "os/lib/create.lua",
@@ -331,6 +336,11 @@
       "size": 23105
     },
     {
+      "path": "os/lib/update.lua",
+      "sha1": "72822ffc82a6c3d7c99f5dbce881ca433e5df2eb",
+      "size": 7268
+    },
+    {
       "path": "os/lib/vector.lua",
       "sha1": "9062a8c02a63cfeea0d208aacc5cfe1c5c36bffc",
       "size": 8581
@@ -342,8 +352,8 @@
     },
     {
       "path": "os/net/netd.lua",
-      "sha1": "d5e5436c125bba39de497be6d02890ff2272d3ad",
-      "size": 6197
+      "sha1": "10a08183d60b6d438789a965acf055b8fc0d8652",
+      "size": 9553
     },
     {
       "path": "os/net/relay.lua",
@@ -484,8 +494,8 @@
     },
     {
       "path": "startup.lua",
-      "sha1": "2aee43e370c868ff41ae20472dc9cf9656d5a4e1",
-      "size": 861
+      "sha1": "d073a178a3d951c3030c223c36756be6725d35d2",
+      "size": 1012
     }
   ]
 }

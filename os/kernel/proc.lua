@@ -30,10 +30,21 @@ local function sfx(name)
     if audio then pcall(audio.sfx, name) end
 end
 
-local function log(msg)
-    local h = fs.open("/os/var/log/kernel.log", "a")
-    if h then h.writeLine(os.date("%Y-%m-%d %H:%M:%S") .. " " .. tostring(msg)) h.close() end
+local function safeLog(name, msg)
+    local h
+    pcall(function()
+        local path = "/os/var/log/" .. name .. ".log"
+        if not fs.exists("/os/var/log") then fs.makeDir("/os/var/log") end
+        if fs.exists(path) and fs.getSize(path) > 16384 then
+            if fs.exists(path .. ".old") then fs.delete(path .. ".old") end
+            fs.move(path, path .. ".old")
+        end
+        h = fs.open(path, "a")
+        if h then h.writeLine(os.date() .. " " .. tostring(msg)) end
+    end)
+    if h then pcall(h.close) end
 end
+local function log(msg) safeLog("kernel", msg) end
 proc.log = log
 
 -- ---------------------------------------------------------------- foco / z-order
@@ -67,6 +78,7 @@ end
 function proc.exit(p)
     if p.dead then return end
     p.dead = true
+    if p.monitor then proc.toScreen(p) end
     for i, q in ipairs(procs) do
         if q == p then table.remove(procs, i) break end
     end
@@ -94,8 +106,7 @@ function proc.crash(p, err)
     local tb = tostring(err)
     if debug and debug.traceback then tb = debug.traceback(p.co, tostring(err)) or tb end
     log("CRASH [" .. p.id .. " " .. tostring(p.title) .. "] " .. tb)
-    local h = fs.open("/os/var/log/crash.log", "a")
-    if h then h.writeLine(os.date() .. " " .. tostring(p.title) .. "\n" .. tb .. "\n") h.close() end
+    safeLog("crash", tostring(p.title) .. "\n" .. tb)
     -- Um som so'. Sem o `silent`, sairiam tres: fechar do processo que caiu, erro, e abrir
     -- da janela de erro.
     p.silent = true

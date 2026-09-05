@@ -9,6 +9,7 @@ local w, h = term.getSize()
 local f = ui.form()
 local doc, scroll = nil, 0
 local lines = {}
+local list
 
 local function titleOf(name)
     local first = (fsx.lines(fs.combine(DIR, name)) or {})[1] or name
@@ -17,6 +18,7 @@ end
 
 local function loadDoc(name)
     doc = name
+    list.visible = false
     scroll = 0
     lines = {}
     for _, raw in ipairs(fsx.lines(fs.combine(DIR, name)) or {}) do
@@ -25,7 +27,7 @@ local function loadDoc(name)
         if text == "" then
             lines[#lines + 1] = { text = "" }
         else
-            local color = level == 1 and theme.accent or (level == 2 and theme.buttonBg or nil)
+            local color = level == 1 and theme.accent or (level == 2 and theme.accent or nil)
             local indent = raw:match("^%s*[-*]%s") and "  " or ""
             for _, wrapped in ipairs(strutil.wrap(indent .. text, w - 1)) do
                 lines[#lines + 1] = { text = wrapped, color = color, heading = level > 0 }
@@ -46,7 +48,7 @@ local function listDocs()
 end
 
 local docs = listDocs()
-local list = f:add(ui.list { x = 1, y = 2, w = w, h = h - 2, items = docs, activateOnClick = true,
+list = f:add(ui.list { x = 1, y = 2, w = w, h = h - 2, items = docs, activateOnClick = true,
     onActivate = function(_, item) loadDoc(item.file) end })
 
 f.onDraw = function(_, t)

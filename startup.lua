@@ -1,5 +1,9 @@
 -- Mosaic OS: ponto de entrada. Fica na raiz do computador.
 -- Segure CTRL ao ligar? Não existe isso no CC; use o arquivo /os/safemode para pular o boot.
+if fs.exists("/.mosaic-update") then
+    printError("Mosaic OS: atualizacao interrompida. Rode o instalador novamente para recuperar.")
+    return
+end
 if fs.exists("/os/safemode") then
     print("Mosaic OS: modo seguro (apague /os/safemode para voltar ao normal).")
     return
