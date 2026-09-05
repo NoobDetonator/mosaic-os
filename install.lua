@@ -57,13 +57,53 @@ if fs.exists("/startup.lua") and not fs.exists("/os") and not updateOnly then
     fs.move("/startup.lua", "/startup.old.lua")
 end
 
+-- Extras (demo 3D, modelo do Blender) so' entram se voce pedir. O disco do computador tem
+-- 1.000.000 bytes e o sistema sozinho ja usa mais da metade.
+local comExtras = args[1] == "extras" or args[2] == "extras"
+local lista = {}
+local pulados = 0
+for _, f in ipairs(manifest.files) do
+    if f.optional and not comExtras then pulados = pulados + 1 else lista[#lista + 1] = f end
+end
+if pulados > 0 then
+    print("Pulando " .. pulados .. " extras (demos e modelos). Para inclui-los: install extras")
+end
+
+-- CONFERE O ESPACO ANTES DE COMECAR.
+--
+-- Antes esta linha era `local free = fs.getFreeSpace("/")` e o valor nao era usado para
+-- nada: a instalacao ia ate' o arquivo que nao coubesse e morria com "Out of space" num
+-- erro cru de Lua, deixando o computador com meio sistema dentro. Agora ela diz quanto
+-- falta, antes de gravar o primeiro byte.
+--
+-- A conta e' a do CC, nao a do arquivo: cada arquivo ocupa no MINIMO 500 bytes no disco do
+-- computador, e cada pasta tambem. Somar o tamanho cru daria um numero otimista demais.
+local function noDisco(n) return (n and n > 500) and n or 500 end
+local preciso, jaTenho = 0, 0
+for _, f in ipairs(lista) do
+    preciso = preciso + noDisco(f.size)
+    local alvo = installTarget(f.path)
+    if fs.exists(alvo) then jaTenho = jaTenho + noDisco(fs.getSize(alvo)) end
+end
 local free = fs.getFreeSpace("/")
+local falta = preciso - jaTenho - free
+if manifest.files[1] and manifest.files[1].size and falta > 0 then
+    printError(string.format("Falta espaco: preciso de %d KB e ha %d KB livres.",
+        math.ceil((preciso - jaTenho) / 1024), math.floor(free / 1024)))
+    print("Libere " .. math.ceil(falta / 1024) .. " KB. O que costuma ocupar:")
+    print("  /os/var  - registros do sistema, pode apagar")
+    print("  /home    - seus arquivos e a area de trabalho")
+    print("  programas antigos na raiz do computador")
+    print("Veja com:  list /   e   list /os")
+    return
+end
+
 local written, skipped, failed = 0, 0, 0
-for i, f in ipairs(manifest.files) do
+for i, f in ipairs(lista) do
     local target = installTarget(f.path)
     term.setCursorPos(1, select(2, term.getCursorPos()))
     term.clearLine()
-    write(string.format("[%d/%d] %s", i, #manifest.files, f.path))
+    write(string.format("[%d/%d] %s", i, #lista, f.path))
     local data, ferr = fetch(f.path)
     if not data then
         print("")

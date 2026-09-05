@@ -4,383 +4,483 @@
   "files": [
     {
       "path": "os/apps/browser.lua",
-      "sha1": "877f09d8d74bc6744e6c106151642321c13a95f4"
+      "sha1": "877f09d8d74bc6744e6c106151642321c13a95f4",
+      "size": 6920
     },
     {
       "path": "os/apps/calc.lua",
-      "sha1": "f28711270beed3105a05b7586889672de7bd4581"
+      "sha1": "f28711270beed3105a05b7586889672de7bd4581",
+      "size": 31631
     },
     {
       "path": "os/apps/clock.lua",
-      "sha1": "0278c9ed22f8069594d31d0d2a72bc4d3408ee38"
+      "sha1": "0278c9ed22f8069594d31d0d2a72bc4d3408ee38",
+      "size": 2292
     },
     {
       "path": "os/apps/desktop.lua",
-      "sha1": "6306d14c10420cd7dd4bc83680c9d86018f5dac7"
+      "sha1": "6306d14c10420cd7dd4bc83680c9d86018f5dac7",
+      "size": 6082
     },
     {
       "path": "os/apps/editor.lua",
-      "sha1": "3f541d2d1705b33ca0f718d180e02d7b6253403f"
+      "sha1": "3f541d2d1705b33ca0f718d180e02d7b6253403f",
+      "size": 593
     },
     {
       "path": "os/apps/files.lua",
-      "sha1": "1106891160da8d3d38abebfbc86a9480dcb4d1e5"
+      "sha1": "1106891160da8d3d38abebfbc86a9480dcb4d1e5",
+      "size": 8310
     },
     {
       "path": "os/apps/folder.lua",
-      "sha1": "d71c1c8cba56639e2bbe2159ca162ae096e0388f"
+      "sha1": "d71c1c8cba56639e2bbe2159ca162ae096e0388f",
+      "size": 2245
     },
     {
       "path": "os/apps/help.lua",
-      "sha1": "4ee11f49e34ef89cb181edb4220bb275de10660d"
+      "sha1": "4ee11f49e34ef89cb181edb4220bb275de10660d",
+      "size": 3828
     },
     {
       "path": "os/apps/launcher.lua",
-      "sha1": "68730cd901ec8cae380d4e2fdb4ab76d8c7a36d1"
+      "sha1": "68730cd901ec8cae380d4e2fdb4ab76d8c7a36d1",
+      "size": 2627
     },
     {
       "path": "os/apps/mirror.lua",
-      "sha1": "d6d1e4b329028a651104ec7bafee1640c48e76cd"
+      "sha1": "d6d1e4b329028a651104ec7bafee1640c48e76cd",
+      "size": 1308
     },
     {
       "path": "os/apps/music.lua",
-      "sha1": "89908c0fef0f77b8e6d3a242568ed49a65f7b9b2"
+      "sha1": "89908c0fef0f77b8e6d3a242568ed49a65f7b9b2",
+      "size": 5053
     },
     {
       "path": "os/apps/netcenter.lua",
-      "sha1": "1f179dfd7caaa0043e98d7ca61b33c922b3ed4e2"
+      "sha1": "1f179dfd7caaa0043e98d7ca61b33c922b3ed4e2",
+      "size": 5745
     },
     {
       "path": "os/apps/notes.lua",
-      "sha1": "4955787f9c271061e7f7d8b9005e642eca6425c5"
+      "sha1": "4955787f9c271061e7f7d8b9005e642eca6425c5",
+      "size": 2155
     },
     {
       "path": "os/apps/periph.lua",
-      "sha1": "afc3efe3aef8ba536d4652da647a369a5da94a33"
+      "sha1": "afc3efe3aef8ba536d4652da647a369a5da94a33",
+      "size": 4588
     },
     {
       "path": "os/apps/pkg.lua",
-      "sha1": "1e1fe03d610052401e3ec4213f4584230ee61519"
+      "sha1": "1e1fe03d610052401e3ec4213f4584230ee61519",
+      "size": 3820
     },
     {
       "path": "os/apps/reactor.lua",
-      "sha1": "7d6d6cc7d90d93153609137917239ce20701efee"
+      "sha1": "7d6d6cc7d90d93153609137917239ce20701efee",
+      "size": 42442
     },
     {
       "path": "os/apps/registry.lua",
-      "sha1": "cc7147f89c5653881acdd25175fad58007c3c24a"
+      "sha1": "cc7147f89c5653881acdd25175fad58007c3c24a",
+      "size": 9581
     },
     {
       "path": "os/apps/remote.lua",
-      "sha1": "6a3306737666b746df54278e4dd788ab5d3a2ee6"
+      "sha1": "6a3306737666b746df54278e4dd788ab5d3a2ee6",
+      "size": 2757
     },
     {
       "path": "os/apps/settings.lua",
-      "sha1": "ea395c566ee7592b6803508316bfc23c69196e98"
+      "sha1": "ea395c566ee7592b6803508316bfc23c69196e98",
+      "size": 6687
     },
     {
       "path": "os/apps/taskman.lua",
-      "sha1": "f2065bd574c0f35aef7319799e33564f83f41a0c"
+      "sha1": "f2065bd574c0f35aef7319799e33564f83f41a0c",
+      "size": 2253
     },
     {
       "path": "os/boot.lua",
-      "sha1": "04d2319dfffda982e385fe779ee948b0b77bf4c4"
+      "sha1": "04d2319dfffda982e385fe779ee948b0b77bf4c4",
+      "size": 4663
     },
     {
       "path": "os/demos/cubo.lua",
-      "sha1": "6750e7e6006c5994600d59b5ff6daea22062a8cc"
+      "sha1": "6750e7e6006c5994600d59b5ff6daea22062a8cc",
+      "size": 5330,
+      "optional": true
     },
     {
       "path": "os/demos/modelo.lua",
-      "sha1": "a5d9a43cb9d45fc886362c29f2e761806ee4fd41"
+      "sha1": "a5d9a43cb9d45fc886362c29f2e761806ee4fd41",
+      "size": 9828,
+      "optional": true
     },
     {
       "path": "os/demos/terreno.lua",
-      "sha1": "d9d67b9f26d4182908b801a905350541bb350c64"
+      "sha1": "d9d67b9f26d4182908b801a905350541bb350c64",
+      "size": 5352,
+      "optional": true
     },
     {
       "path": "os/docs/01-primeiros-passos.md",
-      "sha1": "deb82d719413c889c86b2e053539cca5a324b31a"
+      "sha1": "deb82d719413c889c86b2e053539cca5a324b31a",
+      "size": 3609
     },
     {
       "path": "os/docs/02-aplicativos.md",
-      "sha1": "da3468365e850367f1de8581d1c79b8c9fce161c"
+      "sha1": "da3468365e850367f1de8581d1c79b8c9fce161c",
+      "size": 2611
     },
     {
       "path": "os/docs/03-rede-e-relay.md",
-      "sha1": "64e67669e9596799e6fa17f84ac3b2f8b1f546ca"
+      "sha1": "64e67669e9596799e6fa17f84ac3b2f8b1f546ca",
+      "size": 2055
     },
     {
       "path": "os/docs/04-seus-programas.md",
-      "sha1": "f03e879e2e0013ba750e326d9c5bc3a9f9fed4f6"
+      "sha1": "f03e879e2e0013ba750e326d9c5bc3a9f9fed4f6",
+      "size": 5158
     },
     {
       "path": "os/docs/05-arquivos-e-atalhos.md",
-      "sha1": "abb39a18e5b79b0683dcba364005d6778fafd15a"
+      "sha1": "abb39a18e5b79b0683dcba364005d6778fafd15a",
+      "size": 3201
     },
     {
       "path": "os/docs/06-calculadora.md",
-      "sha1": "6eacc5e063702b33abc613171dcd83fa170c2a38"
+      "sha1": "6eacc5e063702b33abc613171dcd83fa170c2a38",
+      "size": 3556
     },
     {
       "path": "os/docs/07-estado-e-limites.md",
-      "sha1": "228c1881d4bc001bc8ebc9baff673906afa9c644"
+      "sha1": "228c1881d4bc001bc8ebc9baff673906afa9c644",
+      "size": 1896
     },
     {
       "path": "os/docs/08-3d.md",
-      "sha1": "727d2ab3e4c65c59ddeac647eaa3c5ed7778e6f0"
+      "sha1": "727d2ab3e4c65c59ddeac647eaa3c5ed7778e6f0",
+      "size": 4904
     },
     {
       "path": "os/docs/09-reator.md",
-      "sha1": "a018ee6a5e0239dd091d96335a334452769065b6"
+      "sha1": "a018ee6a5e0239dd091d96335a334452769065b6",
+      "size": 4681
     },
     {
       "path": "os/docs/10-som-e-musica.md",
-      "sha1": "b8489073afe1def02834211dfeda1d9e41575b4f"
+      "sha1": "b8489073afe1def02834211dfeda1d9e41575b4f",
+      "size": 2501
     },
     {
       "path": "os/docs/11-telas-e-monitores.md",
-      "sha1": "6646814cf3f098feaa5f23b63eefb214a1b20e8a"
+      "sha1": "6646814cf3f098feaa5f23b63eefb214a1b20e8a",
+      "size": 2331
     },
     {
       "path": "os/docs/12-navegador.md",
-      "sha1": "c2e28b0251e65c4aa60fc1356192c83a35779206"
+      "sha1": "c2e28b0251e65c4aa60fc1356192c83a35779206",
+      "size": 2317
     },
     {
       "path": "os/kernel/draw.lua",
-      "sha1": "08578b66029c47eaeb57818153e258843d51bc8b"
+      "sha1": "08578b66029c47eaeb57818153e258843d51bc8b",
+      "size": 5452
     },
     {
       "path": "os/kernel/palette.lua",
-      "sha1": "7086a3fce4cd39a334955000bf0974ac5f23403e"
+      "sha1": "7086a3fce4cd39a334955000bf0974ac5f23403e",
+      "size": 4247
     },
     {
       "path": "os/kernel/proc.lua",
-      "sha1": "72b14ce00667c4d1c27b9b3bc04b8cade5078e1f"
+      "sha1": "72b14ce00667c4d1c27b9b3bc04b8cade5078e1f",
+      "size": 27299
     },
     {
       "path": "os/kernel/runner.lua",
-      "sha1": "c194c770c43e221f759305ee74ac2d87b56ae32d"
+      "sha1": "c194c770c43e221f759305ee74ac2d87b56ae32d",
+      "size": 481
     },
     {
       "path": "os/kernel/theme.lua",
-      "sha1": "9f2c0abcfddd33cb57857f64aaf92f279656b9d7"
+      "sha1": "9f2c0abcfddd33cb57857f64aaf92f279656b9d7",
+      "size": 4359
     },
     {
       "path": "os/kernel/ui.lua",
-      "sha1": "780df2b63d02a372766c97f85aef4231ff6f9ec9"
+      "sha1": "780df2b63d02a372766c97f85aef4231ff6f9ec9",
+      "size": 51376
     },
     {
       "path": "os/kernel/wm.lua",
-      "sha1": "94fd159d53ffb03c431efd9a68997a0b0edc88cd"
+      "sha1": "94fd159d53ffb03c431efd9a68997a0b0edc88cd",
+      "size": 15301
     },
     {
       "path": "os/lib/audio.lua",
-      "sha1": "5b96d25daff27f34164eea7188a62d01de4de06a"
+      "sha1": "5b96d25daff27f34164eea7188a62d01de4de06a",
+      "size": 11248
     },
     {
       "path": "os/lib/chart.lua",
-      "sha1": "2d0f82d0a07f4d3fc221e4b1ec7c58927e318880"
+      "sha1": "2d0f82d0a07f4d3fc221e4b1ec7c58927e318880",
+      "size": 7825
     },
     {
       "path": "os/lib/clip.lua",
-      "sha1": "c69862fa1502b00fd9c78ee80157426e94e67caa"
+      "sha1": "c69862fa1502b00fd9c78ee80157426e94e67caa",
+      "size": 5810
     },
     {
       "path": "os/lib/create.lua",
-      "sha1": "29c16c214f6c508c721dc7435b34bf328592ba07"
+      "sha1": "29c16c214f6c508c721dc7435b34bf328592ba07",
+      "size": 7633
     },
     {
       "path": "os/lib/expr.lua",
-      "sha1": "cec198efcc5e1bd330a424114998e5a934702628"
+      "sha1": "cec198efcc5e1bd330a424114998e5a934702628",
+      "size": 18496
     },
     {
       "path": "os/lib/fileops.lua",
-      "sha1": "ac57bc7b011723d667a2e3b31e0e854ae41c8958"
+      "sha1": "ac57bc7b011723d667a2e3b31e0e854ae41c8958",
+      "size": 8853
     },
     {
       "path": "os/lib/fsx.lua",
-      "sha1": "1b93f1b5fb789b70b5ed66ef93699d3c30b79df8"
+      "sha1": "1b93f1b5fb789b70b5ed66ef93699d3c30b79df8",
+      "size": 3942
     },
     {
       "path": "os/lib/hal.lua",
-      "sha1": "725582f81b7fc05627f502319286ec824cee9131"
+      "sha1": "725582f81b7fc05627f502319286ec824cee9131",
+      "size": 11910
     },
     {
       "path": "os/lib/httpx.lua",
-      "sha1": "5abccb66b4853beeebb1312c0e05069eaf3d190c"
+      "sha1": "5abccb66b4853beeebb1312c0e05069eaf3d190c",
+      "size": 7607
     },
     {
       "path": "os/lib/icons.lua",
-      "sha1": "024f36b919209e9aac15ba3b3e595ce57a15b57d"
+      "sha1": "024f36b919209e9aac15ba3b3e595ce57a15b57d",
+      "size": 2544
     },
     {
       "path": "os/lib/log.lua",
-      "sha1": "94f730c6b055462d57123e6e7f3587ecbf769747"
+      "sha1": "94f730c6b055462d57123e6e7f3587ecbf769747",
+      "size": 1818
     },
     {
       "path": "os/lib/mcmath.lua",
-      "sha1": "d043deccd115cbbb78736da8a5b27e8fe9786b2e"
+      "sha1": "d043deccd115cbbb78736da8a5b27e8fe9786b2e",
+      "size": 14185
     },
     {
       "path": "os/lib/mesh.lua",
-      "sha1": "048abcab9857709b82dd85faf1dcb7c6df48c9ef"
+      "sha1": "048abcab9857709b82dd85faf1dcb7c6df48c9ef",
+      "size": 17033
     },
     {
       "path": "os/lib/pixel.lua",
-      "sha1": "e5bb4fadec51108317bf9c27913cb5e207e94f24"
+      "sha1": "e5bb4fadec51108317bf9c27913cb5e207e94f24",
+      "size": 13110
     },
     {
       "path": "os/lib/plot.lua",
-      "sha1": "455f9a8b8058e54299cbf1431f04d7c949045961"
+      "sha1": "455f9a8b8058e54299cbf1431f04d7c949045961",
+      "size": 8324
     },
     {
       "path": "os/lib/powah.lua",
-      "sha1": "734f3dac933c429d5ad51bc7271ad07e41046f7b"
+      "sha1": "734f3dac933c429d5ad51bc7271ad07e41046f7b",
+      "size": 19963
     },
     {
       "path": "os/lib/props.lua",
-      "sha1": "9642630acfb0c697c905a3bf998d3125155a51e9"
+      "sha1": "9642630acfb0c697c905a3bf998d3125155a51e9",
+      "size": 4206
     },
     {
       "path": "os/lib/shade.lua",
-      "sha1": "9930f757358221f4156891673f0b43f794e715d0"
+      "sha1": "9930f757358221f4156891673f0b43f794e715d0",
+      "size": 13303
     },
     {
       "path": "os/lib/shortcut.lua",
-      "sha1": "83c7553460888231bf1fa1e615b2c60a5fbf419d"
+      "sha1": "83c7553460888231bf1fa1e615b2c60a5fbf419d",
+      "size": 4391
     },
     {
       "path": "os/lib/strutil.lua",
-      "sha1": "db9e91b0458ba969b1ee2baa677957a67d1102fb"
+      "sha1": "db9e91b0458ba969b1ee2baa677957a67d1102fb",
+      "size": 3673
     },
     {
       "path": "os/lib/three.lua",
-      "sha1": "fe6f3159ff6a770316a4c980ed4bde659dd95c1d"
+      "sha1": "fe6f3159ff6a770316a4c980ed4bde659dd95c1d",
+      "size": 23105
     },
     {
       "path": "os/lib/vector.lua",
-      "sha1": "9062a8c02a63cfeea0d208aacc5cfe1c5c36bffc"
+      "sha1": "9062a8c02a63cfeea0d208aacc5cfe1c5c36bffc",
+      "size": 8581
     },
     {
       "path": "os/net/musicd.lua",
-      "sha1": "d9022cd4dfad35700a7b4390d7914f5e24f3995a"
+      "sha1": "d9022cd4dfad35700a7b4390d7914f5e24f3995a",
+      "size": 11071
     },
     {
       "path": "os/net/netd.lua",
-      "sha1": "0d9f2497dc72f4ff95fb8a4c4cdfe4d7c36810f1"
+      "sha1": "0d9f2497dc72f4ff95fb8a4c4cdfe4d7c36810f1",
+      "size": 5904
     },
     {
       "path": "os/net/relay.lua",
-      "sha1": "eb6c661f55b5ada70665a64fb08321ae9da58d32"
+      "sha1": "eb6c661f55b5ada70665a64fb08321ae9da58d32",
+      "size": 10990
     },
     {
       "path": "os/share/icons/app.nfp",
-      "sha1": "7f87ec4090c527138892ac176bbe33b12aa644ef"
+      "sha1": "7f87ec4090c527138892ac176bbe33b12aa644ef",
+      "size": 156
     },
     {
       "path": "os/share/icons/calc.nfp",
-      "sha1": "7b7f3d42bff12465bc442bc9fdf30aaf1e45f553"
+      "sha1": "7b7f3d42bff12465bc442bc9fdf30aaf1e45f553",
+      "size": 156
     },
     {
       "path": "os/share/icons/clock.nfp",
-      "sha1": "2803981d5261068483b6c07a92892dba9078e3f3"
+      "sha1": "2803981d5261068483b6c07a92892dba9078e3f3",
+      "size": 156
     },
     {
       "path": "os/share/icons/disk.nfp",
-      "sha1": "d171a8fdb9f42bfa4145281570e3f8a5fb3a74cd"
+      "sha1": "d171a8fdb9f42bfa4145281570e3f8a5fb3a74cd",
+      "size": 156
     },
     {
       "path": "os/share/icons/drive.nfp",
-      "sha1": "991a5ed0815981ad359123ba5cac28f3e4b009c6"
+      "sha1": "991a5ed0815981ad359123ba5cac28f3e4b009c6",
+      "size": 156
     },
     {
       "path": "os/share/icons/editor.nfp",
-      "sha1": "fecbaccf74834d30e1b367e866981ac343510bed"
+      "sha1": "fecbaccf74834d30e1b367e866981ac343510bed",
+      "size": 156
     },
     {
       "path": "os/share/icons/file.nfp",
-      "sha1": "e3f5f23b98622300cfe6d9658fab8959c6502fde"
+      "sha1": "e3f5f23b98622300cfe6d9658fab8959c6502fde",
+      "size": 156
     },
     {
       "path": "os/share/icons/files.nfp",
-      "sha1": "b03b434103346312f602a4c0ec36be587bcb76c5"
+      "sha1": "b03b434103346312f602a4c0ec36be587bcb76c5",
+      "size": 156
     },
     {
       "path": "os/share/icons/folder.nfp",
-      "sha1": "b63a41efd96cdc120037b3e32fc265aaf47169d6"
+      "sha1": "b63a41efd96cdc120037b3e32fc265aaf47169d6",
+      "size": 156
     },
     {
       "path": "os/share/icons/help.nfp",
-      "sha1": "9b116ef3dd38ca19456c3fe839b8f8c38e74b879"
+      "sha1": "9b116ef3dd38ca19456c3fe839b8f8c38e74b879",
+      "size": 156
     },
     {
       "path": "os/share/icons/image.nfp",
-      "sha1": "7397eee8e1e98983fad428ee091887575ed559f8"
+      "sha1": "7397eee8e1e98983fad428ee091887575ed559f8",
+      "size": 156
     },
     {
       "path": "os/share/icons/lua.nfp",
-      "sha1": "19a31965067a4f3fe3135102e08cead02fe89a76"
+      "sha1": "19a31965067a4f3fe3135102e08cead02fe89a76",
+      "size": 156
     },
     {
       "path": "os/share/icons/netcenter.nfp",
-      "sha1": "7649801745d99e501ddfa498546e68430dbdfea5"
+      "sha1": "7649801745d99e501ddfa498546e68430dbdfea5",
+      "size": 156
     },
     {
       "path": "os/share/icons/notes.nfp",
-      "sha1": "a7aac49228b8f1c704ec6b13d0a754ff21d5e699"
+      "sha1": "a7aac49228b8f1c704ec6b13d0a754ff21d5e699",
+      "size": 156
     },
     {
       "path": "os/share/icons/paint.nfp",
-      "sha1": "37ff12a6ed19af988d374f4208f5bc81c5ab5c96"
+      "sha1": "37ff12a6ed19af988d374f4208f5bc81c5ab5c96",
+      "size": 156
     },
     {
       "path": "os/share/icons/periph.nfp",
-      "sha1": "797a59d67a4a8d559522ec41d49f75b77d40aa43"
+      "sha1": "797a59d67a4a8d559522ec41d49f75b77d40aa43",
+      "size": 156
     },
     {
       "path": "os/share/icons/pkg.nfp",
-      "sha1": "135197f5396fe05052feaade85a6fa388a002558"
+      "sha1": "135197f5396fe05052feaade85a6fa388a002558",
+      "size": 156
     },
     {
       "path": "os/share/icons/reactor.nfp",
-      "sha1": "b0e2f59e8ee7e42c6558a47f50429202fae3cc8e"
+      "sha1": "b0e2f59e8ee7e42c6558a47f50429202fae3cc8e",
+      "size": 156
     },
     {
       "path": "os/share/icons/remote.nfp",
-      "sha1": "0e3de4fe291ed3677f9ef39385714bc32f849b50"
+      "sha1": "0e3de4fe291ed3677f9ef39385714bc32f849b50",
+      "size": 156
     },
     {
       "path": "os/share/icons/settings.nfp",
-      "sha1": "91e26a2b60c61cd9e2e627a06e27078fca8ddcf5"
+      "sha1": "91e26a2b60c61cd9e2e627a06e27078fca8ddcf5",
+      "size": 156
     },
     {
       "path": "os/share/icons/taskman.nfp",
-      "sha1": "4e33816c70fb54b8b8b9af3056bd450903502560"
+      "sha1": "4e33816c70fb54b8b8b9af3056bd450903502560",
+      "size": 156
     },
     {
       "path": "os/share/icons/terminal.nfp",
-      "sha1": "3da174369a757562b6655a8acbf26e5836d237e8"
+      "sha1": "3da174369a757562b6655a8acbf26e5836d237e8",
+      "size": 156
     },
     {
       "path": "os/share/models/casa.lua",
-      "sha1": "aedebfe006ada304bd332bd8c4aa26cfa9d68100"
+      "sha1": "aedebfe006ada304bd332bd8c4aa26cfa9d68100",
+      "size": 804,
+      "optional": true
     },
     {
       "path": "os/share/models/monkey.lua",
-      "sha1": "6b4163c36a8def607708aea0a3ef790dfd4e4db4"
+      "sha1": "6b4163c36a8def607708aea0a3ef790dfd4e4db4",
+      "size": 33086,
+      "optional": true
     },
     {
       "path": "os/share/vectors/logo.lua",
-      "sha1": "99a3bdfec12a882d7bcbe0adaf87d7525b32ef72"
+      "sha1": "99a3bdfec12a882d7bcbe0adaf87d7525b32ef72",
+      "size": 660
     },
     {
       "path": "os/version.lua",
-      "sha1": "201f22c37842646ac51697f0133461597ab26ded"
+      "sha1": "201f22c37842646ac51697f0133461597ab26ded",
+      "size": 227
     },
     {
       "path": "startup.lua",
-      "sha1": "2aee43e370c868ff41ae20472dc9cf9656d5a4e1"
+      "sha1": "2aee43e370c868ff41ae20472dc9cf9656d5a4e1",
+      "size": 861
     }
   ]
 }
