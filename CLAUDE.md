@@ -124,6 +124,21 @@ Fatos do kernel que não são óbvios:
   escrever um ângulo de luz solto foi o que deixou a casa cinza duas vezes. E a componente vertical da luz é 0,5 e
   não 0,8: o vetor é normalizado, então luz muito de cima não sobra para os lados e as duas paredes visíveis caem
   as duas em cima do corte do `applyTinted`.
+- **O disco do computador é 1.000.000 bytes, e o CC cobra no mínimo 500 por arquivo E por pasta.**
+  Medido no servidor: 661.339 usados + 338.661 livres = exatamente 1.000.000. `/rom` não conta (é outra
+  montagem). Os 594 KB reais do Mosaic viram ~640 KB na conta do CC — dois terços do disco. Por isso
+  demo 3D e modelo do Blender são `optional` no manifest e só entram com `install extras`: o sistema
+  sozinho instala em 548 KB.
+- **O instalador confere o espaço antes de gravar o primeiro byte.** Ele já lia `fs.getFreeSpace` e
+  jogava fora o valor; o resultado era "Out of space" no arquivo 56 de 95 e o computador pela metade.
+  A conta soma `max(500, size)` do manifest e desconta o que já está no disco. Manifest antigo, sem o
+  campo `size`, continua instalando como antes.
+- **O `computerSpaceLimit` do CraftOS-PC não funciona** (medido na 2.8.3: o disco continua com 203 GB).
+  Para testar aperto de disco, troque `fs.getFreeSpace` por uma função sua antes de rodar o instalador —
+  é a mesma tabela global que ele enxerga, o mesmo truque do `fake-reactor`.
+- **O raw.githubusercontent tem cache de alguns minutos.** Um teste de instalador logo depois do push
+  baixa o manifest anterior e "prova" o comportamento antigo. Confira o que o raw está servindo antes de
+  concluir que a mudança não funcionou.
 - **O `powah:reactor_part` É um inventário de 5 slots**, e é assim que se abastece o reator: ele responde
   `list`, `getItemDetail`, `getItemLimit`, `pushItems`, `pullItems`, `tanks`, `getEnergy` e
   `getEnergyCapacity`. Medido no servidor (CC:T 1.101.3 / MC 1.16.5): slot 1 vazio, 2 uraninita, 3 bloco de
