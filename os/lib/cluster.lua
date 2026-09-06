@@ -29,15 +29,28 @@ cluster.ARQUIVO = "/os/var/cluster/nos.json"
 
 -- ---------------------------------------------------------------- este computador
 
+-- Toda leitura de configuracao passa por aqui, num lugar so'.
+--
+-- Existe por causa de um estrago de verdade: o self-check mexia no `settings` real para
+-- exercitar papel e grupo e devolvia no fim. Só que "devolver no fim" nao acontece quando
+-- uma assercao falha no meio - e, pior, basta alguem chamar `settings.save()` enquanto o
+-- valor de teste esta em memoria para ele ir parar no DISCO. Foi encontrado no servidor: um
+-- computador de verdade amanheceu no grupo "mina-norte", que so' existe dentro do teste.
+--
+-- Agora o teste troca esta funcao por uma tabela de mentira e nao encosta na configuracao.
+function cluster.config(chave)
+    return settings.get(chave)
+end
+
 function cluster.role()
-    local r = settings.get("mosaic.cluster.role")
+    local r = cluster.config("mosaic.cluster.role")
     return (r == "mestre") and "mestre" or "no"
 end
 
 function cluster.isMestre() return cluster.role() == "mestre" end
 
 function cluster.group()
-    local g = settings.get("mosaic.cluster.group")
+    local g = cluster.config("mosaic.cluster.group")
     if g == nil or g == "" then return "sem grupo" end
     return g
 end
@@ -45,7 +58,7 @@ end
 -- O id do mestre, quando configurado. Sem ele a batida sai por transmissao e qualquer
 -- mestre na rede recolhe: um no funciona sem configurar nada, e quem quiser cravar, crava.
 function cluster.masterId()
-    local m = tonumber(settings.get("mosaic.cluster.master"))
+    local m = tonumber(cluster.config("mosaic.cluster.master"))
     return m
 end
 
@@ -263,18 +276,30 @@ function cluster.demo()
     fs.delete(tmp)
 
     -- Papel e grupo saem das configuracoes, com padrao que nao surpreende.
-    local rAntes, gAntes = settings.get("mosaic.cluster.role"), settings.get("mosaic.cluster.group")
-    settings.unset("mosaic.cluster.role")
-    assert(cluster.role() == "no", "sem configurar, o computador e' no e nao mestre")
-    assert(not cluster.isMestre(), "sem configurar, ninguem e' mestre")
-    settings.set("mosaic.cluster.role", "mestre")
-    assert(cluster.isMestre(), "papel de mestre nao pegou")
-    settings.set("mosaic.cluster.group", "")
-    assert(cluster.group() == "sem grupo", "grupo vazio precisa de um nome, senao a lista fica sem cabecalho")
-    settings.set("mosaic.cluster.group", "mina-norte")
-    assert(cluster.group() == "mina-norte", "grupo nao foi lido")
-    if rAntes then settings.set("mosaic.cluster.role", rAntes) else settings.unset("mosaic.cluster.role") end
-    if gAntes then settings.set("mosaic.cluster.group", gAntes) else settings.unset("mosaic.cluster.group") end
+    --
+    -- Com configuracao DE MENTIRA: antes este trecho mexia no settings real e devolvia no
+    -- fim, e o valor de teste chegou ao disco de um computador do servidor. Teste nao
+    -- reconfigura a maquina onde roda.
+    local real = cluster.config
+    local falso = {}
+    cluster.config = function(k) return falso[k] end
+    local okTeste, erro = pcall(function()
+        assert(cluster.role() == "no", "sem configurar, o computador e' no e nao mestre")
+        assert(not cluster.isMestre(), "sem configurar, ninguem e' mestre")
+        falso["mosaic.cluster.role"] = "mestre"
+        assert(cluster.isMestre(), "papel de mestre nao pegou")
+        falso["mosaic.cluster.group"] = ""
+        assert(cluster.group() == "sem grupo", "grupo vazio precisa de um nome, senao a lista fica sem cabecalho")
+        falso["mosaic.cluster.group"] = "mina-norte"
+        assert(cluster.group() == "mina-norte", "grupo nao foi lido")
+        falso["mosaic.cluster.master"] = "7"
+        assert(cluster.masterId() == 7, "id do mestre nao foi lido como numero")
+    end)
+    -- Devolve SEMPRE, inclusive quando a assercao falha: era exatamente esse caminho que
+    -- deixava a configuracao suja.
+    cluster.config = real
+    assert(okTeste, erro)
+    assert(cluster.config == real, "o self-check nao devolveu a leitura de configuracao")
 
     -- A batida diz o basico sobre este computador, sem precisar de rede.
     local b2 = cluster.batida()

@@ -19,8 +19,8 @@
     },
     {
       "path": "os/apps/cluster.lua",
-      "sha1": "305ba08a4369c52bbe96fad0d8a3b79695e64ba5",
-      "size": 10180
+      "sha1": "7694b4563572a3a6577c2fa9895bcd4d08afd303",
+      "size": 12175
     },
     {
       "path": "os/apps/desktop.lua",
@@ -242,8 +242,8 @@
     },
     {
       "path": "os/lib/cluster.lua",
-      "sha1": "bceb16d0b9b984103e1923b7b4f00a235d0ca117",
-      "size": 11824
+      "sha1": "06bc2b1aab35787312eac412343dd00143679a6c",
+      "size": 12938
     },
     {
       "path": "os/lib/create.lua",

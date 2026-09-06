@@ -18,6 +18,7 @@ local f = ui.form()
 local lista, status, barra
 local senha                        -- perguntada uma vez, reaproveitada enquanto a janela vive
 local nos = {}
+local aviso                        -- achado da ultima varredura, mostrado ate' a proxima
 
 local cabecalho = f:add(ui.label { x = 2, y = 1, w = -2, text = "" })
 local recado = f:add(ui.label { x = 2, y = 2, w = -2, text = "", fg = theme.mutedFg })
@@ -93,11 +94,16 @@ local function atualiza()
     end
     lista:setItems(itens, true)
 
-    if #nos == 0 then
+    if aviso then
+        recado.text = aviso
+        recado.fg = colors.orange
+    elseif #nos == 0 then
+        recado.fg = theme.mutedFg
         recado.text = papel == "mestre"
             and "Nenhum no bateu ponto ainda. Cada no aparece sozinho em ate 5s."
             or "Este computador e' um no. A frota aparece no mestre."
     else
+        recado.fg = theme.mutedFg
         recado.text = ""
     end
     status.text = string.format(" %d no(s), %d no ar | %s", #nos, noAr,
@@ -208,8 +214,45 @@ end
 --
 -- A ordem importa: a fila mede a propria altura, o rodape se ancora acima dela, e a lista
 -- preenche o que sobrar. O `fillTo` so' enxerga quem ja entrou no form.
+-- Varredura: quem responde na rede mas NAO esta na frota, e por que.
+--
+-- Existe por causa de um caso encontrado no servidor: dois computadores configurados como
+-- mestre. Mestre nao bate ponto (so' no empurra), entao cada um enxergava so' a si mesmo e
+-- NADA avisava - a tela dizia "1 no" nos dois, como se estivesse tudo certo. Sem esta
+-- varredura nao ha como descobrir isso de dentro do jogo.
+local function procura()
+    status.text = " Procurando na rede..."
+    f:draw()
+    local naFrota = {}
+    for _, n in ipairs(nos) do naFrota[n.id] = true end
+    local fora, outrosMestres = {}, 0
+    for _, p in ipairs(netx.peers()) do
+        if not naFrota[p.id] then
+            local r = netx.ask(p.id, { type = "whoami" }, 2)
+            local motivo
+            if not r then motivo = "responde ping, mas nao conhece cluster (versao antiga?)"
+            elseif r.role == "mestre" then
+                outrosMestres = outrosMestres + 1
+                motivo = "tambem esta como MESTRE - por isso nao bate ponto"
+            else motivo = "e' no do grupo '" .. tostring(r.group) .. "' mas nao chegou aqui" end
+            fora[#fora + 1] = string.format("#%d %s\n   %s", p.id, tostring(p.name or "?"), motivo)
+        end
+    end
+    if #fora == 0 then
+        aviso = nil
+        ui.msgbox("Todo computador que respondeu esta na frota.", "Varredura")
+    else
+        aviso = outrosMestres > 0
+            and ("Ha " .. outrosMestres .. " outro(s) MESTRE na rede - veja Procurar.")
+            or (#fora .. " computador(es) fora da frota - veja Procurar.")
+        ui.msgbox("Fora da frota:\n\n" .. table.concat(fora, "\n"), "Varredura")
+    end
+    atualiza()
+end
+
 barra = ui.row(f, { bottom = 0, items = {
     { text = "&Atualizar", onClick = function() atualiza() end },
+    { text = "&Procurar", alt = true, onClick = function() procura() end },
     { text = "A&coes", alt = true, onClick = function()
         local it = lista:getSelected()
         acoes(it and it.no)
