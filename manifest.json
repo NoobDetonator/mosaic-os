@@ -18,6 +18,11 @@
       "size": 2292
     },
     {
+      "path": "os/apps/cluster.lua",
+      "sha1": "305ba08a4369c52bbe96fad0d8a3b79695e64ba5",
+      "size": 10180
+    },
+    {
       "path": "os/apps/desktop.lua",
       "sha1": "6306d14c10420cd7dd4bc83680c9d86018f5dac7",
       "size": 6082
@@ -84,8 +89,8 @@
     },
     {
       "path": "os/apps/registry.lua",
-      "sha1": "cc7147f89c5653881acdd25175fad58007c3c24a",
-      "size": 9581
+      "sha1": "bef4cb4d8ec056b1c1cc484e1fcd2ffabb18fd5a",
+      "size": 9966
     },
     {
       "path": "os/apps/remote.lua",
@@ -352,8 +357,8 @@
     },
     {
       "path": "os/net/netd.lua",
-      "sha1": "31bba38f429177382f8c296415549163acd659e1",
-      "size": 10106
+      "sha1": "7a9a5984af4ea99bad3ad958e408a790348c2f54",
+      "size": 11193
     },
     {
       "path": "os/net/relay.lua",
@@ -373,6 +378,11 @@
     {
       "path": "os/share/icons/clock.nfp",
       "sha1": "2803981d5261068483b6c07a92892dba9078e3f3",
+      "size": 156
+    },
+    {
+      "path": "os/share/icons/cluster.nfp",
+      "sha1": "2623669eb9a16d5ebd17444eff33f2c33ac97ce2",
       "size": 156
     },
     {

@@ -27,6 +27,10 @@ registry.builtin = {
     -- pela largura da janela.
     { id = "browser", name = "Navegador", icon = "Wb", color = colors.lightBlue, path = "/os/apps/browser.lua", w = 48, h = 16 },
     { id = "remote", name = "Controle remoto", icon = "Rm", color = colors.magenta, path = "/os/apps/remote.lua" },
+    -- 66 de largura NAO e' capricho: e' o que a linha inteira mede (marca, id, nome, tipo,
+    -- versao, estado, combustivel). Abaixo de 64 o app corta para o layout curto e a versao
+    -- e o combustivel somem - foi o que aconteceu quando isto estava em 52.
+    { id = "cluster", name = "Cluster", icon = "Cl", color = colors.cyan, path = "/os/apps/cluster.lua", w = 66, h = 18 },
     { id = "reactor", name = "Reator", icon = "Re", color = colors.red, path = "/os/apps/reactor.lua" },
     { id = "pkg", name = "Atualizar OS", icon = "Up", color = colors.brown, path = "/os/apps/pkg.lua" },
     { id = "paint", name = "Paint", icon = "Pt", color = colors.pink, path = "/rom/programs/fun/advanced/paint.lua", args = { "/home/desenho.nfp" } },

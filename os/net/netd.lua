@@ -50,6 +50,18 @@ mosaic.clusterNodes = function()
     return tabela:lista(agora), cluster.role()
 end
 
+-- Tirar da lista a mao. So' serve para no que nao volta mais: a tabela vai para disco, entao
+-- um computador quebrado ficaria de lembrete vermelho para sempre. Quem voltar a bater ponto
+-- reaparece sozinho - esquecer nao e' banir.
+mosaic.clusterForget = function(id)
+    local tinha = tabela:esquece(id)
+    if tinha then
+        pcall(tabela.salva, tabela)
+        log:info("no", id, "removido da lista a mao")
+    end
+    return tinha
+end
+
 local function anota(id, batida)
     local agora = os.epoch("utc")
     local antes = tabela.nos[id]
@@ -173,6 +185,19 @@ function handlers.shutdown(msg, from)
     return { ok = true }
 end
 
+-- Reiniciar existe porque `mosaic.lib` guarda modulo em cache: mandar um arquivo novo para o
+-- no nao muda nada ate' ele bootar. Sem isto, espalhar software exigiria alguem ir ate' o
+-- computador no mundo e apertar o botao.
+--
+-- O evento sai na fila em vez de reiniciar aqui pelo mesmo motivo do shutdown: a resposta
+-- precisa sair ANTES, senao quem pediu fica esperando um prazo inteiro por nada.
+function handlers.reboot(msg, from)
+    local ok, err = autorizado(msg, from)
+    if not ok then return nil, err end
+    os.queueEvent("netd_reboot")
+    return { ok = true }
+end
+
 -- ---------------------------------------------------------------- loop
 
 -- A batida sai por transmissao quando nao ha mestre configurado, e direto quando ha. Assim
@@ -249,6 +274,9 @@ while true do
 
     elseif name == "netd_shutdown" then
         os.shutdown()
+
+    elseif name == "netd_reboot" then
+        os.reboot()
 
     elseif name == "terminate" then
         -- servico nao morre por Ctrl+T

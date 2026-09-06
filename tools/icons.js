@@ -133,6 +133,22 @@ const ART = {
     '            ',
     '            ',
   ],
+  // Mestre em cima, barramento, tres nos embaixo: a forma diz "um manda, varios respondem",
+  // que e' exatamente o desenho do cluster (o no empurra, o mestre nao pergunta).
+  cluster: [
+    '            ',
+    '    9999    ',
+    '    9ff9    ',
+    '    9999    ',
+    '     ff     ',
+    '  fffffffff ',
+    '  f   f   f ',
+    ' 999 999 999',
+    ' 9f9 9f9 9f9',
+    ' 999 999 999',
+    '            ',
+    '            ',
+  ],
   netcenter: [
     '            ',
     '    8888    ',
