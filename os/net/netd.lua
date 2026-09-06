@@ -180,6 +180,25 @@ function handlers.whoami()
     return { role = cluster.role(), group = cluster.group(), node = cluster.batida() }
 end
 
+-- Apagar arquivo do sistema, a pedido do mestre. Pede senha, ao contrario do inventario:
+-- ler hash nao muda nada, apagar muda.
+--
+-- Quem decide o que PODE ser apagado e' o `cluster.podeApagar`, e nao este handler: a regra
+-- e' de lista de permissao (so' dentro de /os, nunca /os/var, nunca o boot) e mora num lugar
+-- onde o self-check consegue cobrar cada caso, inclusive fuga por "..".
+function handlers.deleteFile(msg, from)
+    local ok, err = autorizado(msg, from)
+    if not ok then return nil, err end
+    local caminho = cluster.podeApagar(msg.path)
+    if not caminho then return nil, "caminho nao pode ser apagado: " .. tostring(msg.path) end
+    if not fs.exists(caminho) then return { path = caminho, jaFoi = true } end
+    if fs.isDir(caminho) then return nil, "isto e' uma pasta: " .. caminho end
+    local okDel, errDel = pcall(fs.delete, caminho)
+    if not okDel then return nil, tostring(errDel) end
+    log:info("apagado a pedido de", from, caminho)
+    return { path = caminho }
+end
+
 -- O sistema deste computador, arquivo por arquivo, com sha1. E' consulta e nao pede senha:
 -- hash de codigo aberto nao e' segredo, e exigir senha impediria atualizar uma frota que
 -- ainda nao tem senha configurada.

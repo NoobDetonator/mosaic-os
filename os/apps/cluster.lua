@@ -232,6 +232,61 @@ local function espalha(alvos)
     atualiza()
 end
 
+-- Limpar o que sobra: arquivo que existe no no e nao existe mais no mestre.
+--
+-- E' acao SEPARADA de atualizar, de proposito. Atualizar so' acrescenta e sobrescreve, e por
+-- isso e' seguro repetir; apagar nao volta atras. Misturar as duas faria toda atualizacao
+-- carregar um risco que ninguem pediu.
+--
+-- A lista aparece ANTES da confirmacao: "apagar 12 arquivos" nao e' informacao suficiente
+-- para alguem dizer sim.
+local function limpa(no)
+    local s = pedeSenha()
+    if not s then return end
+    local busy = ui.busy("Limpando", "lendo o meu sistema...")
+    local okMeu, meu = pcall(cluster.inventario)
+    if not okMeu then busy.close() ui.msgbox(tostring(meu), "Erro") return end
+    busy.set(0, "perguntando ao no...")
+    local inv, err = netx.ask(no.id, { type = "inventory" }, 20)
+    busy.close()
+    if not inv or type(inv.files) ~= "table" then
+        ui.msgbox("O no nao respondeu: " .. tostring(err), "Erro") return
+    end
+
+    local _, sobrando = cluster.diferenca(meu, inv.files)
+    -- O no decide o que aceita apagar, mas mostrar aqui so' o que ele vai aceitar evita
+    -- prometer na tela uma limpeza que volta cheia de recusa.
+    local alvos = {}
+    for _, caminho in ipairs(sobrando) do
+        if cluster.podeApagar(caminho) then alvos[#alvos + 1] = caminho end
+    end
+    local protegidos = #sobrando - #alvos
+    if #alvos == 0 then
+        ui.msgbox("Nada a limpar no #" .. no.id .. "."
+            .. (protegidos > 0 and ("\n\n" .. protegidos .. " arquivo(s) a mais, mas fora do /os: nao se apagam.") or ""),
+            "Limpeza")
+        return
+    end
+
+    local amostra = {}
+    for i = 1, math.min(#alvos, 10) do amostra[#amostra + 1] = alvos[i] end
+    if #alvos > 10 then amostra[#amostra + 1] = "... e mais " .. (#alvos - 10) end
+    if not ui.confirm("Apagar do #" .. no.id .. ":\n\n" .. table.concat(amostra, "\n")
+        .. "\n\nIsto nao volta atras.", "Limpeza") then return end
+
+    busy = ui.busy("Limpando #" .. no.id, "")
+    local apagados, falhas = 0, {}
+    for i, caminho in ipairs(alvos) do
+        busy.set(i / #alvos, caminho)
+        local r, e = netx.ask(no.id, netx.assina({ type = "deleteFile", path = caminho }, s), 10)
+        if r then apagados = apagados + 1 else falhas[#falhas + 1] = caminho .. ": " .. tostring(e) end
+    end
+    busy.close()
+    ui.msgbox(apagados .. " de " .. #alvos .. " apagado(s)."
+        .. (protegidos > 0 and ("\n" .. protegidos .. " fora do /os foram poupados.") or "")
+        .. (#falhas > 0 and ("\n\nFalharam:\n" .. table.concat(falhas, "\n")) or ""), "Limpeza")
+end
+
 local function acoes(n)
     if not n then return end
     local itens = {
@@ -261,6 +316,7 @@ local function acoes(n)
             if not ui.confirm("Atualizar " .. #alvos .. " no(s)?", "Cluster") then return end
             espalha(alvos)
         end },
+        { text = "Limpar o que sobra", run = function() limpa(n) end },
         { text = "Reiniciar", run = function()
             if not ui.confirm("Reiniciar o no #" .. n.id .. "?", "Cluster") then return end
             local r, err = manda(n.id, { type = "reboot" })

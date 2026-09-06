@@ -171,6 +171,30 @@ function cluster.diferenca(meu, dele)
     return mandar, sobrando
 end
 
+-- Um caminho que o mestre pode mandar APAGAR no no. Devolve o caminho normalizado, ou false.
+--
+-- Isto e' a unica coisa destrutiva que anda pela rede, entao a regra e' de lista de permissao
+-- e nao de lista de proibicao:
+--
+--   * so' dentro de /os, que e' o que o inventario cobre. /home sao os arquivos da PESSOA, e
+--     nada aqui tem o que apagar la';
+--   * nunca /os/var, que e' estado de execucao (registros, seeded.json) e por isso nao esta
+--     no inventario de ninguem - sem esta linha, toda limpeza apagaria os registros do no;
+--   * nunca startup.lua, porque apagar o boot deixa o computador inalcancavel e alguem tem
+--     de ir ate' o bloco no mundo.
+--
+-- `fs.combine(p, "")` normaliza e resolve "..", entao "/os/../home/x" nao escapa: vira
+-- "home/x" e cai fora do /os.
+function cluster.podeApagar(caminho)
+    if type(caminho) ~= "string" or caminho == "" then return false end
+    local ok, limpo = pcall(fs.combine, caminho, "")
+    if not ok or limpo == "" then return false end
+    if limpo ~= "os" and limpo:sub(1, 3) ~= "os/" then return false end
+    if limpo == "os" then return false end                       -- o /os inteiro, nunca
+    if limpo == "os/var" or limpo:sub(1, 7) == "os/var/" then return false end
+    return "/" .. limpo
+end
+
 -- ---------------------------------------------------------------- tabela de nos
 
 local Tabela = {}
@@ -377,6 +401,23 @@ function cluster.demo()
     local m2 = cluster.diferenca({ ["/startup.lua"] = "1", ["/os/z.lua"] = "1", ["/os/a.lua"] = "1" }, {})
     assert(m2[#m2] == "/startup.lua", "startup.lua tem de ser o ultimo, veio " .. tostring(m2[#m2]))
     assert(m2[1] == "/os/a.lua", "o resto continua em ordem alfabetica")
+
+    -- Apagar por rede e' a unica coisa destrutiva aqui, entao a regra e' cobrada de perto.
+    assert(cluster.podeApagar("/os/apps/velho.lua") == "/os/apps/velho.lua", "recusou caminho legitimo")
+    assert(cluster.podeApagar("os/apps/velho.lua") == "/os/apps/velho.lua", "sem barra na frente tambem vale")
+    assert(cluster.podeApagar("/startup.lua") == false, "apagar o boot deixaria o no inalcancavel")
+    assert(cluster.podeApagar("/home/foto.nfp") == false, "os arquivos da pessoa nao se apagam")
+    assert(cluster.podeApagar("/os/var/log/kernel.log") == false, "/os/var e' estado de execucao")
+    assert(cluster.podeApagar("/os/var") == false, "/os/var inteiro tambem nao")
+    assert(cluster.podeApagar("/os") == false, "o /os inteiro nunca")
+    assert(cluster.podeApagar("/") == false, "a raiz nunca")
+    assert(cluster.podeApagar("") == false, "vazio nao e' caminho")
+    assert(cluster.podeApagar(nil) == false, "nil nao e' caminho")
+    assert(cluster.podeApagar(42) == false, "numero nao e' caminho")
+    -- Escapar por ".." e o jeito classico: o fs.combine resolve antes de a regra olhar.
+    assert(cluster.podeApagar("/os/../home/x") == false, "escapou do /os por ..")
+    assert(cluster.podeApagar("/os/apps/../../startup.lua") == false, "chegou no boot por ..")
+    assert(cluster.podeApagar("/os/apps/../var/log/x") == false, "chegou no /os/var por ..")
 
     -- A batida diz o basico sobre este computador, sem precisar de rede.
     local b2 = cluster.batida()
