@@ -154,7 +154,9 @@ function handlers.sendFile(msg, from)
     if not h then return nil, "nao consegui escrever" end
     h.write(msg.content or "")
     h.close()
-    mosaic.notify("Arquivo recebido: " .. path, 6)
+    -- `quiet` para atualizacao de frota: 95 arquivos sao 95 avisos empilhados na tela do no,
+    -- e quem esta atualizando ja ve o progresso do lado do mestre.
+    if not msg.quiet then mosaic.notify("Arquivo recebido: " .. path, 6) end
     return { path = path, size = #(msg.content or "") }
 end
 
@@ -176,6 +178,18 @@ end
 -- Quem sou eu no cluster. Serve para o app perguntar a um no sem depender do mestre.
 function handlers.whoami()
     return { role = cluster.role(), group = cluster.group(), node = cluster.batida() }
+end
+
+-- O sistema deste computador, arquivo por arquivo, com sha1. E' consulta e nao pede senha:
+-- hash de codigo aberto nao e' segredo, e exigir senha impediria atualizar uma frota que
+-- ainda nao tem senha configurada.
+--
+-- Custa ~1,8 s de CPU (medido: 341 KB/s para 605 KB). Fica abaixo dos 7 s do CC com folga de
+-- quatro vezes, mas segura o netd nesse tempo - por isso e' sob demanda, nunca periodico.
+function handlers.inventory()
+    local arquivos, n, bytes = cluster.inventario()
+    return { version = mosaic.version and mosaic.version.version or "?",
+        files = arquivos, count = n, bytes = bytes }
 end
 
 function handlers.shutdown(msg, from)

@@ -173,6 +173,65 @@ local function reiniciaGrupo(grupo)
     atualiza()
 end
 
+-- Espalhar o sistema: o mestre faz o no ficar igual a ele.
+--
+-- Compara SHA-1 de arquivo por arquivo, e nao versao+tamanho como o plano previa: medido no
+-- servidor, hash do sistema inteiro custa 1,8 s (341 KB/s para 605 KB), bem dentro dos 7 s do
+-- CC. Tamanho igual com conteudo diferente passaria batido, que era a critica certa.
+--
+-- O mestre nao baixa nada: ele manda o que TEM. Quem precisa de internet e' so' ele, e so' na
+-- hora de atualizar a si mesmo pelo instalador.
+local function espalha(alvos)
+    local s = pedeSenha()
+    if not s then return end
+    local busy = ui.busy("Atualizando", "lendo o meu sistema...")
+    local okMeu, meu = pcall(cluster.inventario)
+    if not okMeu then busy.close() ui.msgbox("Nao consegui ler o meu sistema: " .. tostring(meu), "Erro") return end
+
+    local resumo = {}
+    for _, n in ipairs(alvos) do
+        busy.set(0, "#" .. n.id .. ": perguntando o que ele tem...")
+        -- Prazo generoso: o no gasta ~1,8 s so' calculando os hashes dele.
+        local inv, err = netx.ask(n.id, { type = "inventory" }, 20)
+        if not inv or type(inv.files) ~= "table" then
+            resumo[#resumo + 1] = "#" .. n.id .. ": nao respondeu (" .. tostring(err) .. ")"
+        else
+            local mandar, sobrando = cluster.diferenca(meu, inv.files)
+            if #mandar == 0 then
+                resumo[#resumo + 1] = "#" .. n.id .. ": ja esta igual"
+                    .. (#sobrando > 0 and (", com " .. #sobrando .. " arquivo(s) a mais") or "")
+            else
+                local enviados, falha = 0, nil
+                for i, caminho in ipairs(mandar) do
+                    busy.set(i / #mandar, "#" .. n.id .. " " .. caminho)
+                    local h = fs.open(caminho, "r")
+                    local dados = h and h.readAll() or nil
+                    if h then h.close() end
+                    if not dados then falha = caminho .. ": nao consegui ler aqui" break end
+                    local r, e = netx.ask(n.id, netx.assina(
+                        { type = "sendFile", path = caminho, content = dados, quiet = true }, s), 15)
+                    if not r then falha = caminho .. ": " .. tostring(e) break end
+                    enviados = enviados + 1
+                end
+                resumo[#resumo + 1] = string.format("#%d: %d de %d arquivo(s)%s%s",
+                    n.id, enviados, #mandar,
+                    #sobrando > 0 and (", " .. #sobrando .. " a mais la") or "",
+                    falha and ("  PAROU EM " .. falha) or "")
+                -- Reiniciar so' se foi tudo: `mosaic.lib` guarda modulo em cache, entao
+                -- arquivo novo so' vale depois do boot - mas reiniciar no meio de uma
+                -- transferencia quebrada e' trocar um problema por outro pior.
+                if not falha then
+                    netx.ask(n.id, netx.assina({ type = "reboot" }, s), 5)
+                    resumo[#resumo] = resumo[#resumo] .. ", reiniciando"
+                end
+            end
+        end
+    end
+    busy.close()
+    ui.msgbox(table.concat(resumo, "\n"), "Atualizacao da frota")
+    atualiza()
+end
+
 local function acoes(n)
     if not n then return end
     local itens = {
@@ -187,6 +246,20 @@ local function acoes(n)
             if not r then ui.msgbox(tostring(err), "Erro") return end
             ui.msgbox(((r.output or "") ~= "" and r.output .. "\n" or "")
                 .. table.concat(r.returns or {}, "\n"), "Resultado")
+        end },
+        { text = "Atualizar este no", run = function()
+            if not ui.confirm("Deixar o #" .. n.id .. " igual a este computador?", "Cluster") then return end
+            espalha({ n })
+        end },
+        { text = "Atualizar o grupo " .. (n.group or "sem grupo"), run = function()
+            local alvos = {}
+            for _, x in ipairs(nos) do
+                if (x.group or "sem grupo") == (n.group or "sem grupo")
+                    and x.online and x.id ~= os.getComputerID() then alvos[#alvos + 1] = x end
+            end
+            if #alvos == 0 then ui.msgbox("Nenhum no do grupo esta no ar.", "Cluster") return end
+            if not ui.confirm("Atualizar " .. #alvos .. " no(s)?", "Cluster") then return end
+            espalha(alvos)
         end },
         { text = "Reiniciar", run = function()
             if not ui.confirm("Reiniciar o no #" .. n.id .. "?", "Cluster") then return end

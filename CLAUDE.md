@@ -362,6 +362,23 @@ Navegador (`os/apps/browser.lua`):
 
 ### Medido, não suposto (rede)
 
+- **SHA-1 em Lua dá conta do sistema inteiro.** O `PLANO-cluster.md` mandava comparar
+  **versão + tamanho** para espalhar software, supondo que hash de 95 arquivos seria lento demais.
+  Medido no servidor (CC:T 1.101.3): **341 KB/s**, ou seja **1,8 s** de CPU para os 605 KB do sistema
+  e **147 ms** no maior arquivo (`ui.lua`, 50 KB) — contra o teto de 7 s por resume. Folga de quatro
+  vezes, e tamanho igual com conteúdo diferente deixa de passar batido. `cluster.inventario()` usa sha1.
+- **`startup.lua` é o último arquivo a ser enviado**, sempre (`cluster.diferenca` ordena assim). Uma
+  transferência que morre no meio deixa o nó com sistema misturado mas **bootável**, e dá para consertar
+  por `wget run install.lua`. Meio `startup.lua` gravado obriga a ir até o bloco no mundo.
+- **Mestre não bate ponto** — quem empurra é o nó. Dois computadores marcados como mestre, então, não se
+  enxergam: cada tela diz "1 nó" como se estivesse certo. Foi encontrado no servidor e custou metade da
+  frota. O botão **Procurar** do painel existe só para isso: cruza `netx.peers` com a frota e pergunta
+  `whoami` a quem ficou de fora.
+- **Self-check não pode mexer no `settings` real.** O `cluster.demo()` mexia e devolvia no fim — mas
+  "no fim" não acontece quando uma asserção falha, e basta um `settings.save()` com o valor de teste em
+  memória para ele ir ao disco. Um computador do servidor amanheceu no grupo `"mina-norte"`, que só
+  existe dentro do teste. Toda leitura passa por `cluster.config`, e o teste troca **essa função**.
+
 - **rednet entre computadores do mesmo servidor não é rede.** Medido no jogo: 1,4 MB de ida e volta
   em **14 ms** (~98 MB/s), leitura de 1,4 MB do disco em 21 ms. DFPWM precisa de 6 KB/s. Ou seja,
   transmitir áudio entre computadores é de graça — o alcance do modem é regra de jogo, não banda.

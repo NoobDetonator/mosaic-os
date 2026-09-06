@@ -111,6 +111,66 @@ function cluster.batida()
     return b
 end
 
+-- ---------------------------------------------------------------- inventario
+--
+-- O que o sistema E', arquivo por arquivo, com o sha1 de cada um. E' o que deixa o mestre
+-- dizer "seu /os/lib/ui.lua nao e' igual ao meu" sem baixar nada da internet.
+--
+-- O PLANO DIZIA PARA USAR VERSAO + TAMANHO, e nao sha1, supondo que hash em Lua seria lento
+-- demais para 95 arquivos. Medido no servidor (CC:T 1.101.3): 341 KB/s, ou seja 1,8 s de CPU
+-- para os 605 KB do sistema inteiro, e 147 ms no maior arquivo (ui.lua, 50 KB). O teto do CC
+-- e' 7 s por resume. Sobra folga de quatro vezes, e tamanho igual com conteudo diferente
+-- deixaria de ser detectado - que era a critica certa da auditoria.
+--
+-- /os/var fica de fora: e' estado de execucao (registros, seeded.json), nasce diferente em
+-- cada computador e nao faz parte do sistema.
+cluster.RAIZES = { "/startup.lua", "/os" }
+cluster.IGNORAR = { ["os/var"] = true }
+
+function cluster.inventario()
+    local update = require("lib.update")
+    local out, n, bytes = {}, 0, 0
+    local function anda(caminho)
+        if cluster.IGNORAR[caminho] then return end
+        if not fs.exists(caminho) then return end
+        if fs.isDir(caminho) then
+            for _, nome in ipairs(fs.list(caminho)) do anda(fs.combine(caminho, nome)) end
+            return
+        end
+        local h = fs.open(caminho, "r")
+        if not h then return end
+        local dados = h.readAll() or ""
+        h.close()
+        out["/" .. caminho] = update.sha1(dados)
+        n, bytes = n + 1, bytes + #dados
+    end
+    for _, r in ipairs(cluster.RAIZES) do anda((r:gsub("^/", ""))) end
+    return out, n, bytes
+end
+
+-- O que falta ou difere no OUTRO computador, comparado com este. Devolve a lista de
+-- caminhos a mandar e a de caminhos que sobram la'.
+--
+-- `startup.lua` sai por ULTIMO de proposito: se a transferencia morrer no meio, o no fica
+-- com um sistema misturado mas com um boot que ainda funciona, e da' para consertar por
+-- `wget run install.lua`. Meio startup.lua gravado exige ir ate' o bloco no mundo.
+function cluster.diferenca(meu, dele)
+    local mandar, sobrando = {}, {}
+    for caminho, hash in pairs(meu) do
+        if dele[caminho] ~= hash then mandar[#mandar + 1] = caminho end
+    end
+    for caminho in pairs(dele) do
+        if meu[caminho] == nil then sobrando[#sobrando + 1] = caminho end
+    end
+    table.sort(mandar, function(a, b)
+        local sa, sb = a == "/startup.lua", b == "/startup.lua"
+        if sa ~= sb then return sb end
+        return a < b
+    end)
+    table.sort(sobrando)
+    return mandar, sobrando
+end
+
 -- ---------------------------------------------------------------- tabela de nos
 
 local Tabela = {}
@@ -300,6 +360,23 @@ function cluster.demo()
     cluster.config = real
     assert(okTeste, erro)
     assert(cluster.config == real, "o self-check nao devolveu a leitura de configuracao")
+
+    -- Diferenca entre dois inventarios: o que mandar e o que sobra.
+    local meu = { ["/startup.lua"] = "aaa", ["/os/a.lua"] = "bbb", ["/os/b.lua"] = "ccc" }
+    local dele = { ["/startup.lua"] = "aaa", ["/os/a.lua"] = "XXX", ["/os/velho.lua"] = "zzz" }
+    local mandar, sobrando = cluster.diferenca(meu, dele)
+    assert(table.concat(mandar, " ") == "/os/a.lua /os/b.lua",
+        "diferenca errada: " .. table.concat(mandar, " "))
+    assert(table.concat(sobrando, " ") == "/os/velho.lua", "nao achou o arquivo que sobra")
+
+    -- Igual nao entra na lista: atualizar um no ja em dia nao pode mandar nada.
+    assert(#select(1, cluster.diferenca(meu, meu)) == 0, "mandou arquivo para um no ja igual")
+
+    -- E o startup.lua vai por ULTIMO, sempre. Se a transferencia morrer no meio, o no
+    -- continua bootando: meio startup gravado exige ir ate' o bloco no mundo.
+    local m2 = cluster.diferenca({ ["/startup.lua"] = "1", ["/os/z.lua"] = "1", ["/os/a.lua"] = "1" }, {})
+    assert(m2[#m2] == "/startup.lua", "startup.lua tem de ser o ultimo, veio " .. tostring(m2[#m2]))
+    assert(m2[1] == "/os/a.lua", "o resto continua em ordem alfabetica")
 
     -- A batida diz o basico sobre este computador, sem precisar de rede.
     local b2 = cluster.batida()

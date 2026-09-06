@@ -19,8 +19,8 @@
     },
     {
       "path": "os/apps/cluster.lua",
-      "sha1": "7694b4563572a3a6577c2fa9895bcd4d08afd303",
-      "size": 12175
+      "sha1": "0e7f0f8c30b51aed124236c784161a8e8a113381",
+      "size": 16069
     },
     {
       "path": "os/apps/desktop.lua",
@@ -242,8 +242,8 @@
     },
     {
       "path": "os/lib/cluster.lua",
-      "sha1": "06bc2b1aab35787312eac412343dd00143679a6c",
-      "size": 12938
+      "sha1": "c0eb7db6c381803b8822d0bb0591c7f28f4b5e75",
+      "size": 16683
     },
     {
       "path": "os/lib/create.lua",
@@ -357,8 +357,8 @@
     },
     {
       "path": "os/net/netd.lua",
-      "sha1": "7a9a5984af4ea99bad3ad958e408a790348c2f54",
-      "size": 11193
+      "sha1": "8f7f07175f4996bcc72fa3825736fe223ae194d8",
+      "size": 12000
     },
     {
       "path": "os/net/relay.lua",
