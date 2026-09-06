@@ -201,6 +201,55 @@ f:add(ui.textbox {
 atualizaDicaRede(settings.get("mosaic.net.password"))
 y = y + 7
 
+-- ---------------------------------------------------------------- cluster
+--
+-- Papel e grupo so' existiam por Lua ate' agora, e isso custou caro no servidor: dois
+-- computadores acabaram marcados como mestre, e como mestre NAO bate ponto (quem empurra e'
+-- o no), cada um enxergava so' a si mesmo e nada avisava. A dica embaixo diz isso na tela,
+-- que e' onde a pessoa esta quando escolhe o papel.
+inner = group(y, 4, "Cluster")
+local dicaCluster
+local function atualizaDicaCluster()
+    local mestre = settings.get("mosaic.cluster.role") == "mestre"
+    dicaCluster.text = mestre and "Mestre recolhe a frota. So UM por rede."
+        or "No: bate ponto para o mestre sozinho."
+    dicaCluster.fg = mestre and colors.orange or theme.mutedFg
+    f.dirty = true
+end
+f:add(ui.label { x = INSET, y = inner, text = "Papel:" })
+f:add(ui.dropdown {
+    x = INSET + 14, y = inner, w = 10, items = { "no", "mestre" },
+    selected = (settings.get("mosaic.cluster.role") == "mestre") and 2 or 1,
+    onChange = function(_, item)
+        settings.set("mosaic.cluster.role", item == "mestre" and "mestre" or nil)
+        save()
+        atualizaDicaCluster()
+    end,
+})
+f:add(ui.label { x = INSET, y = inner + 1, text = "Grupo:" })
+f:add(ui.textbox {
+    x = INSET + 14, y = inner + 1, w = -(INSET + 16),
+    text = settings.get("mosaic.cluster.group") or "",
+    onChange = function(_, v)
+        settings.set("mosaic.cluster.group", v ~= "" and v or nil)
+        save()
+    end,
+})
+f:add(ui.label { x = INSET, y = inner + 2, text = "Mestre (id):" })
+f:add(ui.textbox {
+    x = INSET + 14, y = inner + 2, w = 10,
+    text = tostring(settings.get("mosaic.cluster.master") or ""),
+    onChange = function(_, v)
+        -- Vazio = transmissao, e qualquer mestre da rede recolhe. E' o padrao de proposito:
+        -- assim um no funciona sem configurar nada.
+        settings.set("mosaic.cluster.master", tonumber(v))
+        save()
+    end,
+})
+dicaCluster = f:add(ui.label { x = INSET, y = inner + 3, w = -INSET - 1, text = "" })
+atualizaDicaCluster()
+y = y + 6
+
 -- ---------------------------------------------------------------- sistema
 inner = group(y, 1, "Sistema")
 f:add(ui.checkbox {

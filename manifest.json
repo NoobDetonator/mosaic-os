@@ -99,8 +99,8 @@
     },
     {
       "path": "os/apps/settings.lua",
-      "sha1": "360f63ac4e5bfc93a7f4f5899623abdc2b31808c",
-      "size": 9980
+      "sha1": "82b877084e160b5eaac9af2b1a38c36fd6dbef76",
+      "size": 12035
     },
     {
       "path": "os/apps/taskman.lua",
@@ -109,8 +109,8 @@
     },
     {
       "path": "os/boot.lua",
-      "sha1": "04d2319dfffda982e385fe779ee948b0b77bf4c4",
-      "size": 4663
+      "sha1": "2c3c78ca865ff45e91a49522fb2500fdc237d96f",
+      "size": 5001
     },
     {
       "path": "os/demos/cubo.lua",
