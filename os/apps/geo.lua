@@ -17,6 +17,7 @@ local ESTREITO = W < 46
 local f = ui.form()
 local lista, status, barra, cabecalho
 local raio = 8
+local gratis                       -- maior raio que sai sem energia; nil = nao sei
 local itens = {}
 
 -- Barra proporcional ao maior valor da lista, nao a um teto inventado: o que interessa e'
@@ -139,7 +140,15 @@ barra = ui.row(f, { bottom = 0, items = {
             return
         end
         raio = math.floor(n)
-        status.text = " Raio agora e' " .. raio .. ". Clique em Varrer."
+        -- Avisa ANTES de varrer, e com o numero: descobrir que o raio custa energia so'
+        -- depois de clicar em Varrer e' descobrir tarde.
+        local custo = geo.custo(raio)
+        if custo and custo > 0 then
+            status.text = string.format(" Raio %d custa %d de energia (gratis ate %s).",
+                raio, custo, tostring(gratis or "?"))
+        else
+            status.text = " Raio agora e' " .. raio .. ". Clique em Varrer."
+        end
         f.dirty = true
     end },
     { text = "&Onde", alt = true, onClick = ondeEsta },
@@ -151,7 +160,13 @@ lista = f:add(ui.list { x = 1, y = 2, w = "fill", fillTo = status, items = {},
 
 local g = geo.find()
 if g then
-    cabecalho.text = "Geo Scanner pronto. Analisar le o chunk; Varrer, um raio."
+    -- Pergunta ao scanner ate' onde da' para ir de graca e ja comeca por ali: e' melhor
+    -- oferecer o maior raio que FUNCIONA do que um numero redondo que falha.
+    gratis = geo.limiteGratis()
+    if gratis and gratis > 0 then raio = gratis end
+    cabecalho.text = gratis and gratis > 0
+        and ("Geo Scanner pronto. Raio gratis ate " .. gratis .. ".")
+        or "Geo Scanner pronto. Analisar le o chunk; Varrer, um raio."
     status.text = " Clique em Analisar para comecar."
 else
     cabecalho.text = "Nenhum Geo Scanner na rede deste computador."

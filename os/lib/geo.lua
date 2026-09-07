@@ -5,9 +5,16 @@
 --   local achados = geo.varre(8)         -- blocos num raio, agrupados e com posicao
 --
 -- Medido no servidor (AP 0.7 / MC 1.16.5): `scan(4)` devolveu 261 blocos em 32 ms, e
--- `chunkAnalyze()` 46 tipos de bloco. `cost(8)` deu 0 e `getMaxFuelLevel()` tambem - naquele
--- servidor o consumo de energia esta desligado na config do mod. NAO conte com isso: onde
--- estiver ligado, `scan` devolve nil e o motivo, e e' por isso que tudo aqui trata a falha.
+-- `chunkAnalyze()` 46 tipos de bloco.
+--
+-- ENERGIA: ha um raio de graca e, depois dele, custo que cresce rapido. Medido:
+-- raio 1 a 8 custa 0; raio 9 custa 330; 12 custa 1821; 16 custa 5274. E o scanner de la' tem
+-- capacidade ZERO, ou seja, tudo acima de 8 e' impossivel enquanto ele nao for ligado na
+-- energia. Eu quase concluí que o consumo estava desligado porque `cost(8)` deu 0 - era so'
+-- o raio estar dentro da faixa gratuita.
+--
+-- Por isso `limiteGratis()` existe: o app pergunta ao scanner ate' onde da' para ir sem
+-- energia, em vez de oferecer um raio que vai falhar.
 --
 -- O scanner mede em volta de SI MESMO, nao de quem pergunta. Ligado por cabo, ele e' uma
 -- estacao parada: as coordenadas saem relativas ao bloco dele. Para uma turtle que anda,
@@ -84,6 +91,32 @@ function geo.analise()
     if not ok then return nil, tostring(dados) end
     if type(dados) ~= "table" then return nil, "o scanner nao respondeu a analise" end
     return geo.organiza(dados)
+end
+
+-- ---------------------------------------------------------------- energia
+
+function geo.custo(raio)
+    local g = geo.find()
+    if not g or not g.cost then return nil end
+    local ok, c = pcall(g.cost, raio)
+    return ok and tonumber(c) or nil
+end
+
+-- O maior raio que ainda sai de graca. `custoFn` existe para o self-check exercitar a busca
+-- sem hardware nenhum.
+--
+-- Anda de baixo para cima e PARA no primeiro que custa: o custo cresce com o raio, entao o
+-- primeiro pago marca o fim da faixa gratuita.
+function geo.limiteGratis(custoFn, maximo)
+    custoFn = custoFn or geo.custo
+    local limite = 0
+    for r = 1, maximo or 16 do
+        local c = custoFn(r)
+        if c == nil then return limite > 0 and limite or nil end
+        if c > 0 then return limite end
+        limite = r
+    end
+    return limite
 end
 
 -- ---------------------------------------------------------------- o raio
@@ -174,6 +207,20 @@ function geo.demo()
     assert(#geo.organiza({}) == 0, "contagem vazia devia dar lista vazia")
     assert(#geo.agrupa({}) == 0, "scan vazio devia dar lista vazia")
     assert(#geo.agrupa(nil) == 0, "scan nil devia dar lista vazia")
+
+    -- O limite gratuito: a busca para no primeiro raio que custa. Com a curva medida no
+    -- servidor (gratis ate' 8, 330 no 9), o limite tem de ser 8.
+    local medido = { [1]=0, [2]=0, [3]=0, [4]=0, [5]=0, [6]=0, [7]=0, [8]=0,
+                     [9]=330, [10]=739, [11]=1200, [12]=1821, [13]=2500, [14]=3300,
+                     [15]=4200, [16]=5274 }
+    assert(geo.limiteGratis(function(r) return medido[r] end) == 8,
+        "com a curva do servidor o limite gratuito e' 8")
+    -- Tudo pago: nao ha raio de graca, e isso e' zero e nao erro.
+    assert(geo.limiteGratis(function() return 100 end) == 0, "tudo pago devia dar 0")
+    -- Tudo de graca: o limite e' o teto da busca.
+    assert(geo.limiteGratis(function() return 0 end, 16) == 16, "tudo gratis devia dar o teto")
+    -- Sem scanner o custo e' nil, e ai nao da' para afirmar limite nenhum.
+    assert(geo.limiteGratis(function() return nil end) == nil, "sem custo nao ha limite conhecido")
 
     -- Sem scanner, as duas portas dizem o motivo em vez de levantar erro.
     if not geo.temScanner() then
