@@ -11,13 +11,16 @@ local function say(s) out.write(tostring(s) .. "\n") end
 -- Argumento "fake": instala um reator do Powah de mentira, para conferir o painel
 -- com dados variando sem precisar do jogo.
 -- Argumento "frota": instala um cluster de mentira, pelo mesmo motivo.
-local fake, frota = false, false
+local fake, frota, geo = false, false, nil
 for i = 2, #args do
     if args[i] == "fake" then
         fake = true
         dofile("/test/fake-reactor.lua").instalar()
     elseif args[i] == "frota" then
         frota = true
+    elseif args[i] == "geo" then
+        geo = dofile("/test/fake-geo.lua")
+        geo.instalar()
     end
 end
 
@@ -33,6 +36,8 @@ local ok, err = pcall(function()
     -- Depois do proc.init(): a frota falsa mora em `proc.api`, que e' o `mosaic` que o app
     -- enxerga, e init() monta essa tabela.
     if frota then dofile("/test/fake-cluster.lua").instalar(proc.api) end
+    -- A turtle falsa depois do proc.init(), pelo mesmo motivo da frota: ela mora em proc.api.
+    if geo then geo.comTurtle(proc.api) end
     local p = proc.launch(target, {}, {
         title = "DBG", x = 1, y = 1, w = wm.W, h = wm.H - 2, holdOnError = true })
     os.queueEvent("timer", -1)

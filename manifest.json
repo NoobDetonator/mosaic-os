@@ -44,8 +44,8 @@
     },
     {
       "path": "os/apps/geo.lua",
-      "sha1": "1efde61df1259adcc44735e08b3d4182ef0e293a",
-      "size": 6532
+      "sha1": "5cc57b40336cf99436e88cad7d45dee97360e554",
+      "size": 19263
     },
     {
       "path": "os/apps/help.lua",
@@ -212,8 +212,8 @@
     },
     {
       "path": "os/kernel/proc.lua",
-      "sha1": "d589cf5557fe4dd380fc9fc401aeb6a14a5a3219",
-      "size": 27652
+      "sha1": "5224072f26be2a90096ef8105fae5af1294616ae",
+      "size": 28225
     },
     {
       "path": "os/kernel/runner.lua",
@@ -279,6 +279,11 @@
       "path": "os/lib/geo.lua",
       "sha1": "092ba51e0e6b646a03f105458f7aa232128f84d1",
       "size": 10552
+    },
+    {
+      "path": "os/lib/geo3d.lua",
+      "sha1": "fbd424f71cb73f86a62f234be68ee06c5e8786c6",
+      "size": 11337
     },
     {
       "path": "os/lib/hal.lua",

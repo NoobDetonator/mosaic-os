@@ -657,6 +657,16 @@ function api.setTitle(id, t)
     if p then p.title = tostring(t) p.titleLocked = true dirty = true end
 end
 function api.holdOnError() return proc.current and proc.current.holdOnError or false end
+-- Em qual monitor este app esta, ou nil se esta na tela do computador.
+--
+-- Um app PRECISA saber que foi para uma parede: la' nao ha teclado, e `monitor_touch` e' so'
+-- clique de botao direito - nao existe arrastar nem tecla. Interface que depende de seta ou
+-- de atalho fica morta ali, e sem esta porta cada app teria de adivinhar comparando o
+-- proprio tamanho com o da tela, que erra sempre que os dois calham de bater.
+function api.onMonitor(id)
+    local p = byId[id or (proc.current and proc.current.id)]
+    return p and p.monitor and p.monitor.name or nil
+end
 function api.notify(text, secs) wm.toast(text, secs) dirty = true end
 function api.screenshot() return wm.screenshot() end
 function api.screenshotText() return wm.screenshotText() end
