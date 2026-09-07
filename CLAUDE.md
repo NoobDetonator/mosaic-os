@@ -386,6 +386,20 @@ Navegador (`os/apps/browser.lua`):
   **não anda enquanto o processo espera**. A primeira medição deu "0,000 s" e "5333 KB/s". Use
   `os.epoch("utc")`.
 
+### 3D dentro do jogo é ~40x mais lento que o bench
+
+- **Medido no servidor (CC:T 1.101.3, MC 1.16.5): ~21 mil triângulos/s.** 5.204 triângulos custaram
+  **247 ms** por quadro num canvas de 160x108 pontos. O bench de `docs/3d-medidas.md` diz ~877 mil/s —
+  mas ele roda no **CraftOS-PC**, que é um processo nativo num PC, não Cobalt dentro de um servidor
+  de Minecraft. **Não use aquele número para decidir o que cabe num app do jogo.**
+- Consequência prática: **~800 blocos de voxel (≈5 mil triângulos) é o teto do que ainda se mexe.**
+  É o `teto` padrão de `geo3d.cena`, e é medido, não chutado.
+- **Giro automático tem de se regular pelo custo do quadro**, não por um intervalo fixo. O app de
+  prospecção mede o último quadro e espera 3× isso (entre 0,3 s e 3 s). Girar mais rápido do que se
+  consegue desenhar só enfileira trabalho e come o computador inteiro.
+- **`mesh.voxels` corta ~47% dos triângulos** em dado real: 821 blocos deram 5.204 triângulos, contra
+  9.852 se cada bloco fosse um cubo. Um `voxels` por tipo (não um cubo por bloco) é o que permite isso.
+
 ### Turtle (`os/lib/turtlex.lua`, `os/apps/turtle.lua`)
 
 - **A posição vai para o disco A CADA PASSO**, não no fim da tarefa. É consequência direta do chunk

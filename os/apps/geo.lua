@@ -33,6 +33,11 @@ local clicaveis = {}               -- y da tela -> indice em `itens`
 
 local giro, altura, zoom = 0.7, 0.5, 1.0
 local gira = false                 -- camera girando sozinha
+-- Quanto custou o ultimo quadro, em ms. O giro automatico se regula por ele: cena pesada
+-- gira devagar em vez de travar o computador. Medido no servidor: 5204 triangulos custaram
+-- 247 ms, ou seja ~21 mil triangulos/s - quarenta vezes menos que o bench no CraftOS-PC.
+local custoQuadro = 0
+local trisCena, blocosCena = 0, 0
 local c3d, f3d, cw3d, ch3d
 
 -- ---------------------------------------------------------------- a turtle na cena
@@ -240,7 +245,11 @@ local function desenha3D(t, reserva)
         if w1 and w2 then c3d:line(x1, y1, x2, y2, colors.gray) end
     end
 
+    local t0 = os.epoch("utc")
     f3d:draw(cena.objetos)
+    custoQuadro = os.epoch("utc") - t0
+    trisCena, blocosCena = 0, cena.blocos
+    for _, o in ipairs(cena.objetos) do trisCena = trisCena + #o.model.tris end
     c3d:render(t, 1, 1)
 
     -- Legenda: quadradinho na cor, nome, contagem, e a marca de ligado. Sem ela o desenho e'
@@ -293,9 +302,14 @@ end
 local function resumo()
     local minerios, total, ligadosN = conta()
     if temPosicao then
-        status.text = string.format(" Raio %d: %d tipos, %d minerios, %d ligados%s",
+        -- O custo do quadro fica na tela quando o 3D esta aberto: e' o que explica a cena
+        -- ficar lenta, e sem esse numero a pessoa culpa o servidor.
+        status.text = string.format(" Raio %d: %d tipos, %d minerios, %d ligados%s%s",
             raio, #itens, minerios, ligadosN,
-            faixaY and string.format(" | y %d..%d", faixaY[1], faixaY[2]) or "")
+            faixaY and string.format(" | y %d..%d", faixaY[1], faixaY[2]) or "",
+            (modo == "3d" and blocosCena > 0)
+                and string.format(" | %d blocos %d tri %d ms", blocosCena, trisCena, custoQuadro)
+                or "")
     else
         status.text = string.format(" Chunk: %d tipos, %d minerios, %d blocos",
             #itens, minerios, total)
@@ -430,7 +444,11 @@ end
 
 f.onEvent = function(_, ev, a, b, c)
     if ev == "timer" and a == relogio then
-        relogio = os.startTimer(BATIDA)
+        -- O intervalo segue o CUSTO do quadro: tres vezes o que o ultimo levou, entre 0,3 s e
+        -- 3 s. Cena leve gira macio; cena pesada gira devagar em vez de comer o computador
+        -- inteiro. Girar mais rapido do que se consegue desenhar so' enfileira trabalho.
+        local espera = math.max(BATIDA, math.min(3, (custoQuadro / 1000) * 3))
+        relogio = os.startTimer(espera)
         -- Gira sozinha na parede (la nao ha teclado) ou quando alguem ligou o giro. So'
         -- redesenha se a janela esta na frente: atras nao ha quem leia.
         if modo == "3d" and (gira or naParede()) then

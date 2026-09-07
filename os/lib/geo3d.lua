@@ -95,7 +95,14 @@ function geo3d.cena(grupos, opts)
     local mesh = require("lib.mesh")
     local shade = require("lib.shade")
     local objetos, legenda, total = {}, {}, 0
-    local teto = opts.teto or 3000
+    -- Teto MEDIDO, nao chutado. No servidor, 5204 triangulos custaram 247 ms por quadro num
+    -- canvas de 160x108 pontos: ~21 mil triangulos/s. E' quarenta vezes mais lento que os
+    -- 877 mil/s do bench no CraftOS-PC, que roda em PC e nao dentro do Minecraft.
+    --
+    -- 800 blocos dao ~5 mil triangulos, ~240 ms. E' o limite do que ainda se mexe; acima
+    -- disso a janela engasga e a parede fica pior ainda. Quem quiser mais liga por filtro e
+    -- assume o custo, mas o padrao nao pode ser inutilizavel.
+    local teto = opts.teto or 800
     local cortou = false
 
     for ordem, g in ipairs(grupos or {}) do
