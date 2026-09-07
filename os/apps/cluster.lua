@@ -54,10 +54,16 @@ local function linhaDe(n, agora)
             marca, n.id, strutil.ellipsis(n.name or "?", 15),
             CURTO[n.kind] or "?", estado)
     end
+    -- Numa turtle a POSICAO ganha da versao na linha: versao se ve nos detalhes, onde ela
+    -- esta e' o que se quer saber de relance.
+    local cauda = comb and ("comb " .. comb) or ""
+    if n.kind == "turtle" and type(n.pos) == "table" then
+        cauda = string.format("%d,%d,%d %s", n.pos.x or 0, n.pos.y or 0, n.pos.z or 0,
+            tostring(n.pos.olhando or "?"):sub(1, 1))
+    end
     return string.format("%s #%-3d %-18s %-7s %-6s %-9s%s",
         marca, n.id, strutil.ellipsis(n.name or "?", 18),
-        CURTO[n.kind] or "?", tostring(n.version or "?"), estado,
-        comb and ("comb " .. comb) or "")
+        CURTO[n.kind] or "?", tostring(n.version or "?"), estado, cauda)
 end
 
 -- ---------------------------------------------------------------- a lista
@@ -143,6 +149,14 @@ local function detalhes(n)
     }
     if n.kind == "turtle" then
         linhas[#linhas + 1] = "Combustivel: " .. (combustivel(n) or "?")
+        local p = n.pos
+        if type(p) == "table" then
+            -- "assumida" nao e' detalhe: posicao so' de conta propria pode ter escorregado se
+            -- empurraram a turtle ou ela renasceu fora do lugar.
+            linhas[#linhas + 1] = string.format("Onde: %d %d %d olhando %s (%s)",
+                p.x or 0, p.y or 0, p.z or 0, tostring(p.olhando),
+                p.certa and "conferida" or "assumida")
+        end
         if n.holding then linhas[#linhas + 1] = "Segurando: " .. tostring(n.holding) end
     end
     local p = n.peripherals

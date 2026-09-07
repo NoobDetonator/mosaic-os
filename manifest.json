@@ -19,8 +19,8 @@
     },
     {
       "path": "os/apps/cluster.lua",
-      "sha1": "c619a0bfd98c12ebfb5a11d78da4140add4b8f37",
-      "size": 19417
+      "sha1": "3e0e8dcd449a5cc39cc50f374ab0cd76dcbdbcd1",
+      "size": 20214
     },
     {
       "path": "os/apps/desktop.lua",
@@ -41,6 +41,11 @@
       "path": "os/apps/folder.lua",
       "sha1": "d71c1c8cba56639e2bbe2159ca162ae096e0388f",
       "size": 2245
+    },
+    {
+      "path": "os/apps/geo.lua",
+      "sha1": "37c3bbd8b5e19db5f70b0846fde4591d29c853b7",
+      "size": 5701
     },
     {
       "path": "os/apps/help.lua",
@@ -89,8 +94,8 @@
     },
     {
       "path": "os/apps/registry.lua",
-      "sha1": "3ca299b5c2f3ef4673f71d55e3066d6a447d5f04",
-      "size": 10253
+      "sha1": "f4125a1350ef3603c7c823067ff95f6f9e4a9a81",
+      "size": 10512
     },
     {
       "path": "os/apps/remote.lua",
@@ -247,8 +252,8 @@
     },
     {
       "path": "os/lib/cluster.lua",
-      "sha1": "a87ac5a9f4bf1268ba59d87b423f555579bf3d19",
-      "size": 19340
+      "sha1": "df0e98def1e4efb70cd6717b2753fe2282371100",
+      "size": 19844
     },
     {
       "path": "os/lib/create.lua",
@@ -269,6 +274,11 @@
       "path": "os/lib/fsx.lua",
       "sha1": "1b93f1b5fb789b70b5ed66ef93699d3c30b79df8",
       "size": 3942
+    },
+    {
+      "path": "os/lib/geo.lua",
+      "sha1": "bb3f6188b0ebb8279824f54bf4d1e9a4474737e8",
+      "size": 8449
     },
     {
       "path": "os/lib/hal.lua",

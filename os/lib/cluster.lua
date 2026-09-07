@@ -100,6 +100,14 @@ function cluster.batida()
         b.peripherals = nomes
     end
     if turtle then
+        -- Onde ela esta vai junto da batida, e nao numa pergunta separada: o mestre nao
+        -- pergunta nada ao no (chunk descarregado nao responde), entao tudo que se quer
+        -- saber tem de vir empurrado. E' o que faz a turtle aparecer no painel do PC.
+        local okP, tx = pcall(require, "lib.turtlex")
+        if okP and tx then
+            local p = tx.posicao()
+            b.pos = { x = p.x, y = p.y, z = p.z, olhando = p.olhando, certa = p.certa == true }
+        end
         b.fuel = cluster.combustivel()
         local okS, s = pcall(turtle.getSelectedSlot)
         if okS then
@@ -219,7 +227,7 @@ function Tabela:registra(id, batida, agora)
     local ESPERADO = {
         name = "string", group = "string", kind = "string", version = "string",
         free = "number", uptime = "number", fuel = "number", slot = "number",
-        holding = "string", peripherals = "table",
+        holding = "string", peripherals = "table", pos = "table",
     }
     for k, tipo in pairs(ESPERADO) do
         local v = (batida or {})[k]

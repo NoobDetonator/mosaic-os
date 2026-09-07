@@ -33,6 +33,9 @@ registry.builtin = {
     -- So' faz sentido numa turtle, mas fica na lista sempre: escondido, ninguem descobre que
     -- existe, e aberto num computador comum ele diz isso em uma linha.
     { id = "turtle", name = "Turtle", icon = "Tu", color = colors.brown, path = "/os/apps/turtle.lua", w = 39, h = 13 },
+    -- Janela larga: nome do bloco, contagem e barra lado a lado, e o nome de bloco modado e'
+    -- comprido ("elementalcraft:crystalore").
+    { id = "geo", name = "Prospeccao", icon = "Ge", color = colors.lime, path = "/os/apps/geo.lua", w = 56, h = 18 },
     { id = "cluster", name = "Cluster", icon = "Cl", color = colors.cyan, path = "/os/apps/cluster.lua", w = 66, h = 18 },
     { id = "reactor", name = "Reator", icon = "Re", color = colors.red, path = "/os/apps/reactor.lua" },
     { id = "pkg", name = "Atualizar OS", icon = "Up", color = colors.brown, path = "/os/apps/pkg.lua" },

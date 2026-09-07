@@ -187,7 +187,7 @@ check(answer == true, "confirm nao devolveu true (" .. tostring(answer) .. ")")
 check(d.dead == true, "processo do dialogo nao terminou")
 
 -- 12. Todos os apps abrem sem quebrar
-local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman", "reactor", "folder", "music", "browser", "cluster", "turtle" }
+local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman", "reactor", "folder", "music", "browser", "cluster", "turtle", "geo" }
 for _, name in ipairs(apps) do
     local path = "/os/apps/" .. name .. ".lua"
     local ap = proc.launch(path, {}, { title = name, x = 2, y = 2, w = wm.W - 4, h = wm.H - 5 })
@@ -251,7 +251,7 @@ local okPowah, errPowah = pcall(require("lib.powah").demo)
 check(okPowah, "powah.demo falhou: " .. tostring(errPowah))
 -- As libs de arquivo: atalho, area de transferencia, propriedades e as operacoes.
 -- Cada uma traz o proprio self-check; aqui so' se cobra que ele passe.
-for _, nome in ipairs({ "shortcut", "clip", "props", "fileops", "expr", "mcmath", "plot", "create", "mesh", "three", "shade", "audio", "netx", "cluster", "turtlex" }) do
+for _, nome in ipairs({ "shortcut", "clip", "props", "fileops", "expr", "mcmath", "plot", "create", "mesh", "three", "shade", "audio", "netx", "cluster", "turtlex", "geo" }) do
     local okLib, errLib = pcall(require("lib." .. nome).demo)
     check(okLib, nome .. ".demo falhou: " .. tostring(errLib))
 end
