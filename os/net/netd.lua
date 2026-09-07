@@ -282,6 +282,17 @@ while true do
                 else
                     rednet.send(from, { id = msg.id, ok = true, result = result }, PROTOCOL)
                 end
+            else
+                -- Tipo que este computador nao conhece: RESPONDE dizendo isso, em vez de
+                -- ficar calado. Calado, quem perguntou espera o prazo inteiro e recebe "nao
+                -- respondeu a tempo" - que faz pensar em rede, chunk descarregado ou modem,
+                -- quando na verdade e' so' um Mosaic mais velho do outro lado.
+                --
+                -- Custou uma hora de caca: o mestre pedia `inventory` a um no que ainda nao
+                -- tinha esse handler, e a unica pista era um tempo esgotado.
+                rednet.send(from, { id = msg.id, ok = false,
+                    error = "este computador nao conhece '" .. tostring(msg.type)
+                        .. "' (Mosaic mais antigo?)" }, PROTOCOL)
             end
         end
 

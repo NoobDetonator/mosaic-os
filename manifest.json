@@ -19,8 +19,8 @@
     },
     {
       "path": "os/apps/cluster.lua",
-      "sha1": "65ed70e983434d547da695325cf11d088a6bf129",
-      "size": 18718
+      "sha1": "c619a0bfd98c12ebfb5a11d78da4140add4b8f37",
+      "size": 19417
     },
     {
       "path": "os/apps/desktop.lua",
@@ -357,8 +357,8 @@
     },
     {
       "path": "os/net/netd.lua",
-      "sha1": "de8e92057d4857878c59569f0a1894553ef645b3",
-      "size": 13009
+      "sha1": "57f170721b24c6bf17bebf2c562624372e312518",
+      "size": 13781
     },
     {
       "path": "os/net/relay.lua",

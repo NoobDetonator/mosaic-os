@@ -16,6 +16,19 @@ const { WebSocketServer } = require('ws');
 const gateway = require('./gateway.js');
 const musica = require('./musica.js');
 
+// O relay morreu uma vez com codigo 4 e NENHUMA mensagem, depois de os tres computadores do
+// servidor caírem e reconectarem varias vezes seguidas. Sem rastro nao da' para consertar,
+// entao o motivo passa a sair na tela antes de o processo ir embora.
+//
+// Sai mesmo assim, de proposito: seguir vivo depois de uma excecao nao tratada e' seguir com
+// estado que ninguem sabe se presta. Quem cuida de levantar de novo e' quem iniciou o relay.
+for (const evento of ['uncaughtException', 'unhandledRejection']) {
+  process.on(evento, (erro) => {
+    console.error(`\n[relay] ${evento}:`, (erro && erro.stack) || erro);
+    process.exit(1);
+  });
+}
+
 const PORT = parseInt(process.env.PORT || '8765', 10);
 const HOST = process.env.HOST || '0.0.0.0';
 const TOKEN_FILE = path.join(__dirname, '.token');

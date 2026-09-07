@@ -193,10 +193,20 @@ local function espalha(alvos)
         busy.set(0, "#" .. n.id .. ": perguntando o que ele tem...")
         -- Prazo generoso: o no gasta ~1,8 s so' calculando os hashes dele.
         local inv, err = netx.ask(n.id, { type = "inventory" }, 20)
-        if not inv or type(inv.files) ~= "table" then
-            resumo[#resumo + 1] = "#" .. n.id .. ": nao respondeu (" .. tostring(err) .. ")"
+        -- No que nao sabe responder o inventario e' justamente o no VELHO - e velho e'
+        -- exatamente quem mais precisa ser atualizado. Desistir aqui seria ovo e galinha: a
+        -- atualizacao exigiria estar atualizado. Sem inventario, manda tudo.
+        --
+        -- Nao e' risco novo: quem clicou ja pediu "deixe este no igual a mim", e mandar tudo
+        -- e' a mesma operacao, so' que inteira. O startup.lua continua indo por ultimo.
+        local semInventario = not inv or type(inv.files) ~= "table"
+        if semInventario and not netx.modems()[1] then
+            resumo[#resumo + 1] = "#" .. n.id .. ": sem modem aqui"
         else
-            local mandar, sobrando = cluster.diferenca(meu, inv.files)
+            local dele = semInventario and {} or inv.files
+            local mandar, sobrando = cluster.diferenca(meu, dele)
+            local aviso1 = semInventario
+                and (" (nao soube dizer o que tem: " .. tostring(err) .. "; mandei tudo)") or ""
             if #mandar == 0 then
                 resumo[#resumo + 1] = "#" .. n.id .. ": ja esta igual"
                     .. (#sobrando > 0 and (", com " .. #sobrando .. " arquivo(s) a mais") or "")
@@ -213,10 +223,10 @@ local function espalha(alvos)
                     if not r then falha = caminho .. ": " .. tostring(e) break end
                     enviados = enviados + 1
                 end
-                resumo[#resumo + 1] = string.format("#%d: %d de %d arquivo(s)%s%s",
+                resumo[#resumo + 1] = string.format("#%d: %d de %d arquivo(s)%s%s%s",
                     n.id, enviados, #mandar,
                     #sobrando > 0 and (", " .. #sobrando .. " a mais la") or "",
-                    falha and ("  PAROU EM " .. falha) or "")
+                    falha and ("  PAROU EM " .. falha) or "", aviso1)
                 -- Reiniciar so' se foi tudo: `mosaic.lib` guarda modulo em cache, entao
                 -- arquivo novo so' vale depois do boot - mas reiniciar no meio de uma
                 -- transferencia quebrada e' trocar um problema por outro pior.
