@@ -67,6 +67,15 @@ proc.launch("/os/apps/desktop.lua", {}, {
     x = 1, y = 1, w = wm.W, h = wm.H - 1, holdOnError = true, bg = theme.desktopBg, fg = theme.desktopFg,
 })
 
+-- Na turtle o painel abre sozinho. A tela e' 39x13: quem liga uma turtle quer saber onde ela
+-- esta e quanto tem de combustivel, nao escolher icone numa area de trabalho apertada. A area
+-- de trabalho continua atras, entao nada se perde - so' muda o que aparece primeiro.
+if turtle then
+    proc.launch("/os/apps/turtle.lua", {}, {
+        title = "Turtle", x = 1, y = 1, w = wm.W, h = wm.H - 1, holdOnError = true,
+    })
+end
+
 -- Servicos
 if settings.get("mosaic.relay.url") then
     proc.daemon("relay", "/os/net/relay.lua")

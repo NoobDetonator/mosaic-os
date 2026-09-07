@@ -149,6 +149,22 @@ const ART = {
     '            ',
     '            ',
   ],
+  // Chassi de maquina visto de frente, com a tela acesa. Voxel a voxel: nesse tamanho cada
+  // ponto e' uma decisao, e rasterizar um desenho maior borra tudo.
+  turtle: [
+    '            ',
+    '   777777   ',
+    '  77ffff77  ',
+    '  7f0000f7  ',
+    '  7f0dd0f7  ',
+    '  7f0dd0f7  ',
+    '  7f0000f7  ',
+    '  77ffff77  ',
+    '   777777   ',
+    '   7    7   ',
+    '            ',
+    '            ',
+  ],
   netcenter: [
     '            ',
     '    8888    ',

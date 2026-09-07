@@ -89,8 +89,8 @@
     },
     {
       "path": "os/apps/registry.lua",
-      "sha1": "bef4cb4d8ec056b1c1cc484e1fcd2ffabb18fd5a",
-      "size": 9966
+      "sha1": "3ca299b5c2f3ef4673f71d55e3066d6a447d5f04",
+      "size": 10253
     },
     {
       "path": "os/apps/remote.lua",
@@ -108,9 +108,14 @@
       "size": 2253
     },
     {
+      "path": "os/apps/turtle.lua",
+      "sha1": "7e205b13e8c73ab562373d32c428e1d9c4aa5bee",
+      "size": 4883
+    },
+    {
       "path": "os/boot.lua",
-      "sha1": "2c3c78ca865ff45e91a49522fb2500fdc237d96f",
-      "size": 5001
+      "sha1": "0c38f9c6955a81e6fb0bfb68885f718529f9de7b",
+      "size": 5432
     },
     {
       "path": "os/demos/cubo.lua",
@@ -341,6 +346,11 @@
       "size": 23105
     },
     {
+      "path": "os/lib/turtlex.lua",
+      "sha1": "7fa9816a427764eb33b846ecbbdcf1c188f09291",
+      "size": 16159
+    },
+    {
       "path": "os/lib/update.lua",
       "sha1": "72822ffc82a6c3d7c99f5dbce881ca433e5df2eb",
       "size": 7268
@@ -478,6 +488,11 @@
     {
       "path": "os/share/icons/terminal.nfp",
       "sha1": "3da174369a757562b6655a8acbf26e5836d237e8",
+      "size": 156
+    },
+    {
+      "path": "os/share/icons/turtle.nfp",
+      "sha1": "d0327a5d225e2c3f6cfebe26df7a9ce80452b795",
       "size": 156
     },
     {

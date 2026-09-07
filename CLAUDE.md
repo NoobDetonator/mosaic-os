@@ -386,6 +386,26 @@ Navegador (`os/apps/browser.lua`):
   **não anda enquanto o processo espera**. A primeira medição deu "0,000 s" e "5333 KB/s". Use
   `os.epoch("utc")`.
 
+### Turtle (`os/lib/turtlex.lua`, `os/apps/turtle.lua`)
+
+- **A posição vai para o disco A CADA PASSO**, não no fim da tarefa. É consequência direta do chunk
+  descarregado: a turtle não pausa, ela perde o estado e volta ao shell vazio. Um passo dado e não
+  gravado é uma turtle que renasce um bloco atrás de onde está — e o erro **acumula**.
+- **Não existe API de direção no CC.** O GPS diz *onde*, nunca *para onde se olha*. `turtlex.descobre()`
+  dá um passo, lê o GPS de novo, e a diferença revela a direção — depois **volta** para o lugar de origem.
+  Se houver bloco à frente ele tenta para trás com o sinal invertido, senão turtle encostada em parede
+  nunca se localizaria.
+- **Sem constelação de GPS não há coordenada nenhuma.** Nada no CC devolve posição do mundo sem 4 hosts
+  rodando `gps host`. Medido no servidor: não há. O caminho então é a âncora à mão (a pessoa lê o F3).
+- **`getEquippedLeft/Right` é 1.116 — proibido aqui.** Ferramenta se descobre por sonda: o motivo do
+  `dig` diz se falta ferramenta. Mas `dig` **quebra bloco**, então a sonda só roda quando o `inspect`
+  garante ar à frente, e devolve `nil` quando não dá. Melhor "não sei" que cavar a parede de alguém.
+- **Argumento é conferido ANTES do hardware.** `anda("diagonal")` num computador comum respondia "não sou
+  uma turtle", mandando quem lê investigar a coisa errada. Erro de digitação é erro de programação com ou
+  sem turtle.
+- **`getFuelLevel` devolve a string `"unlimited"`** quando o servidor desliga o consumo. Não é número, e
+  comparar com um limite derruba o serviço. `-1` é a convenção interna para "sem limite".
+
 ## Como testar
 
 - `node tools/lint.js` — sintaxe Lua 5.1 (luaparse) + grep de APIs proibidas. Rode antes de dizer que terminou.

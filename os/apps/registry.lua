@@ -30,6 +30,9 @@ registry.builtin = {
     -- 66 de largura NAO e' capricho: e' o que a linha inteira mede (marca, id, nome, tipo,
     -- versao, estado, combustivel). Abaixo de 64 o app corta para o layout curto e a versao
     -- e o combustivel somem - foi o que aconteceu quando isto estava em 52.
+    -- So' faz sentido numa turtle, mas fica na lista sempre: escondido, ninguem descobre que
+    -- existe, e aberto num computador comum ele diz isso em uma linha.
+    { id = "turtle", name = "Turtle", icon = "Tu", color = colors.brown, path = "/os/apps/turtle.lua", w = 39, h = 13 },
     { id = "cluster", name = "Cluster", icon = "Cl", color = colors.cyan, path = "/os/apps/cluster.lua", w = 66, h = 18 },
     { id = "reactor", name = "Reator", icon = "Re", color = colors.red, path = "/os/apps/reactor.lua" },
     { id = "pkg", name = "Atualizar OS", icon = "Up", color = colors.brown, path = "/os/apps/pkg.lua" },
