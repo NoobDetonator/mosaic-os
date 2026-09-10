@@ -37,7 +37,28 @@ const net = require('net');
 const http = require('http');
 const https = require('https');
 function ipPublico(ip) {
-  if (net.isIP(ip) === 6) return /^[23][0-9a-f]{3}:/i.test(ip) && !/^200[12]:/i.test(ip);
+  if (net.isIP(ip) === 6) {
+    // Unicast global e' 2000::/3, ou seja, o primeiro grupo entre 0x2000 e 0x3fff.
+    //
+    // O teste anterior era `/^[23][0-9a-f]{3}:/ && !/^200[12]:/`, e o segundo pedaco jogava
+    // fora TODO o 2001::/16 - que nao e' reservado, e' faixa normal onde mora muito da
+    // internet. Como o `lookupPublico` bloqueia o host quando QUALQUER endereco dele reprova,
+    // um site com IPv4 publico e IPv6 em 2001: ficava inalcancavel. Foi assim que o
+    // tweaked.cc (51.75.162.27 + 2001:41d0:...) parou de abrir no navegador.
+    //
+    // Reservado de verdade aqui dentro: 2001:0000::/32 (Teredo), 2001:db8::/32
+    // (documentacao) e 2002::/16 (6to4).
+    const g = ip.toLowerCase().split('%')[0].split(':');
+    const num = (h) => (h === '' || h === undefined ? 0 : parseInt(h, 16));
+    const g0 = num(g[0]);
+    if (!(g0 >= 0x2000 && g0 <= 0x3fff)) return false;
+    if (g0 === 0x2002) return false;
+    if (g0 === 0x2001) {
+      const g1 = num(g[1]);
+      if (g1 === 0x0000 || g1 === 0x0db8) return false;
+    }
+    return true;
+  }
   if (net.isIP(ip) !== 4) return false;
   const [a,b] = ip.split('.').map(Number);
   return !(a === 0 || a === 10 || a === 127 || a >= 224 ||

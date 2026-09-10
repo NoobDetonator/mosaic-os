@@ -1,69 +1,72 @@
 # Relay
 
-Ponte entre os computadores do Minecraft e o seu PC. Serve três coisas na mesma porta:
+A bridge between the in-game computers and your PC. It serves three things on the same port:
 
-- **dashboard web** em `http://localhost:8765/` — ver e controlar os computadores conectados
-- **API HTTP** em `/api/*` — o que o dashboard e o MCP consomem
-- **websocket** em `/ws/computer` — onde os computadores do jogo se conectam
+- **web dashboard** at `http://localhost:8765/` — watch and control the connected computers
+- **HTTP API** at `/api/*` — what the dashboard and the MCP server consume
+- **websocket** at `/ws/computer` — where the in-game computers connect
 
-## Testar sem o Minecraft, com som
+## Try it without Minecraft, with sound
 
-Se você só quer ouvir a coisa funcionando, não precisa de nada disto: um comando só arruma
-tudo (relay ligado, IP local liberado, alto-falante e monitores no computador) e abre um
-Mosaic de verdade para mexer.
+If you just want to hear the thing working, you need none of the setup below. One command arranges
+everything (relay up, local address unblocked, speaker and monitors attached) and opens a real
+Mosaic you can click around in:
 
 ```bash
 node tools/craftos.js live
 ```
 
-## Subir
+## Starting it
 
 ```bash
 cd relay && npm install
 node relay.js
 ```
 
-Ele gera um token em `relay/.token` na primeira execução e imprime os endereços que o computador
-do jogo pode usar. Variáveis: `PORT=9000` para trocar de porta, `TOKEN=segredo` para fixar o token.
+On first run it generates a token in `relay/.token` and prints the addresses the in-game computer
+can use. Environment variables: `PORT=9000` to change the port, `TOKEN=secret` to pin the token.
 
-## Ligar o computador do jogo
+## Connecting the in-game computer
 
-No Mosaic OS: menu `M` → **Config** → preencher a URL e o token → **Testar** → **Salvar relay** → `reboot`.
-O `boot.lua` só sobe o daemon do relay se `mosaic.relay.url` já estiver definido no boot.
+In Mosaic OS: `M` menu → **Config** → fill in the URL and token → **Testar** → **Salvar relay** →
+`reboot`. `boot.lua` only starts the relay daemon if `mosaic.relay.url` is already set at boot.
 
-Pelo terminal dá na mesma:
+From the terminal it's the same:
 
 ```
-set mosaic.relay.url ws://SEU_IP:8765/ws/computer
-set mosaic.relay.token o-token-do-arquivo
+set mosaic.relay.url ws://YOUR_IP:8765/ws/computer
+set mosaic.relay.token the-token-from-the-file
 reboot
 ```
 
-O botão **Testar** troca `ws://` por `http://` e bate em `/api/ping`. Isso testa a rede **sem** depender
-do websocket — se o Testar passa mas a conexão não sobe, o problema é o websocket especificamente.
+The **Testar** button swaps `ws://` for `http://` and hits `/api/ping`, then tries `/api/deps` with
+the token. That tests the network **without** depending on the websocket, and tells you which of
+the two failed — a valid connection with a bad token used to pass silently and only show up later
+as "remote control and music don't work, for no visible reason".
 
-### Qual IP usar
+### Which IP to use
 
-Quem faz a conexão é o computador do jogo, saindo **de dentro do servidor** até o seu PC. Então o IP
-tem que ser um que o *servidor* enxergue:
+The connection is made by the in-game computer, reaching out **from inside the server** to your PC.
+So the address has to be one the *server* can see:
 
-| situação | o que usar | funciona sem mexer na config? |
+| situation | what to use | works without config changes? |
 |---|---|---|
-| mundo local / servidor na mesma máquina | `ws://localhost:8765/ws/computer` | **não** — `127.*` é bloqueado |
-| servidor em outra máquina da mesma LAN | o IP LAN do seu PC (`192.168.x.x`) | **não** — faixa privada |
-| servidor remoto, com Radmin/Hamachi | o IP da VPN (`26.x.x.x` no Radmin, `25.x.x.x` no Hamachi) | **sim** |
-| servidor remoto sem VPN | porta liberada no roteador, ou um túnel (Cloudflare Tunnel, ngrok) | **sim** |
+| local world / server on the same machine | `ws://localhost:8765/ws/computer` | **no** — `127.*` is blocked |
+| server on another machine on your LAN | your PC's LAN IP (`192.168.x.x`) | **no** — private range |
+| remote server, with Radmin/Hamachi | the VPN IP (`26.x.x.x` on Radmin, `25.x.x.x` on Hamachi) | **yes** |
+| remote server without a VPN | a forwarded port, or a tunnel (Cloudflare Tunnel, ngrok) | **yes** |
 
-> **A armadilha que custa mais tempo.** O CC:Tweaked bloqueia faixas privadas por padrão — e isso
-> **inclui o `localhost`**: a regra `$private` cobre `127.0.0.0/8`, `10.*`, `172.16-31.*` e `192.168.*`.
-> Ou seja, testar em mundo local com o relay no mesmo PC **não funciona de fábrica**, mesmo sendo tudo
-> a mesma máquina. IPs de Radmin (`26.x`) e Hamachi (`25.x`) não caem nessa faixa, então passam.
+> **The trap that costs the most time.** CC:Tweaked blocks private ranges by default — and that
+> **includes `localhost`**: the `$private` rule covers `127.0.0.0/8`, `10.*`, `172.16-31.*` and
+> `192.168.*`. So testing in a local world with the relay on the same PC **does not work out of the
+> box**, even though everything is on one machine. Radmin (`26.x`) and Hamachi (`25.x`) addresses
+> fall outside that range, so they pass.
 
-#### Liberando um endereço local
+#### Unblocking a local address
 
-O arquivo fica em `serverconfig/computercraft-server.toml` **dentro da pasta do mundo** (vale para
-mundo local também, desde a 1.13). As regras são testadas **na ordem**, e a primeira que casa vence —
-então basta pôr uma permissão para o seu endereço *antes* da negação, sem abrir o resto:
+The file is at `serverconfig/computercraft-server.toml` **inside the world folder** (that's true for
+single-player too, since 1.13). Rules are tested **in order** and the first match wins — so an
+allow rule for your address placed *before* the deny is enough, without opening everything else:
 
 ```toml
 [[http.rules]]
@@ -75,67 +78,83 @@ então basta pôr uma permissão para o seu endereço *antes* da negação, sem 
     action = "deny"
 ```
 
-Troque `127.0.0.1` pelo IP do seu PC se o servidor estiver em outra máquina da LAN. Salve e reinicie o
-Minecraft (ou o servidor) — a config é lida na entrada do mundo.
+Replace `127.0.0.1` with your PC's IP if the server runs on another LAN machine. Save and restart
+Minecraft (or the server) — the config is read when the world loads.
 
-O servidor também precisa de `[http] enabled = true` e `websocket_enabled = true` no
-`computercraft-server.toml`, e a porta do relay liberada no firewall do seu PC (entrada, TCP).
+The server also needs `[http] enabled = true` and `websocket_enabled = true` in
+`computercraft-server.toml`, and the relay's port open in your PC's firewall (inbound, TCP).
 
-## Porta de entrada para a internet
+## The gateway to the internet
 
-O relay também é o caminho do computador do jogo para a web. Ele busca, limpa e devolve
-pronto — no CC não cabe interpretar HTML (51 colunas, Lua 5.1, teto de 7 segundos por passo).
+The relay is also the in-game computer's route to the web. It fetches, cleans and returns ready-made
+content — interpreting HTML doesn't fit inside CC (51 columns, Lua 5.1, a 7-second ceiling per step).
 
-| rota | o que faz |
+| route | what it does |
 |---|---|
-| `GET /api/web?url=` | busca a página e devolve blocos: título, parágrafo, lista, código, imagem |
-| `GET /api/busca?q=` | busca no DuckDuckGo e devolve os resultados no mesmo formato |
-| `GET /api/musica?q=` | resolve link **ou nome**, converte para DFPWM e devolve `{id, titulo, duracao, blocos}` |
-| `GET /api/audio/<id>/<n>` | o enésimo pedaço de 16 KiB de áudio, cru |
-| `GET /api/deps` | diz o que está instalado nesta máquina |
+| `GET /api/web?url=` | fetches the page and returns blocks: heading, paragraph, list, code, image |
+| `GET /api/busca?q=` | searches DuckDuckGo and returns results in the same format |
+| `GET /api/musica?q=` | resolves a link **or a name**, converts to DFPWM, returns `{id, titulo, duracao, blocos}` |
+| `GET /api/audio/<id>/<n>` | the nth 16 KiB chunk of raw audio |
+| `GET /api/deps` | reports what's installed on this machine |
 
-Todas exigem o token, menos `/api/ping`.
+All require the token except `/api/ping`.
 
-O texto volta **sem acento** de propósito: o terminal do CC desenha byte a byte, sem UTF-8, e
-sem isso toda página em português vira lixo na tela.
+Text comes back **without accents** on purpose: the CC terminal draws byte by byte, with no UTF-8,
+and without stripping them every Portuguese page turns to garbage on screen.
 
-**Endereço de rede local é bloqueado.** O relay roda na sua máquina; um computador do servidor
-pedindo `192.168.0.1` faria dele um túnel para a sua rede de casa. O bloqueio é por IP
-literal — um *nome* que resolve para endereço privado passa, então não exponha o relay a
-quem você não conhece.
+Finding the article is not just reading `<main>`: Wikipedia puts its 143-language selector inside
+`<main>`, so the rule is "the largest candidate by text wins — unless a candidate **inside** it
+keeps 60% of that text, in which case it only lost the frame".
 
-### Música precisa de dois programas
+**Local network addresses are blocked.** The relay runs on your machine; a computer on the server
+asking for `192.168.0.1` would turn it into a tunnel into your home network. The block is by
+literal IP — a *hostname* that resolves to a private address still passes, so don't expose the
+relay to people you don't know.
 
-`yt-dlp` (baixa) e `ffmpeg` 5.1+ (converte para DFPWM). Sem eles o resto do relay continua
-funcionando normalmente, e `/api/musica` diz qual está faltando.
+### Music needs two programs
+
+`yt-dlp` (downloads) and `ffmpeg` 5.1+ (converts to DFPWM). Without them the rest of the relay keeps
+working normally, and `/api/musica` says which one is missing.
 
 ```bash
 winget install yt-dlp.yt-dlp
 winget install Gyan.FFmpeg
 ```
 
-O áudio convertido fica em `relay/cache/`, e é reaproveitado: a mesma música só é baixada uma
-vez. A busca por nome usa `ytsearch1:`, igual a um bot de música — você cola o link ou digita
-o nome.
+Converted audio is cached in `relay/cache/` and reused: the same song is only downloaded once.
+Searching by name uses `ytsearch1:`, like a music bot — you either paste the link or type the name.
 
-## MCP: deixar o Claude Code operar o computador
+**Preparing a song takes 20–60 seconds, and a CC:T HTTP request dies at 30.** So `/api/musica` does
+not wait: it starts the job, answers `{estado, espere=true}` immediately, and the client asks again
+until it's ready.
+
+Two things learned the hard way, both encoded in `musica.js`:
+
+- **YouTube hides the audio URL behind a JavaScript challenge.** Without a JS runtime the download
+  fails with HTTP 403 while search still works — a very misleading trail. The relay is already Node,
+  so it passes `process.execPath` to yt-dlp as the runtime: nothing extra to install.
+- **Piping `yt-dlp -o -` into ffmpeg does not work.** The stream comes out fragmented and ffmpeg
+  can't read that from a non-seekable pipe ("Invalid data found when processing input"). An
+  intermediate file is written and deleted.
+
+## MCP: letting Claude Code drive the computer
 
 ```bash
-claude mcp add --scope user mosaic -- node /caminho/para/relay/mcp.js
+claude mcp add --scope user mosaic -- node /path/to/relay/mcp.js
 ```
 
-É **stdio**, não HTTP — não adianta apontar um MCP HTTP para `http://localhost:8765/mcp`, essa rota não
-existe (o `relay.js` devolve 404 para tudo fora de `/api/` e `/`). O `mcp.js` lê o relay em
-`MOSAIC_RELAY` (padrão `http://localhost:8765`) e o token em `MOSAIC_TOKEN` (padrão: `relay/.token`).
+It's **stdio**, not HTTP — pointing an HTTP MCP client at `http://localhost:8765/mcp` won't work,
+that route doesn't exist (`relay.js` returns 404 for anything outside `/api/` and `/`). `mcp.js`
+reads the relay address from `MOSAIC_RELAY` (default `http://localhost:8765`) and the token from
+`MOSAIC_TOKEN` (default: `relay/.token`).
 
-Ferramentas expostas: `list_computers`, `computer_info`, `exec_lua`, `run_shell`, `read_file`,
+Exposed tools: `list_computers`, `computer_info`, `exec_lua`, `run_shell`, `read_file`,
 `write_file`, `list_files`, `delete_file`, `screenshot`, `launch_app`, `list_processes`,
 `kill_process`, `notify`, `send_input`.
 
-## Testar sem o jogo
+## Testing without the game
 
 ```bash
-node tools/test-relay.js
+node tools/test-relay.js      # starts the relay, fakes a computer connecting, exercises the API
+node tools/test-gateway.js    # HTML→blocks, address filter, audio chunking — no network needed
 ```
-
-Sobe o relay numa porta própria, simula um computador conectando, exercita a API e fecha.

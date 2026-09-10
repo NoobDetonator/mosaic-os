@@ -9,8 +9,8 @@
     },
     {
       "path": "os/apps/calc.lua",
-      "sha1": "f28711270beed3105a05b7586889672de7bd4581",
-      "size": 31631
+      "sha1": "716b55ee3a1922e61c560418b6ae1482c0258dd8",
+      "size": 31635
     },
     {
       "path": "os/apps/clock.lua",
@@ -130,8 +130,8 @@
     },
     {
       "path": "os/demos/modelo.lua",
-      "sha1": "a5d9a43cb9d45fc886362c29f2e761806ee4fd41",
-      "size": 9828,
+      "sha1": "66264785909f9c19c3649cf1d1750a6d47fd177e",
+      "size": 9832,
       "optional": true
     },
     {

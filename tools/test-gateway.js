@@ -113,6 +113,19 @@ for (const bom of ['http://exemplo.com/', 'https://a.b.c/x?y=1', 'http://172.32.
   check(gateway.urlPermitida(bom).ok, 'devia permitir ' + bom);
 }
 
+// IPv6, que e' onde o filtro ja errou: bloquear demais quebra o navegador em silencio.
+// O teste antigo rejeitava TODO o 2001::/16, que nao e' reservado - e' faixa normal. Como o
+// host e' bloqueado quando QUALQUER endereco dele reprova, um site com IPv4 publico e IPv6
+// em 2001: ficava inalcancavel (foi o caso do tweaked.cc).
+for (const mau6 of ['http://[::1]/', 'http://[fd00::1]/', 'http://[2001:db8::1]/',
+  'http://[2001::1]/', 'http://[2002::1]/', 'http://[fe80::1]/']) {
+  check(!gateway.urlPermitida(mau6).ok, 'devia bloquear IPv6 ' + mau6);
+}
+for (const bom6 of ['http://[2001:41d0:801:2000::4ffc]/', 'http://[2606:4700::1111]/',
+  'http://[2800:3f0:4000::1]/']) {
+  check(gateway.urlPermitida(bom6).ok, 'devia permitir IPv6 global ' + bom6);
+}
+
 // ---------------------------------------------------------------- pedacos de audio
 // A conta que faz o som nao estalar: DFPWM gasta 1 bit por amostra, o playAudio do CC aceita
 // no maximo 128*1024 amostras, logo o pedaco e' de 16*1024 bytes. Se este teste quebrar, ou

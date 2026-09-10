@@ -21,6 +21,10 @@ Isso significa CC:Tweaked ~1.95–1.101 e **Lua 5.1 (Cobalt)**. Advanced Periphe
   `"energyDetector"`, `"meBridge"`, `"rsBridge"`, `"inventoryManager"`, `"redstoneIntegrator"`, `"blockReader"`,
   `"geoScanner"`, `"NBTStorage"`, `"colonyIntegrator"`, `"arController"`. **Nunca** snake_case (`chat_box`).
 - Nada de dependências externas (Basalt, Pine3D). `ui.lua` é o toolkit da casa.
+- **Escreva arquivo Lua com a ferramenta Write, nunca com `cat <<EOF`.** O heredoc do bash come a
+  barra invertida: já aconteceu três vezes — `"[/\:*?]"` virou o escape inválido `\:`, e um `\n`
+  dentro de string virou quebra de linha de verdade. E o **`tools/lint.js` não pega escape inválido
+  de string**: o `luaparse` aceita, e o erro só aparece no CraftOS-PC. Vale melhorar o lint um dia.
 - Nomes de código em **inglês**; textos de interface e docs em **PT-BR**.
 - Cada módulo é `require`-ável (`return M`). Apps em `os/apps/*.lua` exportam `main(...)` **ou** são scripts comuns.
 - Processos são coroutines cooperativas: **todo loop precisa fazer yield** (`os.pullEvent`, `sleep`) senão o computador trava (CC aborta em ~7 s).
@@ -34,15 +38,24 @@ os/kernel/proc.lua -> scheduler: spawn/launch/resume/kill/terminate/setFocus/rai
 os/kernel/wm.lua   -> canvas offscreen (window.create(root,1,1,W,H,false)), z-order, hitTest, drag/resize, taskbar, screenshot
 os/kernel/ui.lua   -> widgets (form/label/button/textbox/list/checkbox/dropdown/progress) + msgbox/confirm/prompt modais
 os/kernel/theme.lua-> cores nomeadas
-os/lib/*           -> audio (alto-falante, sons do sistema, fluxo DFPWM), chart, clip (recortar/colar),
-                      fileops (acoes + menus), fsx, hal (periféricos), httpx, icons (.nfp 12x12),
-                      log, pixel (teletext 2x3), powah, props, shortcut (.lnk), strutil, vector (rasterizador)
-os/net/*           -> relay.lua (websocket p/ relay Node), netd.lua (rednet entre computadores Mosaic)
-os/docs/*          -> guias em markdown simples lidos pelo app Ajuda (entram no manifest)
-os/apps/*          -> desktop, folder, launcher, registry, files, editor, netcenter, periph, taskman, settings, help, notes, calc,
-                      clock, remote, reactor, pkg, mirror
-relay/             -> relay.js (WS + HTTP API + dashboard), mcp.js (tools p/ Claude Code)
+os/lib/*           -> audio (alto-falante, sons, DFPWM), chart, clip, cluster (papel/grupo/tabela de nos),
+                      create, expr, fileops, fsx, geo + geo3d (Geo Scanner), hal (periféricos), httpx,
+                      icons (.nfp 12x12), log, mcmath, mesh + three + shade (3D), netx (rednet + assinatura),
+                      pixel (teletext 2x3), plot, powah, props, shortcut (.lnk), strutil,
+                      turtlex (turtle), update (sha1 + instalacao transacional), vector
+os/net/*           -> relay.lua (websocket p/ relay Node), netd.lua (rednet + cluster), musicd.lua (fila de musica)
+os/docs/*          -> manual em PT-BR lido pelo app Ajuda (entra no manifest)
+os/apps/*          -> desktop, folder, launcher, registry, files, editor, netcenter, periph, taskman, settings,
+                      help, notes, calc, clock, remote, reactor, pkg, mirror, music, browser, cluster, turtle, geo
+relay/             -> relay.js (WS + HTTP API + dashboard), gateway.js (web), musica.js (yt-dlp+ffmpeg),
+                      webdoc.js (HTML -> blocos), mcp.js (tools p/ Claude Code)
+docs/              -> documentacao de desenvolvedor, em INGLES (architecture, testing, cluster, 3d-performance)
 ```
+
+**Idioma:** código e comentários em PT-BR, identificadores em inglês. `os/docs/` (o manual do app
+Ajuda) em PT-BR, porque é produto. `README.md`, `relay/README.md` e `docs/*.md` em **inglês**, porque
+são a cara do repositório. Este arquivo fica em PT-BR: ele cita mensagem de erro e comentário do
+código, que continuam em português.
 
 Fatos do kernel que não são óbvios:
 - `Window.redraw()`/`restoreCursor()` não fazem nada em janela invisível → as janelas dos apps são copiadas
@@ -96,7 +109,7 @@ Fatos do kernel que não são óbvios:
   o nosso instalador é travado por sha1. Diferenças: saída em sub-pixel (102x57 em 51x19), z-buffer por ponto,
   cores pela paleta do Mosaic. `mesh.voxels` emite só a face que dá para fora — a esfera de 15 tem 1791 blocos
   e sai com 2124 triângulos em vez de 10746.
-- **Antes de mexer no 3D, rode `node tools/craftos.js bench`** e leia [docs/3d-medidas.md](docs/3d-medidas.md),
+- **Antes de mexer no 3D, rode `node tools/craftos.js bench`** e leia [docs/3d-performance.md](docs/3d-performance.md),
   onde cada otimização tem previsão, medida e veredito. Medido no CraftOS-PC: cubo 0,26 ms, círculo 15 maciço
   1,00 ms, esfera oca 15 (3.768 triângulos) 4,70 ms, `canvas:render` 0,48 ms, contra 50 ms de um tique.
   ~877 mil triângulos por segundo. O relatório sai em `/out/bench.txt` e uma cópia fica em `docs/bench-ultimo.txt`.
@@ -225,6 +238,18 @@ Fatos do kernel que não são óbvios:
   e `"fill" - 2` derruba o app. Use `tonumber(w.w) or padrao` em qualquer código que rode antes do primeiro layout.
 - **`x` não é chave de ancoragem.** Só `w`, `h`, `right`, `bottom`, `above` e `fillTo` são. `x = -20` não encosta
   nada na direita: desenha fora da tela.
+- **Widget escondido é `visible = false`, não `hidden`.** O `ui.lua` já respeita `visible ~= false` em
+  `draw`, `widgetAt`, `focusNext`, `contentHeight` e `pressMnemonic` — não invente uma segunda bandeira.
+- **Antes de encurtar nome numa barra de botões, tire o espaço ENTRE eles.** A barra de abas do reator
+  caía para os nomes curtos por **uma** coluna, e cada botão já tem folga interna.
+- **Cinza não pode ser cor de série num gráfico**: cinza é o vazio da barra, e a série some. Foi assim
+  que o bloco de carvão ficou invisível no painel do reator.
+- **Série perto do máximo desenhada com preenchimento vira um retângulo sólido** — bonito e mudo. Linha
+  diz mais que mancha quando o valor quase não varia.
+- **Barra 3D em fileira tem ângulo cego**: de perfil, as colunas se escondem umas atrás das outras. Em
+  círculo não há ângulo ruim.
+- **Lambert lava caixa alinhada aos eixos.** Cor por orientação da face (topo/lado/base), não por
+  direção de luz — vale para `mesh.voxels` e para qualquer gráfico de barras em 3D.
 - **O teste de fumaça de app olha a tela, não só se o processo morreu.** Com `holdOnError` o processo fica vivo
   mostrando o erro, então "não morreu" não prova nada.
 
@@ -362,7 +387,7 @@ Navegador (`os/apps/browser.lua`):
 
 ### Medido, não suposto (rede)
 
-- **SHA-1 em Lua dá conta do sistema inteiro.** O `PLANO-cluster.md` mandava comparar
+- **SHA-1 em Lua dá conta do sistema inteiro.** O plano do cluster mandava comparar
   **versão + tamanho** para espalhar software, supondo que hash de 95 arquivos seria lento demais.
   Medido no servidor (CC:T 1.101.3): **341 KB/s**, ou seja **1,8 s** de CPU para os 605 KB do sistema
   e **147 ms** no maior arquivo (`ui.lua`, 50 KB) — contra o teto de 7 s por resume. Folga de quatro
@@ -389,7 +414,7 @@ Navegador (`os/apps/browser.lua`):
 ### 3D dentro do jogo é ~40x mais lento que o bench
 
 - **Medido no servidor (CC:T 1.101.3, MC 1.16.5): ~21 mil triângulos/s.** 5.204 triângulos custaram
-  **247 ms** por quadro num canvas de 160x108 pontos. O bench de `docs/3d-medidas.md` diz ~877 mil/s —
+  **247 ms** por quadro num canvas de 160x108 pontos. O bench de `docs/3d-performance.md` diz ~877 mil/s —
   mas ele roda no **CraftOS-PC**, que é um processo nativo num PC, não Cobalt dentro de um servidor
   de Minecraft. **Não use aquele número para decidir o que cabe num app do jogo.**
 - Consequência prática: **~800 blocos de voxel (≈5 mil triângulos) é o teto do que ainda se mexe.**
@@ -462,6 +487,15 @@ Navegador (`os/apps/browser.lua`):
   - `boot` liga o OS e devolve a tela composta; `app <nome>` abre um app de `os/apps` e fotografa.
   - Como o relógio redesenha a cada segundo, a foto vem de dentro do OS (`mosaic.screenshotText`
     gravado em `/out`, via um app de autostart) e não do despejo do headless.
+- **O `craftos.js` monta `/os` da própria pasta do repositório** (`--mount-rw /os=<repo>/os`), então
+  tudo que o OS grava em `/os/var` cai **no repo** e sobrevive ao `resetComputer()`. O emulador em JS
+  mapeia `os/var` para o sandbox dele, que é apagado — foi por isso que os dois discordaram uma vez: no
+  emulador a área de trabalho vinha semeada e no CraftOS-PC vinha vazia, porque o `seeded.json` do repo
+  dizia "já semeei" e o `/home` tinha acabado de ser apagado. Hoje o `resetComputer()` limpa `os/var`.
+- **Contar operação no papel não substitui medir.** Previ 50% de ganho no descarte de face (deu 25%) e
+  metade do custo fixo em guardar canvas e quadro (deu 11%). Hipótese sem medida é palpite.
+- **Geometria de teste ruim reprova código bom.** O primeiro teste do corte no plano próximo usava uma
+  parede inclinada cuja parte visível projetava toda fora do canvas: falhava por geometria, não por bug.
 - **O emulador em JS engolia erro de script.** O `os.run` mandava a mensagem para o terminal
   *emulado* — invisível quando o script tinha redirecionado o terminal antes de estourar — e o shell
   saía com `host.exit(0)` cravado. Script que quebrava parecia sucesso. Hoje o código de saída vem do

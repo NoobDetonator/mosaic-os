@@ -134,7 +134,7 @@ local function desenhaMonitor()
 end
 
 -- Canvas e quadro guardados entre desenhos, refeitos so' quando a janela muda de tamanho
--- (recriar os dois todo quadro custa medidos 0,47 ms; ver docs/3d-medidas.md).
+-- (recriar os dois todo quadro custa medidos 0,47 ms; ver docs/3d-performance.md).
 local function prepara(t)
     local W, H = t.getSize()
     local cols, rows = W, H - 1

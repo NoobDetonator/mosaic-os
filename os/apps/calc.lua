@@ -271,7 +271,7 @@ local function montarMalha()
     -- todas alinhadas aos eixos, entao ha seis normais so', e uma rampa de quatro degraus
     -- joga as terracas em tons muito diferentes - a esfera vira listra dura. O topo/lado/base
     -- que o mesh.voxels ja pinta e' orientacao, nao direcao, e por isso nao cria assimetria
-    -- entre esquerda e direita. Ver docs/3d-medidas.md.
+    -- entre esquerda e direita. Ver docs/3d-performance.md.
     malha, cortadas = m, faltando
 end
 

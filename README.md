@@ -1,282 +1,316 @@
 # Mosaic OS
 
-Sistema operacional com janelas para [CC:Tweaked](https://tweaked.cc), escrito em Lua 5.1 puro —
-sem Basalt, sem Pine3D, sem nenhuma dependência externa. Alvo: **Minecraft 1.16.5 / All The Mods 6**
+A windowed operating system for [CC:Tweaked](https://tweaked.cc), written in plain Lua 5.1 — no
+Basalt, no Pine3D, no external dependencies at all. Target: **Minecraft 1.16.5 / All The Mods 6**
 (CC:Tweaked ~1.95–1.101, Advanced Peripherals 0.7.x).
 
-![versão](https://img.shields.io/badge/versão-0.2.0%20"Tessera"-blue)
+![version](https://img.shields.io/badge/version-0.2.0%20"Tessera"-blue)
 ![lua](https://img.shields.io/badge/Lua-5.1-000080)
-![testes](https://img.shields.io/badge/self--check-168%20checagens-008080)
+![tests](https://img.shields.io/badge/self--check-248%20checks-008080)
 
-![Área de trabalho](docs/img/desktop.png)
+> The system's interface and its built-in manual are in **Brazilian Portuguese**. This README and
+> everything under [`docs/`](docs) are in English. Code identifiers are English; code comments are
+> Portuguese.
 
-## Estado do projeto
+![Desktop](docs/img/desktop.png)
 
-**Tudo que está aqui foi desenvolvido e testado no [CraftOS-PC](https://www.craftos-pc.cc/), não
-dentro do Minecraft.** O CraftOS-PC é a implementação real do CC:Tweaked fora do jogo — ROM, shell,
-`edit`, `paint` e a API `window` de verdade — então ele pega bug de integração que um emulador
-caseiro não pegaria. Mas ele não é o jogo.
+## Project status
 
-O que isso significa na prática:
+**Everything here was built and tested in [CraftOS-PC](https://www.craftos-pc.cc/), not inside
+Minecraft.** CraftOS-PC is a real CC:Tweaked implementation outside the game — real ROM, shell,
+`edit`, `paint` and the real `window` API — so it catches integration bugs a homemade emulator
+would miss. But it is not the game.
 
-- **Pode haver problema dentro do Minecraft que aqui não aparece.** O computador do jogo é mais
-  lento, roda Cobalt em vez do Lua do CraftOS-PC, e divide tempo com o servidor.
-- **O CraftOS-PC 2.8+ traz uma ROM mais nova que a da 1.16.5** (Lua 5.2, CC:T 1.109+). Ele não
-  acusa uso de API nova demais — quem cuida disso é o `tools/lint.js`, que é a autoridade sobre
-  compatibilidade com o alvo.
-- **Periférico não dá para testar aqui.** Drive de disquete, chat box, player detector, ME bridge e
-  reator do Powah só se provam no jogo. O código deles existe e tem guarda contra ausência, mas
-  "não quebra sem o periférico" é diferente de "funciona com ele".
+What that means in practice:
 
-Nada disso é motivo para não usar — é motivo para reportar. Problema encontrado no jogo vira
-correção nas próximas atualizações, e o app **Atualizar OS** existe justamente para isso.
+- **There may be problems inside Minecraft that never show up here.** The in-game computer is
+  slower, runs Cobalt instead of CraftOS-PC's Lua, and shares time with the server. Measured: the
+  3D engine runs **40× slower in-game** than in the benchmark.
+- **CraftOS-PC 2.8+ ships a newer ROM than 1.16.5 does** (Lua 5.2, CC:T 1.109+). It will not flag
+  the use of too-new APIs — that job belongs to `tools/lint.js`, which is the authority on target
+  compatibility.
+- **Peripherals cannot be tested here.** Disk drives, chat boxes, player detectors, ME bridges and
+  the Powah reactor only prove themselves in-game. Their code exists and guards against absence,
+  but "doesn't break without the peripheral" is not the same as "works with it".
 
-## Instalação
+None of that is a reason not to use it — it's a reason to report. A problem found in-game becomes a
+fix in the next update, which is exactly what the **Atualizar OS** app is for.
 
-No computador do jogo (precisa ser **advanced computer** para mouse e cores, e a API `http`
-tem que estar habilitada no servidor):
+## Install
+
+On the in-game computer (it must be an **advanced computer** for mouse and colour, and the `http`
+API must be enabled on the server):
 
 ```
 wget run https://raw.githubusercontent.com/NoobDetonator/mosaic-os/master/install.lua
 reboot
 ```
 
-O instalador guarda o `/startup.lua` que já existia como `/startup.old.lua` antes de sobrescrever.
+The installer saves any pre-existing `/startup.lua` as `/startup.old.lua` before overwriting it.
 
-### Atualizar
+### Updating
 
-Pelo app **Atualizar OS** dentro do sistema, ou de novo pela linha de comando:
+Through the **Atualizar OS** app inside the system, or from the command line again:
 
 ```
 wget run https://raw.githubusercontent.com/NoobDetonator/mosaic-os/master/install.lua update
 ```
 
-Ambos comparam arquivo por arquivo e só baixam o que mudou.
+Both compare file by file and download only what changed. Updates are **transactional**: if a write
+fails halfway through, the original file comes back.
 
-### Se algo quebrar
+### If something breaks
 
-Crie o arquivo `/os/safemode` (`edit /os/safemode`, salve vazio) para o `startup.lua` pular o boot
-e te deixar no shell da ROM. Apague o arquivo para voltar ao normal.
+Create the file `/os/safemode` (`edit /os/safemode`, save it empty) to make `startup.lua` skip the
+boot and drop you in the ROM shell. Delete the file to go back to normal.
 
-## O que vem dentro
+## What's inside
 
-### Área de trabalho e arquivos
+### Desktop and files
 
-A área de trabalho **é uma pasta** (`/home/desktop`): o que está lá é o que aparece na tela.
-Atalho é um arquivo `.lnk` comum, então criar, renomear e apagar ícone é mexer em arquivo.
-Os programas moram na pasta Programas, que abre como janela de ícones.
+The desktop **is a folder** (`/home/desktop`): what lives there is what shows on screen. A shortcut
+is an ordinary `.lnk` file, so creating, renaming and deleting an icon is just touching files.
+Programs live in the Programs folder, which opens as an icon window.
 
-![Pasta Programas](docs/img/programas.png)
+![Programs folder](docs/img/programas.png)
 
-O gerenciador de arquivos tem barra lateral de Lugares e de Discos, com disquete aparecendo
-sozinho quando entra no drive. Recortar, copiar e colar são compartilhados entre janelas.
+The file manager has a sidebar of Places and Disks, with floppies appearing on their own when
+inserted. Cut, copy and paste are shared across windows.
 
-![Arquivos](docs/img/arquivos.png)
+![Files](docs/img/arquivos.png)
 
-### Calculadora
+### Calculator
 
-Cinco modos. O de contas tem analisador próprio — precedência de verdade, multiplicação implícita
-(`2pi raio`), fatorial, graus ou radianos e variáveis — com histórico navegável pela seta para cima
-e teclado de botões em F2.
+Five modes. The arithmetic mode has its own parser — real precedence, implicit multiplication
+(`2pi radius`), factorial, degrees or radians, and variables — with history you can walk with the
+up arrow, and a button keypad on F2.
 
-![Calculadora](docs/img/calc.png)
+![Calculator](docs/img/calc.png)
 
-Gráfico de função com eixos, marcações, escala automática, arrastar e aproximar:
+Function plotting with axes, ticks, automatic scaling, panning and zooming:
 
-![Gráfico](docs/img/calcgraf.png)
+![Plot](docs/img/calcgraf.png)
 
-Formas em bloco com a contagem e o desenho do que você vai construir — círculo, esfera, cúpula,
-cone, losango e mais, cheios ou ocos —, e a pré-visualização em 3D:
+Block shapes with the count and the drawing of what you're about to build — circle, sphere, dome,
+cone, diamond and more, solid or hollow — plus a 3D preview:
 
-![Blocos em 3D](docs/img/calc3d.png)
+![Blocks in 3D](docs/img/calc3d.png)
 
-E matemática do mod Create. As fórmulas são verdade por construção; os valores por bloco vivem numa
-tabela editável e **nascem marcados com `?`** até você conferir no jogo com os Óculos de Engenheiro:
+And Create mod maths. The formulas are correct by construction; the per-block values live in an
+editable table and **start marked with `?`** until you confirm them in-game with the Engineer's
+Goggles:
 
 ![Create](docs/img/calccreate.png)
 
 ### Kernel
 
-Scheduler de processos em coroutines cooperativas, gerenciador de janelas com z-order,
-arrastar/redimensionar e taskbar, e um toolkit de widgets próprio (`form`, `button`, `textbox`,
-`list`, `iconview`, `checkbox`, `dropdown`, `group`, `progress`, modais) com layout ancorado e
-navegação completa por teclado.
+A process scheduler built on cooperative coroutines, a window manager with z-order,
+drag/resize and a taskbar, and a widget toolkit of its own (`form`, `button`, `textbox`, `list`,
+`iconview`, `checkbox`, `dropdown`, `group`, `progress`, modals) with anchored layout and full
+keyboard navigation.
 
-### Bibliotecas
+See [docs/architecture.md](docs/architecture.md) for how the pieces fit together.
+
+### Libraries
 
 | | |
 |---|---|
-| `expr` | analisador de expressão (tokenizador + descendente recursivo) |
-| `plot` | gráfico de função com eixos e escala |
-| `mcmath` | formas em bloco, stacks e recipientes |
-| `create` | razão de engrenagem e stress do mod Create |
-| `mesh` / `three` | malha 3D, câmera e rasterizador por varredura com z-buffer |
-| `pixel` | canvas de sub-pixel (2x3 por célula) |
-| `vector` | rasterizador de vetor 2D |
-| `icons` | ícones `.nfp` de 12x12 |
-| `hal` | periféricos, com os nomes do Advanced Peripherals 0.7 |
-| `fsx`, `strutil`, `httpx`, `log` | arquivo, texto, HTTP e registro |
-| `shortcut`, `clip`, `props`, `fileops` | atalhos, área de transferência e operações de arquivo |
-| `chart`, `powah` | série temporal e reator do Powah |
+| `expr` | expression parser (tokeniser + recursive descent) |
+| `plot` | function plotting with axes and scaling |
+| `mcmath` | block shapes, stacks and containers |
+| `create` | Create mod gear ratios and stress |
+| `mesh` / `three` | 3D meshes, camera and a scanline rasteriser with z-buffer |
+| `pixel` | sub-pixel canvas (2×3 per cell) |
+| `vector` | 2D vector rasteriser |
+| `icons` | 12×12 `.nfp` icons |
+| `hal` | peripherals, using Advanced Peripherals 0.7 names |
+| `netx` / `cluster` | rednet request/reply, roles, groups and the node table |
+| `turtlex` | turtle capabilities, movement with a reason, position that survives |
+| `geo` / `geo3d` | Geo Scanner readings and the 3D chunk view |
+| `update` | SHA-1, transactional install and rollback |
+| `audio` | speakers, system sounds and DFPWM streaming |
+| `fsx`, `strutil`, `httpx`, `log` | files, text, HTTP and logging |
+| `shortcut`, `clip`, `props`, `fileops` | shortcuts, clipboard and file operations |
+| `chart`, `powah` | time series and the Powah reactor |
 
 ### 3D
 
-Motor próprio: malha com transformações encadeáveis, geradores sem arquivo (cubo, plano, grade,
-voxel), câmera com órbita e voo, corte no plano próximo, e rasterizador por varredura de linha com
-z-buffer, desenhando em sub-pixel. Escrito olhando a arquitetura do
-[Pine3D](https://github.com/Xella37/Pine3D), mas sem depender dele — o CLAUDE.md proíbe
-dependência externa, e o nosso instalador é travado por sha1.
+An engine of its own: meshes with chainable transforms, file-free generators (cube, plane, grid,
+voxels), orbit and free-flight cameras, near-plane clipping, and a scanline rasteriser with a
+z-buffer drawing into sub-pixels. Written by studying [Pine3D](https://github.com/Xella37/Pine3D)'s
+architecture without depending on it.
 
-~877 mil triângulos por segundo no CraftOS-PC. Cada otimização tem previsão, medida e veredito em
-[docs/3d-medidas.md](docs/3d-medidas.md) — inclusive as previsões minhas que a medida refutou.
+**~877k triangles/second in CraftOS-PC — but only ~21k/s in the actual game.** That 40× gap is the
+single most important number in this repository: the benchmark runs as a native process on a PC,
+not as Cobalt inside a Minecraft server. Every optimisation has a prediction, a measurement and a
+verdict in [docs/3d-performance.md](docs/3d-performance.md) — including the predictions of mine
+that the measurement refuted.
 
-**Modelo feito no Blender.** `node tools/obj.js modelo.obj` lê o `.obj` com o `.mtl` ao lado, casa
-a cor difusa de cada material com a paleta do Mosaic e grava a malha em `os/share/models/`. O
-arquivo é indexado, e não uma lista de triângulos prontos: a Suzanne tem 507 vértices para 968
-triângulos, e repetir cada vértice seis vezes custava 105 KB num computador que tem 1 MB de disco
-inteiro — indexada ela ocupa 33 KB e desenha em 3 ms.
+**Models made in Blender.** `node tools/obj.js model.obj` reads the `.obj` with its `.mtl`
+alongside, matches each material's diffuse colour to the Mosaic palette, and writes the mesh into
+`os/share/models/`. The file is indexed rather than a flat list of triangles: Suzanne has 507
+vertices for 968 triangles, and repeating each vertex six times cost 105 KB on a computer with 1 MB
+of disk in total — indexed she takes 33 KB and draws in 3 ms.
 
-![Visualizador de modelos](docs/img/modelo.png)
+![Model viewer](docs/img/modelo.png)
 
-**Modo arame**, com a linha cortada no retângulo antes do Bresenham — sem esse corte uma aresta com
-um vértice logo atrás da câmera projeta a milhões de pontos e trava o computador nos 7 segundos.
-Arame só se lê com pouco polígono: com 968 triângulos as arestas se encostam e vira uma mancha.
+**Wireframe mode**, with the line clipped to the rectangle before Bresenham runs — without that
+clip, an edge with a vertex just behind the camera projects to millions of points and freezes the
+computer on the 7-second abort. Wireframe only reads well with few polygons: at 968 triangles the
+edges touch and it turns into a smudge.
 
-![Modo arame](docs/img/arame.png)
+![Wireframe](docs/img/arame.png)
 
-**E sai da janelinha:** o visualizador joga o mesmo modelo num monitor. Medido no CraftOS-PC, um
-monitor 102x38 na escala 0,5 dá 204x114 pontos e custa 7 ms, contra 3 ms da janela.
+**And it leaves the little window:** the viewer throws the same model onto a monitor. Measured in
+CraftOS-PC, a 102×38 monitor at scale 0.5 gives 204×114 points and costs 7 ms, against 3 ms for the
+window.
 
-Três demos em [`os/demos/`](os/demos): cubo girando, terreno com câmera livre e o visualizador de
-modelos. Eles não aparecem no menu Iniciar nem na pasta Programas: abra o Arquivos, vá em
-`/os/demos` e mande Executar.
+Three demos in [`os/demos/`](os/demos): a spinning cube, terrain with a free camera, and the model
+viewer. They deliberately do not appear in the Start menu or the Programs folder: open Files, go to
+`/os/demos` and choose Run.
 
-### Rede
+### Sound and music
 
-`netd` para conversar com outros computadores Mosaic via rednet, e `relay` para se conectar por
-websocket a um servidor Node fora do jogo.
+System sounds (open, close, error, boot) and a music player with a queue that accepts a YouTube
+link **or just the song's name**. The queue lives in a service, not in the window: closing the
+player does not stop the music.
 
-**Relay (`relay/`)** — servidor Node opcional que roda no seu PC: dashboard web para ver e controlar
-os computadores do jogo, API HTTP, e um servidor MCP (`mcp.js`) para o Claude Code operar o
-computador in-game direto.
+Needs a speaker next to the computer, and the relay running on your PC with `yt-dlp` and `ffmpeg` —
+the in-game computer does not download video, it receives already-converted audio chunks.
 
-![Sobre](docs/img/sobre.png)
+![Music](docs/img/musica.png)
 
-### Som e música
+### Wall screens
 
-Sons de sistema (abrir, fechar, erro, boot) e um tocador de músicas com fila, que aceita link do
-YouTube **ou o nome da música**. A fila mora num serviço, não na janela: fechar o tocador não para
-a música.
+Any app can move to a monitor and take the whole wall: right-click its button in the taskbar. One
+computer serves several walls, instead of one computer per wall.
 
-Precisa de um alto-falante encostado no computador, e do relay ligado no seu PC com `yt-dlp` e
-`ffmpeg` — o computador do jogo não baixa vídeo, ele recebe pedaços de áudio já convertidos.
+The app re-lays itself out for the new size, a touch on the monitor becomes a click, and if someone
+breaks the block the app returns to the desktop instead of hanging.
 
-![Música](docs/img/musica.png)
+![Send to monitor](docs/img/monitor.png)
 
-### Telas de parede
+### Browser
 
-Qualquer app pode ir para um monitor e ocupar a parede inteira: botão direito no botão dele na
-barra de tarefas. Um computador passa a servir várias paredes, em vez de um computador por parede.
+Opens web pages inside the game. No images and no JavaScript, but it reads text, follows links and
+searches. Links become numbers, like in text browsers: type `7` and Enter.
 
-O app se re-ajusta sozinho ao tamanho novo, o toque no monitor vira clique, e se alguém quebrar o
-bloco ele volta para a área de trabalho em vez de travar.
+The relay is what reads the HTML and returns ready-made blocks (and strips accents, or the CC
+terminal draws garbage). Without the relay it still opens plain text files.
 
-![Enviar para monitor](docs/img/monitor.png)
+![Browser](docs/img/navegador.png)
 
-### Navegador
+![Search](docs/img/busca.png)
 
-Abre páginas da internet dentro do jogo. Sem imagem e sem JavaScript, mas lê texto, segue link e
-busca. Links viram números, como nos navegadores de texto: digite `7` e Enter.
+### Cluster: several computers as one system
 
-O relay é quem lê o HTML e devolve blocos prontos (e tira os acentos, senão o terminal do CC
-desenha lixo). Sem relay, ainda abre arquivo de texto puro.
+A CC computer is small — 1 MB of disk and a time budget the game cuts off at seven seconds.
+Changing language does not lift that: the limit belongs to the mod. The way to grow without
+depending on anything outside the game is **more computers**.
 
-![Navegador](docs/img/navegador.png)
+One of them is the master; the rest are nodes, organised into **groups** (`north-mine`, `farm`) so
+one fleet's orders don't land on another. The panel shows type, version, how long ago each one
+spoke, and turtle fuel — and **Update** makes a node (or a whole group) match the master, which is
+the only one that needs internet.
 
-![Busca](docs/img/busca.png)
+![Cluster panel](docs/img/cluster.png)
 
-### Cluster: vários computadores como um sistema só
+**Nodes speak first; the master never polls.** That isn't style: when nobody is nearby the chunk
+unloads and the computer **does not pause** — it loses everything and returns to an empty shell. A
+node that comes back simply resumes its heartbeat. For the same reason the master's table goes to
+disk, and a turtle's position is written **on every step**, not at the end of the task.
 
-Um computador do CC é pequeno — 1 MB de disco e um orçamento de tempo que o jogo corta em sete
-segundos. Trocar de linguagem não levanta isso: o limite é do mod. O jeito de crescer sem depender
-de nada fora do jogo é ter **mais computadores**.
+A turtle is a computer that walks: install Mosaic on it, equip a modem, and it joins the fleet.
 
-Um deles é o mestre; os outros são nós, organizados em **grupos** (`mina-norte`, `fazenda`) para
-que a ordem de um não caia na frota errada. O painel mostra tipo, versão, há quanto tempo cada um
-falou e o combustível das turtles — e **Atualizar** deixa um nó (ou o grupo inteiro) igual ao
-mestre, que é o único que precisa de internet.
+Protocol details are in [docs/cluster.md](docs/cluster.md).
 
-![Painel do cluster](docs/img/cluster.png)
+### Prospecting
 
-**O nó fala primeiro, o mestre não pergunta.** Isso não é estilo: quando ninguém está por perto o
-chunk descarrega e o computador **não pausa** — ele perde tudo e volta ao shell vazio. Quem renasce
-simplesmente volta a bater ponto. Pela mesma razão a lista do mestre vai para disco, e a posição de
-uma turtle é gravada **a cada passo**, não no fim da tarefa.
+Reads the Geo Scanner and answers three different questions: what exists in the chunk, what exists
+within a radius, and **where** — the last one in 3D, with the turtle inside the scene.
 
-Turtle é um computador que anda: instale o Mosaic nela, equipe um modem, e ela entra na frota.
+![Prospecting](docs/img/prospeccao.png)
 
-### Prospecção
+A detail that costs time to discover, and is therefore built into the app: **radius up to 8 is
+free**, above that the cost explodes — and the scanner starts with zero capacity. The app asks the
+scanner how far it can go without power, instead of offering a radius that would fail.
 
-Lê o Geo Scanner e responde três perguntas diferentes: o que existe no chunk, o que existe num raio,
-e **onde** — este último em 3D, com a turtle dentro da cena.
+### Networking
 
-![Prospecção](docs/img/prospeccao.png)
+`netd` talks to other Mosaic computers over rednet; `relay` connects by websocket to a Node server
+outside the game.
 
-Detalhe que custa tempo descobrir e por isso está no app: **raio até 8 é de graça**, acima disso o
-custo dispara — e o scanner nasce com capacidade zero. O app pergunta a ele até onde dá para ir sem
-energia, em vez de oferecer um raio que vai falhar.
+**Relay (`relay/`)** — an optional Node server running on your PC: a web dashboard to watch and
+control the in-game computers, an HTTP API, the gateway that fetches web pages and converts music,
+and an MCP server (`mcp.js`) that lets Claude Code drive the in-game computer directly. See
+[relay/README.md](relay/README.md).
 
-## Desenvolvimento
+![About](docs/img/sobre.png)
+
+## Development
 
 ```bash
 cd tools && npm install     # luaparse + fengari
-node tools/lint.js          # sintaxe Lua 5.1 + APIs novas demais para 1.16.5
-node tools/test.js          # self-check do kernel no emulador CC embutido
-node tools/icons.js         # regenera os icones (arte em texto dentro do script)
-node tools/manifest.js      # regenera o manifest.json usado pelo instalador
+node tools/lint.js          # Lua 5.1 syntax + APIs too new for 1.16.5
+node tools/test.js          # kernel self-check in the built-in CC emulator
+node tools/icons.js         # regenerate the icons (text art lives inside the script)
+node tools/manifest.js      # regenerate the manifest.json the installer uses
 
 cd relay && npm install && node relay.js   # http://localhost:8765
-node tools/test-relay.js                   # teste de integração do relay
+node tools/test-relay.js                   # relay integration test
+node tools/test-gateway.js                 # HTML→blocks, address filter, audio chunking
 ```
 
-Com o [CraftOS-PC](https://www.craftos-pc.cc/) instalado dá para rodar contra a implementação real
-do CC, sem abrir janela:
+With [CraftOS-PC](https://www.craftos-pc.cc/) installed you can run against the real CC
+implementation without opening a window:
 
 ```bash
-node tools/craftos.js test          # o mesmo self-check, na ROM verdadeira
-node tools/craftos.js boot          # liga o OS e mostra a tela
-node tools/craftos.js shot calc     # abre um app pelo registry e fotografa
-node tools/craftos.js bench         # mede compositor, ícone, vetor e quadro 3D
+node tools/craftos.js test          # both suites, on the real ROM
+node tools/craftos.js boot          # boot the OS and print the composed screen
+node tools/craftos.js shot calc     # open an app through the registry and photograph it
+node tools/craftos.js bench         # measure compositor, icons, vectors and a 3D frame
+node tools/craftos.js live          # a Mosaic you can actually use: sound, relay, monitors
 ```
 
-Os prints deste README saíram todos do `shot`. Ele tem cenários prontos (`programas`, `calc`,
-`calc3d`, `calcgraf`, `calccreate`, `about`, `startctx`) que clicam e digitam antes da foto —
-print de tela vazia não prova nada.
+Every screenshot in this README came from `shot`. It has ready-made scenarios that click and type
+before taking the picture — a photo of an empty screen proves nothing.
 
-As regras de código (o que é proibido usar por causa do Lua 5.1 e do CC:T antigo) e as armadilhas
-já encontradas estão em [CLAUDE.md](CLAUDE.md) — vale a leitura antes de mandar PR.
+[docs/testing.md](docs/testing.md) explains what each harness catches and, more importantly, what
+each one *cannot* catch.
 
-## Estrutura
+The coding rules (what's forbidden because of Lua 5.1 and old CC:T) and the traps already
+discovered live in [CLAUDE.md](CLAUDE.md), in Portuguese — worth reading before opening a PR.
+
+## Layout
 
 ```
-startup.lua          entrada, fica na raiz do computador
-install.lua          instalador/atualizador
-manifest.json        lista de arquivos + hashes (gerado)
-os/boot.lua          inicializa settings, wm, kernel e daemons
-os/kernel/           proc (scheduler), wm (janelas), ui (widgets), draw, theme, palette
-os/lib/              bibliotecas (ver a tabela acima)
-os/net/              relay (websocket), netd (rednet)
-os/apps/             aplicativos
-os/docs/             manual lido pelo app Ajuda dentro do sistema
-os/share/            ícones .nfp, desenhos vetoriais e modelos 3D
-relay/               servidor Node + dashboard + MCP
-tools/               lint, emulador, testes, bench, gerador de manifest
-docs/img/            prints usados neste README
+startup.lua          entry point, lives at the computer's root
+install.lua          installer / updater
+manifest.json        file list + hashes (generated)
+os/boot.lua          brings up settings, wm, kernel and daemons
+os/kernel/           proc (scheduler), wm (windows), ui (widgets), draw, theme, palette
+os/lib/              libraries (see the table above)
+os/net/              relay (websocket), netd (rednet), musicd (music queue)
+os/apps/             applications
+os/docs/             the manual the Ajuda app reads, in Portuguese
+os/share/            .nfp icons, vector drawings and 3D models
+relay/               Node server + dashboard + MCP
+tools/               lint, emulator, tests, bench, manifest generator
+docs/                developer documentation, in English
+docs/img/            screenshots used in this README
 ```
 
-## Manual
+## Documentation
 
-O manual completo está em [`os/docs/`](os/docs) e é lido pelo app **Ajuda** dentro do sistema:
+For developers, in English:
+
+- [Architecture](docs/architecture.md) — kernel, compositor, processes, widgets, libraries
+- [Testing](docs/testing.md) — the four harnesses and the blind spots of each
+- [Cluster](docs/cluster.md) — the rednet protocol, roles, groups and software distribution
+- [3D performance](docs/3d-performance.md) — every optimisation with prediction, measurement, verdict
+- [Relay](relay/README.md) — the Node server, its HTTP API and the music pipeline
+
+For users, in Portuguese, read inside the system by the **Ajuda** app — [`os/docs/`](os/docs):
 
 1. [Primeiros passos](os/docs/01-primeiros-passos.md)
 2. [Os aplicativos](os/docs/02-aplicativos.md)
@@ -287,7 +321,12 @@ O manual completo está em [`os/docs/`](os/docs) e é lido pelo app **Ajuda** de
 7. [Estado e limites](os/docs/07-estado-e-limites.md)
 8. [Três dimensões](os/docs/08-3d.md)
 9. [Reator](os/docs/09-reator.md)
+10. [Som e música](os/docs/10-som-e-musica.md)
+11. [Telas e monitores](os/docs/11-telas-e-monitores.md)
+12. [Navegador](os/docs/12-navegador.md)
+13. [Cluster](os/docs/13-cluster.md)
+14. [Prospecção](os/docs/14-prospeccao.md)
 
-## Licença
+## Licence
 
 [MIT](LICENSE).
