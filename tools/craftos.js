@@ -266,24 +266,47 @@ if (cmd === 'bench') {
 }
 
 if (cmd === 'test') {
-  resetComputer();
-  // Tempo folgado: aqui o relogio e' real, e os testes que esperam a batida de um servico
-  // (a musica) custam segundos de verdade, nao passos virtuais como no emulador.
-  const { out, status } = run([...mounts(true), '--script', path.join(ROOT, 'tools', 'test', 'run.lua')], 300000);
-  const result = out.replace(/\r/g, '').split('\n')
-    .map((l) => l.replace(/\s+$/, ''))
-    .filter((l) => /self-check:|^\s+- /.test(l));
-  // As linhas se repetem a cada quadro; ficamos com a ultima ocorrencia de cada uma.
-  const seen = new Set();
-  const unique = [];
-  for (const l of result.reverse()) if (!seen.has(l.trim())) { seen.add(l.trim()); unique.unshift(l.trim()); }
-  if (unique.length) { console.log(unique.join('\n')); process.exit(status || 0); }
-  // Sem a linha do self-check o teste abortou antes do fim (erro de sintaxe, arquivo que
-  // falta, computador travado). Isso NAO e' sucesso: sair com 0 aqui ja deixou passar um
-  // commit vermelho uma vez, porque o `&&` da linha de comando seguiu em frente.
-  console.log('(o teste nao chegou ao resultado; tela final:)');
-  console.log(lastScreen(out));
-  process.exit(1);
+  // DUAS suites, e as duas rodam sempre:
+  //   run.lua         o kernel, as libs e os apps abrindo
+  //   regression.lua  os casos que ja quebraram uma vez (sha1, atualizacao transacional)
+  //
+  // A regressao roda SO' aqui, e nao no emulador em JS: ela usa `assert` e desliga o
+  // computador no fim, e o serializador de JSON daquele emulador nao aguenta o `%d` do
+  // fengari. Ela ficou orfa por um tempo - nenhum comando a executava - justamente cobrindo
+  // a parte mais perigosa do OS, que e' a atualizacao que troca arquivo por baixo.
+  function suite(script, prazo) {
+    resetComputer();
+    const { out, status } = run([...mounts(true), '--script', path.join(ROOT, 'tools', 'test', script)], prazo);
+    const result = out.replace(/\r/g, '').split('\n')
+      .map((l) => l.replace(/\s+$/, ''))
+      .filter((l) => /self-check:|^\s+- /.test(l));
+    // As linhas se repetem a cada quadro; ficamos com a ultima ocorrencia de cada uma.
+    const seen = new Set();
+    let unique = [];
+    for (const l of result.reverse()) if (!seen.has(l.trim())) { seen.add(l.trim()); unique.unshift(l.trim()); }
+    // O headless despeja a tela a cada mudanca, entao a MESMA frase aparece meio digitada
+    // varias vezes - e tudo na MESMA linha de saida, nao em linhas separadas:
+    //   "Regression   Regression self-check:   Regression self-check: 26 ok, 0 falhas"
+    // Por isso nao adianta filtrar linha repetida: fica-se com a ultima ocorrencia completa
+    // dentro da linha.
+    const COMPLETA = /[A-Za-z]+ self-check: \d+ ok, \d+ falhas/g;
+    unique = unique.map((l) => {
+      const m = l.match(COMPLETA);
+      return m ? m[m.length - 1] : l;
+    });
+    if (unique.length) { console.log(unique.join('\n')); return status || 0; }
+    // Sem a linha do self-check o teste abortou antes do fim (erro de sintaxe, arquivo que
+    // falta, computador travado). Isso NAO e' sucesso: sair com 0 aqui ja deixou passar um
+    // commit vermelho uma vez, porque o `&&` da linha de comando seguiu em frente.
+    console.log(`(${script} nao chegou ao resultado; tela final:)`);
+    console.log(lastScreen(out));
+    return 1;
+  }
+  // Tempo folgado no run.lua: aqui o relogio e' real, e os testes que esperam a batida de um
+  // servico (a musica) custam segundos de verdade, nao passos virtuais como no emulador.
+  const a = suite('run.lua', 300000);
+  const b = suite('regression.lua', 120000);
+  process.exit(a || b);
 }
 
 // Liga o OS e tira um print PNG de verdade (pixels, fonte e cores do CraftOS-PC).
@@ -457,6 +480,21 @@ if (cmd === 'shot') {
                 'for ch in ("alto falante minecraft computercraft"):gmatch(".") do os.queueEvent("char", ch) end',
                 'os.queueEvent("key", keys.enter, false)',
                 'sleep(5)'],
+    // O painel do cluster com uma frota de mentira: levantar cinco computadores de verdade
+    // so' para tirar um print nao se paga, e o fake ja cobre o que a tela precisa desenhar
+    // (mais de um grupo, turtle com e sem combustivel, no fora do ar).
+    cluster: ['dofile("/test/fake-cluster.lua").instalar(mosaic)',
+                'local r = mosaic.require("apps.registry") r.open(r.byId("cluster"))',
+                'sleep(2.5)'],
+    // Prospeccao com o scanner falso, que devolve os nomes de bloco que sairam do servidor
+    // de verdade - inclusive os modados, que sao os que quebram classificacao ingenua.
+    geo: ['dofile("/test/fake-geo.lua").instalar()',
+                'local r = mosaic.require("apps.registry") r.open(r.byId("geo"))',
+                'sleep(1.5)',
+                // O app abre vazio de proposito (a varredura custa energia, entao ele
+                // espera voce pedir). Sem apertar Varrer, o print seria uma caixa cinza.
+                'os.queueEvent("key", keys.right, false) sleep(0.4)',
+                'os.queueEvent("key", keys.enter, false) sleep(2.5)'],
     // O tocador com uma fila de mentira. Sem isto o print seria uma janela vazia dizendo
     // "cole um link": o relay de verdade levaria 30 s e dependeria da internet.
     musica: ['local fp = dofile("/test/fake-periph.lua")',

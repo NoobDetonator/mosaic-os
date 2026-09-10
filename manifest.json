@@ -201,6 +201,16 @@
       "size": 2317
     },
     {
+      "path": "os/docs/13-cluster.md",
+      "sha1": "38c41428bb05f1fabc718475b838174c81fb4640",
+      "size": 4193
+    },
+    {
+      "path": "os/docs/14-prospeccao.md",
+      "sha1": "faa42ae6970dc7e64f9c78603345dc1507a1e467",
+      "size": 2393
+    },
+    {
       "path": "os/kernel/draw.lua",
       "sha1": "08578b66029c47eaeb57818153e258843d51bc8b",
       "size": 5452

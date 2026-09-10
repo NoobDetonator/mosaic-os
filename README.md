@@ -195,6 +195,37 @@ desenha lixo). Sem relay, ainda abre arquivo de texto puro.
 
 ![Busca](docs/img/busca.png)
 
+### Cluster: vários computadores como um sistema só
+
+Um computador do CC é pequeno — 1 MB de disco e um orçamento de tempo que o jogo corta em sete
+segundos. Trocar de linguagem não levanta isso: o limite é do mod. O jeito de crescer sem depender
+de nada fora do jogo é ter **mais computadores**.
+
+Um deles é o mestre; os outros são nós, organizados em **grupos** (`mina-norte`, `fazenda`) para
+que a ordem de um não caia na frota errada. O painel mostra tipo, versão, há quanto tempo cada um
+falou e o combustível das turtles — e **Atualizar** deixa um nó (ou o grupo inteiro) igual ao
+mestre, que é o único que precisa de internet.
+
+![Painel do cluster](docs/img/cluster.png)
+
+**O nó fala primeiro, o mestre não pergunta.** Isso não é estilo: quando ninguém está por perto o
+chunk descarrega e o computador **não pausa** — ele perde tudo e volta ao shell vazio. Quem renasce
+simplesmente volta a bater ponto. Pela mesma razão a lista do mestre vai para disco, e a posição de
+uma turtle é gravada **a cada passo**, não no fim da tarefa.
+
+Turtle é um computador que anda: instale o Mosaic nela, equipe um modem, e ela entra na frota.
+
+### Prospecção
+
+Lê o Geo Scanner e responde três perguntas diferentes: o que existe no chunk, o que existe num raio,
+e **onde** — este último em 3D, com a turtle dentro da cena.
+
+![Prospecção](docs/img/prospeccao.png)
+
+Detalhe que custa tempo descobrir e por isso está no app: **raio até 8 é de graça**, acima disso o
+custo dispara — e o scanner nasce com capacidade zero. O app pergunta a ele até onde dá para ir sem
+energia, em vez de oferecer um raio que vai falhar.
+
 ## Desenvolvimento
 
 ```bash

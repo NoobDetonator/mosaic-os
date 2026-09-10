@@ -103,10 +103,15 @@ if not parentShell then
     local script = host.opts.script
     -- --script aceita argumentos ("/test/debug.lua /os/apps/files.lua"); so o primeiro
     -- pedaco e' o caminho do arquivo.
-    if fs.exists(script:match("^%S+") or script) then shell.run(script) end
+    local ok = true
+    if fs.exists(script:match("^%S+") or script) then ok = shell.run(script) end
     -- se o script terminou, o computador "desliga" (headless)
     if host.opts.show then host.print(term.screenText()) end
-    host.exit(0)
+    -- O codigo de saida vinha CRAVADO em 0, e a mensagem de erro ficava presa no terminal
+    -- emulado - invisivel quando o script tinha redirecionado o terminal antes de estourar.
+    -- Script que quebrava parecia sucesso para quem chamava de fora.
+    if not ok then host.print("ERRO no script: " .. tostring(os.lastRunError)) end
+    host.exit(ok and 0 or 1)
 end
 
 print(os.version())

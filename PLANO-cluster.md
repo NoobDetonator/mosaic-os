@@ -199,3 +199,69 @@ de fumaça; nada de rede pode travar o OS; print depois de cada onda.
 Mineração e fila de trabalho (é a próxima empreitada, sobre esta base), eleição automática de
 mestre, criptografia do rednet, pathfinding, e qualquer coisa que dependa de mod de chunk
 loader.
+
+---
+
+# Estado em 10/09/2026
+
+`node tools/lint.js` limpo (71 arquivos), `node tools/test.js` com **245 checagens**, e
+`node tools/craftos.js test` com **248 + 26 da regressao**, 0 falhas nos dois.
+
+## Ondas 1 a 6: prontas
+
+**Onda 1 — a base.** `os/lib/netx.lua` com pedido/resposta correlacionado e o `askAll` que
+transmite e colhe dentro de um prazo so'. O `netcenter` e o `remote` passaram a usar, em vez
+de cada um ter a sua copia. E os campos de **senha e nome** entraram nas Configuracoes: eles
+nao existiam, apesar de a documentacao mandar preenche-los, e sem senha um no' recusa qualquer
+comando.
+
+**Onda 2 — papeis e grupos.** `mosaic.cluster.role`, `.group` e `.master`, com o no' empurrando
+batida de ponto e o mestre guardando a tabela em disco. Tipo do no' (computador, turtle,
+pocket) sai da deteccao, nao da configuracao.
+
+**Onda 3 — o painel.** `os/apps/cluster.lua`, agrupado por grupo, com acoes por no' **e por
+grupo**.
+
+**Onda 4 — espalhar, melhor do que estava planejado.** O plano dizia versao + tamanho, porque
+sha1 em Lua parecia lento demais. **Foi feito sha1 de verdade** (`os/lib/update.lua`), com
+aplicacao transacional: se a troca falhar no meio, o arquivo original volta. Minha aproximacao
+nao foi necessaria.
+
+**Onda 5 — a turtle.** `os/lib/turtlex.lua` com posicao gravada a cada passo, e o app de painel
+proprio, porque 39x13 nao comporta area de trabalho.
+
+**Onda 6 — fechamento.** Dois capitulos novos (`13-cluster.md`, `14-prospeccao.md`), README com
+os dois prints, e a regressao ligada num arreio.
+
+## Fora do plano, e valeu
+
+Prospeccao pelo Geo Scanner e o visualizador 3D do chunk (`lib/geo`, `lib/geo3d`,
+`apps/geo.lua`) - com a turtle aparecendo dentro da cena.
+
+## Tres coisas que o uso corrigiu
+
+**O 403 do YouTube nao era o `player_client`.** Era falta de interpretador de JavaScript: o
+YouTube esconde o endereco do audio atras de um desafio em JS. O conserto usa o proprio node do
+relay como runtime, entao nao ha nada a instalar.
+
+**O 3D no jogo e' 40x mais lento que o bench.** 5204 triangulos a 247 ms por quadro, ~21 mil
+triangulos/s contra os 877 mil/s do CraftOS-PC. O numero do bench nao serve para decidir o que
+cabe num app do jogo, e agora isso esta no CLAUDE.md.
+
+**A senha do rednet passou a assinar** em vez de viajar na mensagem.
+
+## Armadilhas do arreio, encontradas ao fechar a onda 6
+
+- **O emulador em JS engolia erro de script**: `os.run` mandava a mensagem para o terminal
+  EMULADO (invisivel se o script tinha redirecionado o terminal) e o shell saia com `host.exit(0)`
+  cravado. Script que estourava parecia sucesso. Agora o codigo de saida vem do resultado e a
+  mensagem sobe para quem chamou - e foi isso que revelou por que a regressao nao rodava la'.
+- **A regressao nao roda no emulador em JS**: o serializador de JSON dele usa `%d`, que o
+  fengari (Lua 5.3) recusa para float. O CC do jogo (5.1) aceita calado. Ela roda no
+  `craftos.js test`, que tem ROM de verdade.
+- **Suite orfa e' suite que nao existe.** A regressao ficou um tempo sem nenhum comando que a
+  executasse, cobrindo justamente a atualizacao que troca arquivo do OS por baixo.
+
+## Falta
+
+A fila de trabalho e a mineracao de verdade - a empreitada seguinte, sobre esta base.

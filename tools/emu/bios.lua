@@ -379,7 +379,14 @@ function os.run(env, path, ...)
     local fn, err = loadfile(path, "t", env)
     if not fn then printError(err) return false end
     local ok, e = pcall(fn, ...)
-    if not ok then if e ~= nil and e ~= "" then printError(e) end return false end
+    if not ok then
+        -- Guarda a mensagem para quem chamou poder relatar. O printError vai para o terminal
+        -- EMULADO, e um script que redirecionou o terminal antes de estourar levava o proprio
+        -- erro junto: a tela final saia em branco e o emulador dizia que deu tudo certo.
+        os.lastRunError = e
+        if e ~= nil and e ~= "" then printError(e) end
+        return false
+    end
     return true
 end
 function sleep(t)

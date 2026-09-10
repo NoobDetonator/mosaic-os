@@ -453,10 +453,19 @@ Navegador (`os/apps/browser.lua`):
 - `node tools/craftos.js <test|boot|app <nome>|exec "<lua>"|run <arquivo>>` — roda no **CraftOS-PC**
   instalado na máquina (implementação real do CC: ROM, shell, `edit`, `paint` e API `window` de verdade).
   Acha o executável sozinho no Windows, ou use a variável `CRAFTOS`.
-  - `test` roda o mesmo `tools/test/run.lua` do emulador, mas contra a ROM verdadeira;
+  - `test` roda **duas** suítes contra a ROM verdadeira: `tools/test/run.lua` (o mesmo do emulador)
+    e `tools/test/regression.lua` (os casos que já quebraram uma vez: sha1, atualização transacional).
+    A regressão **só roda aqui** — o serializador de JSON do emulador em JS usa `string.format("%d")`,
+    que o fengari (Lua 5.3) recusa para float e o CC do jogo (5.1) aceita calado. Ela ficou órfã por
+    um tempo, sem nenhum comando que a executasse, cobrindo justamente a parte que troca arquivo do
+    OS por baixo. **Suíte que ninguém roda é suíte que não existe.**
   - `boot` liga o OS e devolve a tela composta; `app <nome>` abre um app de `os/apps` e fotografa.
   - Como o relógio redesenha a cada segundo, a foto vem de dentro do OS (`mosaic.screenshotText`
     gravado em `/out`, via um app de autostart) e não do despejo do headless.
+- **O emulador em JS engolia erro de script.** O `os.run` mandava a mensagem para o terminal
+  *emulado* — invisível quando o script tinha redirecionado o terminal antes de estourar — e o shell
+  saía com `host.exit(0)` cravado. Script que quebrava parecia sucesso. Hoje o código de saída vem do
+  resultado e a mensagem sobe para quem chamou. Se um `--script` seu sair calado, é isso que consertar.
 - **Cuidado com a versão do CraftOS-PC**: da 2.8 em diante ele traz uma ROM mais nova que a do alvo
   (Lua 5.2, CC:T 1.109+). Ele pega bugs de integração, mas **não** acusa API nova demais nem sintaxe
   de 5.2 — isso é papel do `tools/lint.js`, que continua sendo a autoridade. Para testar na ROM exata
