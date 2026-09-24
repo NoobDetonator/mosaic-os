@@ -94,8 +94,8 @@
     },
     {
       "path": "os/apps/registry.lua",
-      "sha1": "f4125a1350ef3603c7c823067ff95f6f9e4a9a81",
-      "size": 10512
+      "sha1": "f41a25b0a7a4de05e14b747d054c9932af901820",
+      "size": 10636
     },
     {
       "path": "os/apps/remote.lua",
@@ -106,6 +106,11 @@
       "path": "os/apps/settings.lua",
       "sha1": "82b877084e160b5eaac9af2b1a38c36fd6dbef76",
       "size": 12035
+    },
+    {
+      "path": "os/apps/storage.lua",
+      "sha1": "6c6b69a7da7b611f9e16580c437583ad5c96e617",
+      "size": 15127
     },
     {
       "path": "os/apps/taskman.lua",
@@ -119,8 +124,8 @@
     },
     {
       "path": "os/boot.lua",
-      "sha1": "0c38f9c6955a81e6fb0bfb68885f718529f9de7b",
-      "size": 5432
+      "sha1": "900afed17c4ff67382aed77c4c80d06050c2d363",
+      "size": 5559
     },
     {
       "path": "os/demos/cubo.lua",
@@ -147,8 +152,8 @@
     },
     {
       "path": "os/docs/02-aplicativos.md",
-      "sha1": "da3468365e850367f1de8581d1c79b8c9fce161c",
-      "size": 2611
+      "sha1": "71ccf8109fe5b5855e0ec9a9c59e8d7183c02c8a",
+      "size": 2850
     },
     {
       "path": "os/docs/03-rede-e-relay.md",
@@ -209,6 +214,11 @@
       "path": "os/docs/14-prospeccao.md",
       "sha1": "faa42ae6970dc7e64f9c78603345dc1507a1e467",
       "size": 2393
+    },
+    {
+      "path": "os/docs/15-armazem.md",
+      "sha1": "11d02755b9a65bc152e2e13fc38304a9fcf0ba97",
+      "size": 2840
     },
     {
       "path": "os/kernel/draw.lua",
@@ -361,6 +371,11 @@
       "size": 4391
     },
     {
+      "path": "os/lib/storage.lua",
+      "sha1": "203538df42b964a47b18a1078702f12e88c04210",
+      "size": 18057
+    },
+    {
       "path": "os/lib/strutil.lua",
       "sha1": "db9e91b0458ba969b1ee2baa677957a67d1102fb",
       "size": 3673
@@ -399,6 +414,11 @@
       "path": "os/net/relay.lua",
       "sha1": "eb6c661f55b5ada70665a64fb08321ae9da58d32",
       "size": 10990
+    },
+    {
+      "path": "os/net/storaged.lua",
+      "sha1": "25f1d75acb680a970d1571b26920abe7632c97f3",
+      "size": 4830
     },
     {
       "path": "os/share/icons/app.nfp",

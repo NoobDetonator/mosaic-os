@@ -38,6 +38,7 @@ registry.builtin = {
     { id = "geo", name = "Prospeccao", icon = "Ge", color = colors.lime, path = "/os/apps/geo.lua", w = 56, h = 18 },
     { id = "cluster", name = "Cluster", icon = "Cl", color = colors.cyan, path = "/os/apps/cluster.lua", w = 66, h = 18 },
     { id = "reactor", name = "Reator", icon = "Re", color = colors.red, path = "/os/apps/reactor.lua" },
+    { id = "storage", name = "Armazem", icon = "Ar", color = colors.green, path = "/os/apps/storage.lua", w = 49, h = 16 },
     { id = "pkg", name = "Atualizar OS", icon = "Up", color = colors.brown, path = "/os/apps/pkg.lua" },
     { id = "paint", name = "Paint", icon = "Pt", color = colors.pink, path = "/rom/programs/fun/advanced/paint.lua", args = { "/home/desenho.nfp" } },
     { id = "lua", name = "Lua REPL", icon = "Lu", color = colors.lightGray, path = "/rom/programs/lua.lua" },
