@@ -517,6 +517,12 @@ if (cmd === 'shot') {
                 'sleep(1)',
                 'for _ = 1, 3 do os.queueEvent("mosaic:music_cmd", "add", "faixa") sleep(1.2) end',
                 'sleep(1.5)'],
+    // Inventarios falsos para conferir a densidade e a hierarquia visual do Armazem.
+    storage: ['dofile("/test/fake-storage-demo.lua").instalar()',
+              'os.queueEvent("mosaic:storage_cmd", { action = "set_role", name = "minecraft:chest_input", role = "input" })',
+              'os.queueEvent("mosaic:storage_cmd", { action = "set_role", name = "minecraft:chest_output", role = "output" })',
+              'local r = mosaic.require("apps.registry") r.open(r.byId("storage"))',
+              'sleep(2)'],
     // O painel do reator com um reator de mentira: o de verdade so' existe no jogo.
     // `janela` e' o tamanho, para conferir o mesmo painel em tela de monitor.
     reator: ['dofile("/out/fake-reactor.lua").instalar()',

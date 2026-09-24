@@ -187,7 +187,7 @@ check(answer == true, "confirm nao devolveu true (" .. tostring(answer) .. ")")
 check(d.dead == true, "processo do dialogo nao terminou")
 
 -- 12. Todos os apps abrem sem quebrar
-local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman", "reactor", "folder", "music", "browser", "cluster", "turtle", "geo" }
+local apps = { "files", "settings", "periph", "notes", "calc", "clock", "help", "pkg", "netcenter", "taskman", "reactor", "folder", "music", "browser", "cluster", "turtle", "geo", "storage" }
 for _, name in ipairs(apps) do
     local path = "/os/apps/" .. name .. ".lua"
     local ap = proc.launch(path, {}, { title = name, x = 2, y = 2, w = wm.W - 4, h = wm.H - 5 })
@@ -835,6 +835,25 @@ pump() pump()
 check(mosaic.musicStatus().erro ~= nil, "sem relay, o servico deveria reclamar")
 
 proc.kill(md) pump()
+
+-- 23. Armazem: motor com baus simulados e servico sem inventario real.
+dofile("/test/storage.lua")(check)
+dofile("/test/fake-storage-demo.lua").instalar()
+local sd = proc.daemon("storaged", "/os/net/storaged.lua")
+pump()
+check(not sd.dead, "storaged morreu ao iniciar")
+check(type(mosaic.storageStatus) == "function", "storaged nao publicou storageStatus")
+os.queueEvent("mosaic:storage_cmd", { action = "set_role", name = "minecraft:chest_input", role = "input" })
+os.queueEvent("mosaic:storage_cmd", { action = "set_role", name = "minecraft:chest_output", role = "output" })
+pump()
+local storageStatus = mosaic.storageStatus()
+check(storageStatus.ready == true and storageStatus.input == "minecraft:chest_input"
+    and storageStatus.output == "minecraft:chest_output", "storaged nao aplicou as portas")
+check((storageStatus.totalItems or 0) == 682, "storaged perdeu o indice ao configurar portas")
+os.queueEvent("mosaic:storage_cmd", { action = "rescan" })
+pump()
+check(type(mosaic.storageStatus().items) == "table", "storaged nao publicou catalogo")
+proc.kill(sd) pump()
 
 -- Resultado
 term.redirect(term.native())

@@ -86,6 +86,8 @@ end
 -- Musica sempre: e' ele que segura a fila, e sem ele a musica pararia ao fechar a janela.
 -- Sem relay e sem alto-falante ele so' fica esperando evento, e o app diz o que falta.
 proc.daemon("musicd", "/os/net/musicd.lua")
+-- O catalogo de baus e as transferencias continuam ativos ao fechar a janela.
+proc.daemon("storaged", "/os/net/storaged.lua")
 
 -- Autostart do usuario
 for _, path in ipairs(settings.get("mosaic.autostart") or {}) do

@@ -70,6 +70,12 @@ Manda codigo Lua para outro computador Mosaic pela rede local. Pede o
 ID do destino. O outro lado precisa estar com a rede ligada, e com
 senha se tiver sido configurada.
 
+## Armazem
+
+Catalogo de todos os baus na rede de modems com fio. Procure itens, saque para
+o bau de Saida e devolva pelo bau de Entrada. A aba Baus configura os papeis e
+a coleta automatica. O capitulo Armazem em rede explica a montagem.
+
 ## Atualizar OS
 
 Compara os arquivos daqui com o repositorio e baixa so o que mudou.
